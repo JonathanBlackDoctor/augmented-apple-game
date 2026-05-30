@@ -13,7 +13,19 @@ module.exports = {
     'plugin:@typescript-eslint/recommended',
     'prettier',
   ],
-  ignorePatterns: ['dist', 'coverage', 'node_modules', '*.cjs', 'vite.config.ts'],
+  ignorePatterns: [
+    'dist',
+    'coverage',
+    'node_modules',
+    '*.cjs',
+    'vite.config.ts',
+    // Root-level design references uploaded by the designer (HTML/JSX/JS
+    // prototypes) — not part of the app build, must not be linted.
+    '/board-engine.js',
+    '/design-canvas.jsx',
+    '/moodboard.jsx',
+    '/*.jsx',
+  ],
   rules: {
     '@typescript-eslint/no-explicit-any': 'off',
     '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],

@@ -106,7 +106,7 @@ export class OnlineController {
   async join(code: string): Promise<void> {
     const c = code.toUpperCase();
     if (!isValidRoomCode(c)) {
-      useOnlineStore.getState().set({ error: '코드 형식이 올바르지 않아요 (6자리)' });
+      useOnlineStore.getState().set({ error: '코드 형식이 올바르지 않아요 (3자리)' });
       return;
     }
     useOnlineStore.getState().set({ stage: 'connecting', roomCode: c, error: null });
@@ -116,14 +116,16 @@ export class OnlineController {
   private async enter(code: string, role: Role): Promise<void> {
     if (!this.backend) return;
     const session = new BackendNetSession(this.backend);
-    await session.join(code, this.pub());
+    // The host (re)creates the room, so wipe any leftover events from a previous
+    // match that reused this code; the guest joins into that clean room.
+    await session.join(code, this.pub(), { reset: role === 'host' });
     this.match = new OnlineMatch({ session, role, self: this.pub(), roomId: code, durationMs: DURATION });
     this.resolved = false;
     this.started = false;
     this.comboStreak = 0;
     this.lastRound = -1;
     this.lastPhase = '';
-    await this.match.start();
+    await this.match.start(this.clock.now());
     this.loop();
   }
 

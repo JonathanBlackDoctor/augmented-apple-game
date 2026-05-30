@@ -9,6 +9,7 @@ import { InputController, type DragHandlers } from '../input/InputController';
 import { createMonotonicClock } from './clock';
 import { sfx } from './sound';
 import { useGameStore } from './store';
+import { getSettings } from './settingsStore';
 
 const NOOP_BUS: AugmentHookBus = { run: () => undefined };
 
@@ -62,6 +63,7 @@ export class MatchController {
     this.plan = plan;
     // Board size can come from settings → re-fit the layout before the round.
     this.layout = this.calcLayout();
+    this.board.setAppleScale(getSettings().appleScale);
     this.board.setLayout(this.layout);
     this.owned = [];
     this.roundIndex = 0;

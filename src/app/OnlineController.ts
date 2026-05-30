@@ -10,6 +10,7 @@ import { InputController, type DragHandlers } from '../input/InputController';
 import { createMonotonicClock } from './clock';
 import { sfx } from './sound';
 import { useOnlineStore } from './onlineStore';
+import { getSettings } from './settingsStore';
 import { OnlineMatch, type OnlineSnapshot, type Role } from './OnlineMatch';
 import { InMemoryNetBackend } from '../net/memoryBackend';
 import { BackendNetSession } from '../net/session';
@@ -44,6 +45,7 @@ export class OnlineController {
   async mount(parent: HTMLElement): Promise<void> {
     this.parent = parent;
     this.layout = this.calc();
+    this.board.setAppleScale(getSettings().appleScale);
     await this.board.mount(parent, this.layout);
     this.input = new InputController(this.board.app.canvas, () => this.layout, this.handlers);
     this.input.attach();

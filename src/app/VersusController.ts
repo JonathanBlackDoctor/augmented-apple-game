@@ -102,8 +102,9 @@ export class VersusController {
     const mmr = this.profile?.mmr ?? 1000;
     const diff: Difficulty = s.aiDifficulty === 'auto' ? difficultyForMmr(mmr) : s.aiDifficulty;
     const tierLabel = diff === 'hard' ? 'Gold' : diff === 'normal' ? 'Silver' : 'Bronze';
-    // Settings (board size) may have changed since mount → re-fit the boards.
+    // Settings (apple count/size) may have changed since mount → re-fit the boards.
     this.layout = this.calcLayout();
+    this.board.setAppleScale(s.appleScale);
     this.board.setLayout(this.layout);
     this.match = new VersusMatch({
       seedBase: `versus:${Date.now()}`,
@@ -128,6 +129,7 @@ export class VersusController {
     this.board.showSelection(null, false);
     if (this.botView) {
       this.miniLayout = this.calcMiniLayout();
+      this.botView.setAppleScale(s.appleScale);
       this.botView.setLayout(this.miniLayout);
       this.botView.setBoard(this.match.botBoard());
     }
@@ -352,6 +354,7 @@ export class VersusController {
         this.miniCreating = true;
         try {
           const bv = new BoardView();
+          bv.setAppleScale(getSettings().appleScale);
           this.miniLayout = this.calcMiniLayout();
           await bv.mount(this.miniHost, this.miniLayout);
           this.botView = bv;

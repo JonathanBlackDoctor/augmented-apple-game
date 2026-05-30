@@ -41,7 +41,8 @@ export class BoardView {
     await this.app.init({
       width: layout.width,
       height: layout.height,
-      background: theme.color.bg,
+      // Transparent so the live day→night orchard sky shows through behind the grid.
+      backgroundAlpha: 0,
       antialias: true,
       resolution: Math.min(window.devicePixelRatio || 1, 2),
       autoDensity: true,
@@ -81,9 +82,22 @@ export class BoardView {
     const w = (x1 - Math.min(rect.x0, rect.x1) + 1) * l.cell;
     const h = (y1 - Math.min(rect.y0, rect.y1) + 1) * l.cell;
     const radius = l.cell * theme.ratio.selectionRadius;
-    g.roundRect(a.x, a.y, w, h, radius)
-      .fill({ color: valid ? theme.color.selFill : theme.color.selNeutralStroke, alpha: valid ? 0.28 : 0.1 })
-      .stroke({ color: valid ? theme.color.selStroke : theme.color.selNeutralStroke, width: valid ? 3 : 2, alpha: valid ? 0.95 : 0.55 });
+    if (valid) {
+      // Most important positive feedback: orchard-green fill + glowing ring.
+      g.roundRect(a.x - 3, a.y - 3, w + 6, h + 6, radius + 3).stroke({
+        color: theme.color.selStroke,
+        width: 6,
+        alpha: 0.28,
+      });
+      g.roundRect(a.x, a.y, w, h, radius)
+        .fill({ color: theme.color.selFill, alpha: 0.18 })
+        .stroke({ color: theme.color.selStroke, width: 3, alpha: 0.95 });
+    } else {
+      // In-progress (sum ≠ target): restrained neutral ink box.
+      g.roundRect(a.x, a.y, w, h, radius)
+        .fill({ color: theme.color.selNeutralStroke, alpha: 0.05 })
+        .stroke({ color: theme.color.selNeutralStroke, width: 2, alpha: 0.4 });
+    }
   }
 
   /** Emit a satisfying burst at each cleared cell, then hide them. */
@@ -173,8 +187,15 @@ export class BoardView {
         style: {
           fontFamily: theme.font,
           fontSize: Math.round(l.cell * theme.ratio.fontSize),
-          fontWeight: '700',
+          fontWeight: '800',
           fill: theme.color.text,
+          dropShadow: {
+            color: theme.color.numShadow,
+            alpha: 0.32,
+            blur: 0,
+            distance: 1,
+            angle: Math.PI / 2,
+          },
         },
       });
       label.anchor.set(0.5);
@@ -211,20 +232,68 @@ export class BoardView {
     }
   }
 
+  // Plump apple silhouette from the design 시안 (viewBox 0..100), centered at
+  // the origin and scaled to the cell. Subtle stem dimple at the top.
+  private traceApple(g: Graphics, size: number): void {
+    const m = (u: number, v: number): [number, number] => [
+      ((u - 50) / 100) * size,
+      ((v - 50) / 100) * size,
+    ];
+    const p0 = m(44, 15);
+    g.moveTo(p0[0], p0[1]);
+    const c = (
+      x1: number, y1: number, x2: number, y2: number, x: number, y: number,
+    ): void => {
+      const a = m(x1, y1), b = m(x2, y2), e = m(x, y);
+      g.bezierCurveTo(a[0], a[1], b[0], b[1], e[0], e[1]);
+    };
+    c(47, 18, 53, 18, 56, 15);
+    c(67, 11, 90, 24, 90, 50);
+    c(90, 73, 72, 89, 50, 89);
+    c(28, 89, 10, 73, 10, 50);
+    c(10, 24, 33, 11, 44, 15);
+    g.closePath();
+  }
+
   private drawApple(g: Graphics, cell: number, tag: CellTag): void {
     g.clear();
     const rad = cell * theme.ratio.appleRadius;
+    const size = cell * 0.96; // silhouette box edge
     const isGold = tag === 'golden';
     const isWild = tag === 'wild';
     const base = isGold ? theme.color.golden : isWild ? theme.color.wild : theme.color.apple;
     const edge = isGold ? theme.color.goldenEdge : theme.color.appleEdge;
     const top = isGold ? theme.color.goldenTop : theme.color.appleTop;
+
     // body
-    g.circle(0, 0, rad).fill(base).stroke({ color: edge, width: Math.max(1, cell * 0.03), alpha: 0.6 });
-    // soft top highlight
-    g.circle(-rad * 0.3, -rad * 0.34, cell * theme.ratio.highlightRadius)
-      .fill({ color: top, alpha: 0.55 });
-    // tiny leaf stem
-    g.ellipse(rad * 0.18, -rad * 0.92, rad * 0.22, rad * 0.12).fill({ color: theme.color.leaf, alpha: 0.9 });
+    this.traceApple(g, size);
+    g.fill(base).stroke({ color: edge, width: Math.max(1, cell * 0.025), alpha: 0.45 });
+    // bottom shading for satin depth
+    g.ellipse(0, rad * 0.46, rad * 0.66, rad * 0.5).fill({ color: edge, alpha: 0.22 });
+    // soft satin top highlight
+    g.ellipse(-rad * 0.16, -rad * 0.4, rad * 0.52, rad * 0.44).fill({ color: top, alpha: 0.6 });
+    // bright gloss
+    g.ellipse(-rad * 0.2, -rad * 0.46, rad * 0.26, rad * 0.2).fill({ color: 0xfffaf2, alpha: 0.5 });
+
+    // stem (tilted) — a short thick warm-brown line at the dimple
+    g.moveTo(0, -rad * 0.9)
+      .lineTo(rad * 0.13, -rad * 1.16)
+      .stroke({ color: 0x7a4a2a, width: Math.max(1, cell * 0.06), cap: 'round' });
+
+    // leaf — a rotated petal ellipse beside the stem
+    const lcx = rad * 0.34;
+    const lcy = -rad * 1.0;
+    const lw = rad * 0.42;
+    const lh = rad * 0.2;
+    const rot = -0.52; // ≈ -30°
+    const cos = Math.cos(rot), sin = Math.sin(rot);
+    const pts: number[] = [];
+    for (let i = 0; i < 18; i++) {
+      const a = (i / 18) * Math.PI * 2;
+      const ex = Math.cos(a) * lw;
+      const ey = Math.sin(a) * lh;
+      pts.push(lcx + ex * cos - ey * sin, lcy + ex * sin + ey * cos);
+    }
+    g.poly(pts).fill({ color: theme.color.leaf });
   }
 }

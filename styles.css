@@ -1,0 +1,360 @@
+/* moodboard.jsx — 3 visual directions for 증강 사과게임, on a design canvas. */
+
+// ── artistic augment emblems (unique gradient ids per instance) ──
+const ART = {
+  time: (id) => (
+    <svg viewBox="0 0 100 100" fill="none">
+      <defs>
+        <radialGradient id={id + '-glow'} cx="50%" cy="44%" r="52%"><stop offset="0%" stopColor="#fffef8" /><stop offset="100%" stopColor="#fffef8" stopOpacity="0" /></radialGradient>
+        <linearGradient id={id + '-rim'} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#ffffff" /><stop offset="48%" stopColor="#b4bdc9" /><stop offset="100%" stopColor="#6d7a88" /></linearGradient>
+        <linearGradient id={id + '-face'} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#fcfdff" /><stop offset="100%" stopColor="#e3e9f0" /></linearGradient>
+      </defs>
+      <circle cx="50" cy="50" r="46" fill={`url(#${id}-glow)`} />
+      <circle cx="50" cy="50" r="34" fill={`url(#${id}-rim)`} />
+      <circle cx="50" cy="50" r="28" fill={`url(#${id}-face)`} stroke="#c4cdd7" strokeWidth="1" />
+      {[...Array(12)].map((_, i) => {
+        const a = i * 30 * Math.PI / 180, r1 = 25, r2 = i % 3 === 0 ? 19.5 : 22;
+        return <line key={i} x1={50 + Math.sin(a) * r1} y1={50 - Math.cos(a) * r1} x2={50 + Math.sin(a) * r2} y2={50 - Math.cos(a) * r2} stroke="#8b97a3" strokeWidth={i % 3 === 0 ? 2 : 1} strokeLinecap="round" />;
+      })}
+      <line x1="50" y1="50" x2="50" y2="33" stroke="#39434f" strokeWidth="3.2" strokeLinecap="round" />
+      <line x1="50" y1="50" x2="63" y2="57" stroke="#39434f" strokeWidth="2.4" strokeLinecap="round" />
+      <circle cx="50" cy="50" r="3.1" fill="#39434f" />
+      <path d="M72 26 A30 30 0 0 1 80 52" stroke="#3E9F63" strokeWidth="3.6" strokeLinecap="round" fill="none" />
+      <path d="M75 20 L70 28 L79 30 Z" fill="#3E9F63" />
+    </svg>
+  ),
+  combo: (id) => (
+    <svg viewBox="0 0 100 100" fill="none">
+      <defs>
+        <radialGradient id={id + '-glow'} cx="50%" cy="50%" r="50%"><stop offset="0%" stopColor="#fff6d8" /><stop offset="100%" stopColor="#fff6d8" stopOpacity="0" /></radialGradient>
+        <linearGradient id={id + '-s'} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#fff3c2" /><stop offset="55%" stopColor="#f4c43e" /><stop offset="100%" stopColor="#d8970f" /></linearGradient>
+      </defs>
+      <circle cx="50" cy="50" r="44" fill={`url(#${id}-glow)`} />
+      {[...Array(12)].map((_, i) => {
+        const a = i * 30 * Math.PI / 180, r1 = i % 2 ? 30 : 38, r0 = 19;
+        return <line key={i} x1={50 + Math.sin(a) * r0} y1={50 - Math.cos(a) * r0} x2={50 + Math.sin(a) * r1} y2={50 - Math.cos(a) * r1} stroke="#eaa91f" strokeWidth={i % 2 ? 1.6 : 2.6} strokeLinecap="round" opacity={i % 2 ? .55 : .9} />;
+      })}
+      <path d="M50 12 L58 50 L50 88 L42 50 Z" fill={`url(#${id}-s)`} stroke="#fff3c2" strokeWidth=".8" />
+      <path d="M12 50 L50 42 L88 50 L50 58 Z" fill={`url(#${id}-s)`} stroke="#fff3c2" strokeWidth=".8" />
+      <path d="M50 12 L58 50 L50 50 Z" fill="#fff" opacity=".4" />
+      <circle cx="76" cy="28" r="3.4" fill="#ffe27a" /><circle cx="26" cy="72" r="2.6" fill="#ffe27a" />
+      <circle cx="74" cy="70" r="2.2" fill="#ffd75a" opacity=".8" />
+    </svg>
+  ),
+  rule: (id) => (
+    <svg viewBox="0 0 100 100" fill="none">
+      <defs>
+        <radialGradient id={id + '-glow'} cx="50%" cy="46%" r="54%"><stop offset="0%" stopColor="#f3edff" /><stop offset="100%" stopColor="#f3edff" stopOpacity="0" /></radialGradient>
+        <linearGradient id={id + '-cry'} x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#eef0ff" /><stop offset="48%" stopColor="#c7b6ff" /><stop offset="100%" stopColor="#8f7be8" /></linearGradient>
+      </defs>
+      <circle cx="50" cy="50" r="45" fill={`url(#${id}-glow)`} />
+      <line x1="6" y1="44" x2="42" y2="50" stroke="#ffffff" strokeWidth="3.4" strokeLinecap="round" opacity=".95" />
+      {['#ff5a6e', '#ff9f43', '#ffd23f', '#4fd17a', '#3aa6ff', '#9a6bff'].map((c, i) => (
+        <line key={i} x1="60" y1="56" x2="94" y2={40 + i * 5.4} stroke={c} strokeWidth="2.6" strokeLinecap="round" />
+      ))}
+      <path d="M50 22 L76 72 L24 72 Z" fill={`url(#${id}-cry)`} stroke="#ffffff" strokeWidth="1.4" strokeLinejoin="round" />
+      <path d="M50 22 L62 72 L50 72 Z" fill="#ffffff" opacity=".22" />
+      <circle cx="50" cy="22" r="2.4" fill="#fff" />
+    </svg>
+  ),
+};
+
+// ── direction config ────────────────────────────────────────────
+const DIRS = [
+  {
+    key: 'a', cls: 'dir-a', name: '햇살 과수원', en: 'Sunlit Orchard',
+    tag: '잘 익은 과수원의 따뜻한 햇살. 크림빛 종이 위에서 윤기 흐르는 사과가 톡톡 터지는 — 정성 들인 과일 브랜드 같은 프리미엄 캐주얼.',
+    type: 'Gowun Batang · Newsreader',
+    palette: [['크림 종이', '#FBF5E9'], ['사과 레드', '#E04A36'], ['딥 레드', '#B8311E'], ['허니 골드', '#E3A12A'], ['잎 그린', '#5E9A4E']],
+    accent: '#E04A36',
+  },
+  {
+    key: 'b', cls: 'dir-b', name: '갓 짠 과즙', en: 'Fresh-Pressed',
+    tag: '갓 짜낸 주스처럼 맑고 시원한 청량감. 차가운 화이트에 투명하게 빛나는 젤리빛 사과, 민트·라임 악센트로 산뜻하고 모던하게.',
+    type: 'Gowun Dodum · Space Grotesk',
+    palette: [['민트 화이트', '#EFFAF3'], ['주스 레드', '#F0514E'], ['딥 레드', '#D2322F'], ['프레시 민트', '#18B07A'], ['라임', '#A8DC4E']],
+    accent: '#18B07A',
+  },
+  {
+    key: 'c', cls: 'dir-c', name: '과일 정물', en: 'Fruit Still-Life',
+    tag: '미술관의 과일 정물화. 리넨빛 여백과 가는 헤어라인, 무광의 절제된 사과. 장식을 덜어낸 가장 조용하고 고급스러운 방향.',
+    type: 'Nanum Myeongjo · Cormorant',
+    palette: [['리넨', '#F1ECE2'], ['헤리티지 레드', '#BC4A3C'], ['딥 테라', '#99392E'], ['오커', '#C68A3A'], ['와인', '#7A3B50']],
+    accent: '#BC4A3C',
+  },
+];
+
+const AUGMENTS = [
+  { tier: 'silver', fam: '시간', art: 'time', name: '여유', effect: '라운드 시작 시 +3초. 한 박자 더 여유롭게.' },
+  { tier: 'gold', fam: '콤보', art: 'combo', name: '연쇄', effect: '콤보를 유지하면 점수 1.5×. 끊기면 리셋.' },
+  { tier: 'prism', fam: '룰', art: 'rule', name: '연금술', effect: '10의 배수면 모두 인정 (10·20·30…).' },
+];
+
+// ── refined rank crest emblems ──────────────────────────────────
+const RANKS = [
+  { en: 'Iron', ko: '아이언', metal: ['#9aa0a8', '#565c65'], gem: ['#7d8390', '#535963'], orn: 0 },
+  { en: 'Bronze', ko: '브론즈', metal: ['#cd9163', '#875530'], gem: ['#bb7c4c', '#7c4c28'], orn: 0 },
+  { en: 'Silver', ko: '실버', metal: ['#e9eef4', '#9aa6b2'], gem: ['#ccd6df', '#94a0ac'], orn: 1 },
+  { en: 'Gold', ko: '골드', metal: ['#f8db80', '#c7921f'], gem: ['#ffe9a0', '#d49e22'], orn: 1 },
+  { en: 'Platinum', ko: '플래티넘', metal: ['#e2f2ee', '#8fc7ba'], gem: ['#bfeae0', '#5fb8a6'], orn: 2 },
+  { en: 'Diamond', ko: '다이아', metal: ['#d8edff', '#7aa6ff'], gem: ['#bfe0ff', '#5f8fff'], orn: 2 },
+  { en: 'Master', ko: '마스터', metal: ['#edd8f8', '#9a5ad0'], gem: ['#f1d2ff', '#a85ee0'], orn: 3 },
+];
+
+function RankEmblem({ id, m }) {
+  return (
+    <svg viewBox="0 0 48 54" fill="none">
+      <defs>
+        <linearGradient id={id + '-m'} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={m.metal[0]} /><stop offset="100%" stopColor={m.metal[1]} /></linearGradient>
+        <linearGradient id={id + '-g'} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={m.gem[0]} /><stop offset="100%" stopColor={m.gem[1]} /></linearGradient>
+      </defs>
+      <path d="M24 2 L44 13 V35 L24 52 L4 35 V13 Z" fill={`url(#${id}-m)`} stroke="rgba(255,255,255,.6)" strokeWidth=".9" />
+      <path d="M24 2 L44 13 L24 25 L4 13 Z" fill="#fff" opacity=".2" />
+      <path d="M4 35 L24 25 L44 35 L24 52 Z" fill="#000" opacity=".13" />
+      <path d="M24 15 L33 27 L24 41 L15 27 Z" fill={`url(#${id}-g)`} stroke="rgba(255,255,255,.8)" strokeWidth=".7" />
+      <path d="M24 15 L33 27 L24 27 Z" fill="#fff" opacity=".4" />
+      {m.orn >= 1 && (<g><circle cx="11" cy="20" r="1.5" fill="#fff" opacity=".75" /><circle cx="37" cy="20" r="1.5" fill="#fff" opacity=".75" /></g>)}
+      {m.orn >= 2 && (<g><circle cx="24" cy="46" r="1.7" fill="#fff" opacity=".85" /></g>)}
+      {m.orn >= 3 && (<path d="M16 9 L20 13 L24 7 L28 13 L32 9 L30 15 L18 15 Z" fill="#fff" opacity=".9" />)}
+    </svg>
+  );
+}
+
+// ── garden backdrop (subtle, cozy) ──────────────────────────────
+function rand(seed) { const x = Math.sin(seed) * 10000; return x - Math.floor(x); }
+function Backdrop() {
+  const motes = [];
+  for (let i = 0; i < 7; i++) {
+    const s = 5 + rand(i + 1) * 12;
+    motes.push(<i key={i} className="mote" style={{ width: s, height: s, left: (8 + rand(i + 2) * 84) + '%', top: (28 + rand(i + 5) * 54) + '%', animationDuration: (10 + rand(i + 3) * 8) + 's', animationDelay: (-rand(i + 4) * 12) + 's' }} />);
+  }
+  return (
+    <div className="poster-bg">
+      <div className="g-sky" /><div className="g-sun" />
+      <div className="g-hill g-hill-2" /><div className="g-hill g-hill-1" />
+      <div className="g-meadow" /><div className="g-breeze" />
+      {motes}
+    </div>
+  );
+}
+
+function Surface({ dir, children, pad = true }) {
+  return (
+    <div className={'board-surface ' + dir.cls}>
+      <Backdrop />
+      {pad ? <div className="surface-pad">{children}</div> : children}
+    </div>
+  );
+}
+
+function Apple({ variant, n, leaf }) {
+  return (
+    <div className="spec-apple">
+      <div className={'apple' + (variant ? ' ' + variant : '')}>
+        <span className="apple-body" />
+        {leaf && (<><span className="leaf-stem" /><span className="leaf" /></>)}
+        <span className="num">{n}</span>
+      </div>
+    </div>
+  );
+}
+
+// ── POSTER ──────────────────────────────────────────────────────
+function Poster({ dir }) {
+  return (
+    <Surface dir={dir}>
+      <div className="kicker">방향 {dir.key.toUpperCase()} · Direction</div>
+      <h2 className="concept-name">{dir.name}</h2>
+      <div className="concept-en">{dir.en}</div>
+      <p className="concept-tag">{dir.tag}</p>
+
+      <div className="block-label">팔레트</div>
+      <div className="swatches">
+        {dir.palette.map(([nm, hex]) => (
+          <div className="swatch" key={hex}>
+            <div className="chip" style={{ background: hex }} />
+            <div className="meta"><div className="nm">{nm}</div><div className="hex">{hex}</div></div>
+          </div>
+        ))}
+      </div>
+
+      <div className="type-spec">
+        <div className="block-label">타이포 · {dir.type}</div>
+        <div className="type-row"><span className="type-display">증강 사과게임</span></div>
+        <div className="type-row"><span className="type-body">합이 10이 되도록 사과를 드래그해 담으세요.</span></div>
+        <div className="type-nums">0 1 2 3 4 5 6 7 8 9</div>
+      </div>
+
+      <div className="block-label">사과 — 기본 · 황금 · 와일드</div>
+      <div className="specimens">
+        <div className="spec"><Apple n="7" leaf /><div className="cap">기본</div></div>
+        <div className="spec"><Apple variant="golden" n="3" leaf /><div className="cap">황금 ×2</div></div>
+        <div className="spec"><Apple variant="wild" n="?" leaf /><div className="cap">와일드</div></div>
+      </div>
+    </Surface>
+  );
+}
+
+// ── PLAYABLE BOARD ──────────────────────────────────────────────
+function BoardCard({ dir }) {
+  const host = React.useRef(null);
+  const api = React.useRef(null);
+  const [s, setS] = React.useState({ score: 0, combo: 0, timeLeft: 30, total: 30, over: false });
+  React.useEffect(() => {
+    api.current = window.mountAppleBoard(host.current, { cols: 12, rows: 8, cell: 40, total: 30, onUpdate: setS });
+    return () => api.current && api.current.destroy();
+  }, []);
+  const pct = Math.max(0, (s.timeLeft / s.total) * 100);
+  const warn = s.timeLeft <= 5 && s.timeLeft > 0;
+  const secs = Math.ceil(s.timeLeft);
+  return (
+    <Surface dir={dir}>
+      <div className="board-head">
+        <div>
+          <div className="board-eyebrow">{dir.en} · Live</div>
+          <div className="board-name">게임 보드</div>
+        </div>
+        <div className="hud-chip"><span>R</span><span className="v">1/5</span></div>
+      </div>
+
+      <div className="hud">
+        <div className="hud-score">{s.score}<small>점</small></div>
+        <div className={'hud-combo' + (s.combo >= 2 ? ' show' : '')}><span className="v">{s.combo}</span> 콤보</div>
+      </div>
+
+      <div className="timewrap">
+        <div className="timebar"><div className={'timebar-fill' + (warn ? ' warn' : '')} style={{ width: pct + '%' }} /></div>
+        <div className={'timesec' + (warn ? ' warn' : '')}>{secs}</div>
+      </div>
+
+      <div className="board-host"><div ref={host} /></div>
+
+      <div className="board-tip">
+        <p>드래그해서 합이 <b>10</b>인 사과를 묶어 터뜨려 보세요.</p>
+        <button className="reset-btn" onClick={() => api.current && api.current.reset()}>새 보드</button>
+      </div>
+    </Surface>
+  );
+}
+
+// ── AUGMENT SELECT ──────────────────────────────────────────────
+function AugSelect({ dir }) {
+  return (
+    <Surface dir={dir}>
+      <div className="aug-top">
+        <div className="tier-badge tier-gold"><span className="dot" />골드 · 라운드 3</div>
+        <h3 className="aug-title">증강 선택</h3>
+        <p className="aug-sub">하나를 골라 빌드를 쌓으세요 · 리롤 없음</p>
+      </div>
+      <div className="aug-row">
+        {AUGMENTS.map((a) => (
+          <div className={'aug-card ' + a.tier} key={a.name}>
+            <div className="aug-art">{ART[a.art](dir.key + '-' + a.art)}</div>
+            <div className="fam">{a.fam}</div>
+            <div className="aug-name">{a.name}</div>
+            <div className="aug-effect">{a.effect}</div>
+          </div>
+        ))}
+      </div>
+    </Surface>
+  );
+}
+
+// ── UI KIT ──────────────────────────────────────────────────────
+function Kit({ dir }) {
+  return (
+    <Surface dir={dir}>
+      <div className="kit-group">
+        <div className="section-divider"><span className="lbl">버튼</span><span className="ln" /></div>
+        <div className="btn-row">
+          <button className="btn primary">빠른 한 판</button>
+          <button className="btn gold">증강 모드</button>
+          <button className="btn versus">AI와 대결</button>
+          <button className="btn ghost">홈으로</button>
+        </div>
+      </div>
+
+      <div className="kit-group">
+        <div className="section-divider"><span className="lbl">칩 · 배지</span><span className="ln" /></div>
+        <div className="chip-row">
+          <span className="chip"><span>R</span><span className="v">3/5</span></span>
+          <span className="chip combo"><span className="v">5</span> 콤보</span>
+          <span className="chip accent">최고 <span className="v">128</span></span>
+          <span className="tier-badge tier-silver"><span className="dot" />실버</span>
+          <span className="tier-badge tier-prism"><span className="dot" />프리즘</span>
+        </div>
+      </div>
+
+      <div className="kit-group">
+        <div className="section-divider"><span className="lbl">랭크 티어</span><span className="ln" /></div>
+        <div className="badges">
+          {RANKS.map((m) => (
+            <div className="rank" key={m.en}>
+              <div className="em"><RankEmblem id={dir.key + '-' + m.en} m={m} /></div>
+              <div className="nm">{m.ko}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="kit-group">
+        <div className="section-divider"><span className="lbl">결과 · 토스트</span><span className="ln" /></div>
+        <div style={{ display: 'flex', gap: 14, alignItems: 'stretch', flexWrap: 'wrap' }}>
+          <div className="result-card" style={{ flex: '1 1 200px' }}>
+            <div className="result-title">최고 기록!</div>
+            <div className="result-score">142</div>
+            <div className="result-meta">최고 142 · 5라운드</div>
+            <div><span className="result-mmr">MMR +18</span></div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <span className="toast"><span className="ok"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 13l4 4L19 7" /></svg></span>링크가 복사됐어요</span>
+          </div>
+        </div>
+      </div>
+    </Surface>
+  );
+}
+
+// ── INTRO ───────────────────────────────────────────────────────
+function Intro() {
+  return (
+    <div className="board-surface dir-a">
+      <Backdrop />
+      <div className="intro" style={{ position: 'relative', zIndex: 2 }}>
+        <div className="kicker">Design Brief · 비주얼 방향 제안</div>
+        <h1>증강 사과게임 — 3가지 비주얼 방향</h1>
+        <p>모두 <b>라이트 + 프리미엄</b> 톤 안에서, 서로 다른 극으로 끌어낸 세 방향입니다. 사과게임 DNA(숫자 사과 격자 + 드래그 박스)와 숫자 가독성은 그대로 지키고, 색·타이포·사과 아트·배경·컴포넌트만 바꿉니다. <b>각 방향의 보드는 실제로 플레이됩니다</b> — 드래그해서 합 10을 만들어 손맛을 직접 느껴보세요.</p>
+        <div className="legend">
+          {DIRS.map((d) => (
+            <div className="lg" key={d.key}>
+              <span className="sw" style={{ background: d.accent }} />
+              <div><b>{d.name}</b><span>{d.en}</span></div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── APP ─────────────────────────────────────────────────────────
+function App() {
+  return (
+    <DesignCanvas>
+      <DCSection id="intro" title="읽어주세요" subtitle="세 방향의 개요 · 보드는 실제로 드래그됩니다">
+        <DCArtboard id="intro" label="개요" width={900} height={440}><Intro /></DCArtboard>
+      </DCSection>
+
+      {DIRS.map((d) => (
+        <DCSection key={d.key} id={'dir-' + d.key} title={d.name + ' · ' + d.en} subtitle={d.tag.split('.')[0] + '.'}>
+          <DCArtboard id={d.key + '-poster'} label="무드보드" width={560} height={820}><Poster dir={d} /></DCArtboard>
+          <DCArtboard id={d.key + '-board'} label="플레이 보드 (드래그 가능)" width={600} height={720}><BoardCard dir={d} /></DCArtboard>
+          <DCArtboard id={d.key + '-aug'} label="증강 선택" width={620} height={560}><AugSelect dir={d} /></DCArtboard>
+          <DCArtboard id={d.key + '-kit'} label="UI 키트" width={560} height={860}><Kit dir={d} /></DCArtboard>
+        </DCSection>
+      ))}
+    </DesignCanvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);

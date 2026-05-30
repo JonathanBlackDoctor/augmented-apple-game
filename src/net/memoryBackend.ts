@@ -42,6 +42,10 @@ export class InMemoryNetBackend implements NetBackend {
         for (const c of cells) room.owned.set(c, uid);
         return { ok: true, cells };
       },
+      reset: async () => {
+        room.log.length = 0;
+        room.owned.clear();
+      },
       close: () => {
         /* per-subscription cleanup happens via the returned unsubscribe fn */
       },

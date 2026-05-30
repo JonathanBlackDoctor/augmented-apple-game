@@ -8,6 +8,8 @@ export function HomeScreen() {
   const startSolo = useGameStore((s) => s.startSolo);
   const startAugment = useGameStore((s) => s.startAugment);
   const startVersus = useGameStore((s) => s.startVersus);
+  const startOnline = useGameStore((s) => s.startOnline);
+  const startLeaderboard = useGameStore((s) => s.startLeaderboard);
   const [overlay, setOverlay] = useState<'settings' | 'help' | null>(null);
   return (
     <div className="screen home">
@@ -37,6 +39,12 @@ export function HomeScreen() {
           </button>
           <button className="btn versus" onClick={() => startVersus(5, 30_000)}>
             AI와 대결 · 5라운드
+          </button>
+          <button className="btn online" onClick={() => startOnline()}>
+            친구와 1:1 대결
+          </button>
+          <button className="btn rank" onClick={() => startLeaderboard()}>
+            랭킹 보기
           </button>
         </div>
         {best > 0 && <p className="best">최고 점수 {best}</p>}

@@ -32,7 +32,10 @@ export type NetEvent =
   | { t: 'heartbeat'; player: PlayerId; ts: number };
 
 export interface NetSession {
-  join(roomId: string, profile: PublicProfile): Promise<void>;
+  /** `opts.reset` wipes the room's persisted state before joining — used by the
+   *  host when (re)creating a room so a reused code never inherits a previous
+   *  match's events. */
+  join(roomId: string, profile: PublicProfile, opts?: { reset?: boolean }): Promise<void>;
   on(cb: (e: NetEvent) => void): () => void;
   send(e: NetEvent): Promise<void>;
   /** Shared-board mode: atomic cell claim via transaction. */

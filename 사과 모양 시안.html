@@ -1,0 +1,94 @@
+/* apple-shapes.css — apple silhouette + finish study
+   One consistent orchard-red treatment so we compare SHAPE, not colour. */
+@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css");
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: #f0eee9; }
+#root { height: 100vh; }
+
+.ap-surface {
+  width: 100%; height: 100%; padding: 26px 24px 24px;
+  background:
+    radial-gradient(120% 70% at 50% 0%, #fffdf7, transparent 60%),
+    linear-gradient(180deg, #FBF5E9, #F6EFE2);
+  color: #3A2A1E;
+  font-family: 'Pretendard Variable', -apple-system, sans-serif;
+  display: flex; flex-direction: column; align-items: center;
+}
+
+/* ── apple primitive ── */
+.ap-wrap { position: relative; flex: 0 0 auto; }
+.ap {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  -webkit-mask: var(--m) center / 100% 100% no-repeat;
+  mask: var(--m) center / 100% 100% no-repeat;
+  background:
+    radial-gradient(78% 66% at 50% 12%, #ff7c61, transparent 58%),
+    linear-gradient(178deg, #e85540 4%, #d3402c 54%, #b22f1d);
+  filter: drop-shadow(0 2px 2.5px rgba(120,42,22,.26));
+}
+.ap::before {
+  content: ""; position: absolute; left: 0; right: 0; top: 0; height: 64%;
+  background: radial-gradient(58% 78% at 38% 20%, rgba(255,250,242,.5), transparent 70%);
+}
+.ap.circle { -webkit-mask: none; mask: none; border-radius: 50%; }
+.ap.squircle { -webkit-mask: none; mask: none; border-radius: 32%; }
+.ap .n {
+  position: relative; z-index: 1; font-weight: 800; letter-spacing: -.02em;
+  color: #FFF4EC; font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 1px rgba(120,30,16,.30);
+}
+
+/* stem + leaf (leafed option) */
+.ap-wrap .stem { position: absolute; z-index: 2; top: -5%; left: 45%; width: 5%; height: 22%;
+  border-radius: 2px; background: linear-gradient(180deg, #6e4a2c, #4f3320); transform: rotate(9deg); transform-origin: bottom; }
+.ap-wrap .leaf { position: absolute; z-index: 2; top: -9%; left: 52%; width: 32%; height: 22%;
+  background: linear-gradient(135deg, #8fc873, #5E9A4E); border-radius: 0 100% 0 100%;
+  transform: rotate(-28deg); box-shadow: inset -1px -1px 2px rgba(0,0,0,.16); }
+
+/* ── layout pieces ── */
+.hero { height: 150px; display: flex; align-items: center; justify-content: center; }
+.ap-name { margin-top: 4px; text-align: center; }
+.ap-name b { font-size: 19px; font-weight: 800; letter-spacing: -.01em; }
+.ap-name span { font-size: 12px; color: #9a8472; margin-left: 6px; font-style: italic; }
+.ap-note { font-size: 12.5px; line-height: 1.5; color: #7a6552; text-align: center; max-width: 30ch; margin: 5px 0 14px; text-wrap: pretty; }
+
+.strip { display: flex; align-items: flex-end; gap: 16px; justify-content: center; padding: 12px 0 4px;
+  border-top: 1px solid #e7dac4; width: 100%; }
+.strip .lab { position: absolute; }
+.strip-wrap { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.strip-wrap .px { font-size: 9.5px; color: #b0a08c; font-variant-numeric: tabular-nums; }
+
+.ap-grid { margin-top: 16px; display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px;
+  padding: 12px; background: #fffdf7; border: 1px solid #ecdfc9; border-radius: 12px; }
+.grid-cell { width: 26px; height: 26px; }
+.grid-cap { font-size: 10px; color: #b0a08c; margin-top: 8px; }
+
+/* finish overrides (shape held constant) */
+.ap.fin-glossy { background: radial-gradient(62% 54% at 40% 13%, #ffb6a1, transparent 56%), linear-gradient(176deg, #ef5c45, #bb3220); }
+.ap.fin-glossy::before { height: 58%; background: radial-gradient(48% 62% at 36% 15%, rgba(255,255,255,.88), transparent 64%); }
+.ap.fin-satin { /* base */ }
+.ap.fin-matte { background: linear-gradient(180deg, #d9472f, #b1301d); filter: drop-shadow(0 1px 1px rgba(120,42,22,.18)); }
+.ap.fin-matte::before { background: radial-gradient(62% 72% at 40% 24%, rgba(255,242,234,.20), transparent 74%); }
+.ap.fin-flat { background: #d8412c; filter: drop-shadow(0 1px 1px rgba(120,42,22,.16)); }
+.ap.fin-flat::before { background: none; }
+.ap.fin-painterly {
+  background:
+    radial-gradient(34% 28% at 33% 18%, rgba(255,214,196,.9), transparent 60%),
+    radial-gradient(80% 86% at 64% 78%, #9c2716, transparent 62%),
+    linear-gradient(168deg, #ec5640, #c0331f);
+}
+.ap.fin-painterly::before { background: radial-gradient(50% 60% at 36% 18%, rgba(255,248,240,.5), transparent 66%); }
+
+.fin-name { margin-top: 12px; font-size: 15px; font-weight: 800; }
+.fin-name span { display: block; font-size: 11px; color: #9a8472; font-weight: 500; margin-top: 2px; font-style: italic; }
+
+/* intro */
+.intro { padding: 40px 46px; background: linear-gradient(180deg, #FBF5E9, #F4EDDF); height: 100%; color: #3A2A1E;
+  font-family: 'Pretendard Variable', sans-serif; }
+.intro h1 { font-size: 34px; font-weight: 800; letter-spacing: -.02em; margin: 0 0 12px; }
+.intro p { font-size: 15px; line-height: 1.65; color: #7a6552; max-width: 60ch; margin: 0 0 10px; text-wrap: pretty; }
+.intro .row { display: flex; align-items: center; gap: 22px; margin-top: 22px; }
+.intro .row .ap-wrap { filter: none; }
+.intro .kick { font-size: 11px; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; color: #E04A36; margin-bottom: 14px; }

@@ -1,0 +1,535 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<title>증강 사과게임 — UI/비주얼 풀 리디자인 의뢰서</title>
+<style>
+  :root{
+    --ink:#1c1714; --ink-2:#4a423b; --ink-3:#7b7068; --line:#e7e0d8; --line-2:#d8cfc4;
+    --paper:#ffffff; --paper-2:#faf7f2; --paper-3:#f4efe7;
+    --apple:#e5503b; --apple-deep:#b8331f; --gold:#c98a18; --gold-bg:#fbf2dc;
+    --green:#3f9d6b; --silver:#8b97a3; --prism:#7a6df0; --leaf:#5a9a48;
+  }
+  *{box-sizing:border-box}
+  html{font-size:15px}
+  body{
+    margin:0; color:var(--ink); background:var(--paper);
+    font-family:'Pretendard','Pretendard Variable',-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic',system-ui,sans-serif;
+    line-height:1.62; -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:860px; margin:0 auto; padding:28px 30px 64px;}
+  h1,h2,h3,h4{line-height:1.25; margin:0 0 .4em;}
+  p{margin:0 0 .8em;}
+  a{color:var(--apple); text-decoration:none;}
+  small{color:var(--ink-3);}
+  strong{font-weight:700;}
+  .muted{color:var(--ink-3);}
+
+  /* cover */
+  .cover{min-height:262mm; display:flex; flex-direction:column; justify-content:space-between; padding:6mm 0 0; page-break-after:always;}
+  .cover .mark{display:flex; align-items:center; gap:12px; font-weight:800; letter-spacing:-.2px; font-size:15px; color:var(--ink-2);}
+  .cover .logo{width:34px;height:34px;display:block;}
+  .cover .hero h1{font-size:42px; font-weight:900; letter-spacing:-1.2px; margin:0 0 14px; line-height:1.12;}
+  .cover .hero .lede{font-size:18px; color:var(--ink-2); max-width:60ch; line-height:1.55;}
+  .cover .kicker{display:inline-block; font-size:12.5px; font-weight:800; letter-spacing:1.5px; text-transform:uppercase; color:var(--apple); border:1.5px solid var(--apple); border-radius:999px; padding:5px 13px; margin-bottom:22px;}
+  .cover .meta{border-top:2px solid var(--ink); padding-top:16px; display:flex; flex-wrap:wrap; gap:26px 40px; font-size:13.5px;}
+  .cover .meta b{display:block; font-size:11px; letter-spacing:1px; text-transform:uppercase; color:var(--ink-3); font-weight:800; margin-bottom:3px;}
+  .cover .freehand{margin-top:26px; background:var(--paper-3); border-radius:14px; padding:18px 20px; font-size:14px; color:var(--ink-2);}
+  .cover .freehand b{color:var(--apple);}
+
+  /* section system */
+  h2.sec{font-size:23px; font-weight:900; letter-spacing:-.5px; margin:40px 0 4px; padding-top:18px; border-top:2px solid var(--ink);}
+  h2.sec .n{color:var(--apple); margin-right:10px; font-variant-numeric:tabular-nums;}
+  .sec-lead{color:var(--ink-2); font-size:14.5px; margin:0 0 16px;}
+  h3{font-size:16.5px; font-weight:800; margin:22px 0 6px; letter-spacing:-.2px;}
+  h4{font-size:14px; font-weight:800; margin:14px 0 4px; color:var(--ink-2);}
+
+  ul,ol{margin:0 0 12px; padding-left:20px;}
+  li{margin:3px 0;}
+  li::marker{color:var(--apple);}
+
+  /* tables */
+  table{width:100%; border-collapse:collapse; margin:10px 0 18px; font-size:13px;}
+  th,td{text-align:left; vertical-align:top; padding:8px 10px; border-bottom:1px solid var(--line);}
+  thead th{background:var(--paper-3); font-size:11.5px; letter-spacing:.4px; text-transform:uppercase; color:var(--ink-3); font-weight:800; border-bottom:2px solid var(--line-2);}
+  tbody tr:nth-child(even){background:var(--paper-2);}
+  td.c,th.c{text-align:center;}
+  .tag{display:inline-block; font-size:10.5px; font-weight:800; padding:2px 8px; border-radius:999px; white-space:nowrap; letter-spacing:.3px;}
+  .t-silver{background:#eef1f4; color:#54606c;}
+  .t-gold{background:var(--gold-bg); color:#8a5e08;}
+  .t-prism{background:#efeaff; color:#5b48d6;}
+  .t-done{background:#e6f4ec; color:#1f7a4d;}
+  .t-soon{background:#f3efe8; color:#8a7a63;}
+
+  /* callouts */
+  .call{border-left:4px solid var(--apple); background:var(--paper-2); border-radius:0 12px 12px 0; padding:14px 18px; margin:14px 0 18px;}
+  .call.note{border-left-color:var(--green);}
+  .call.warn{border-left-color:var(--gold);}
+  .call h4{margin:0 0 4px; color:var(--ink);}
+  .call p{margin:0; font-size:13.5px; color:var(--ink-2);}
+
+  .pill-row{display:flex; flex-wrap:wrap; gap:8px; margin:8px 0 16px;}
+  .pill{font-size:12px; font-weight:700; padding:6px 12px; border-radius:999px; background:var(--paper-3); color:var(--ink-2); border:1px solid var(--line);}
+
+  .grid2{display:flex; flex-wrap:wrap; gap:14px; margin:6px 0 14px;}
+  .card{flex:1 1 46%; min-width:240px; border:1px solid var(--line); border-radius:14px; padding:14px 16px; background:var(--paper);}
+  .card h4{margin-top:0;}
+  .card p{font-size:13px; margin:0; color:var(--ink-2);}
+
+  .swatches{display:flex; flex-wrap:wrap; gap:7px; margin:8px 0 6px;}
+  .sw{display:flex; align-items:center; gap:7px; font-size:11px; color:var(--ink-2); border:1px solid var(--line); border-radius:8px; padding:4px 8px 4px 4px;}
+  .sw i{width:20px;height:20px;border-radius:5px; display:block; border:1px solid rgba(0,0,0,.08);}
+  .mono{font-family:ui-monospace,'SFMono-Regular',Menlo,Consolas,monospace; font-size:12px; background:var(--paper-3); padding:1px 6px; border-radius:5px;}
+
+  .checklist{columns:2; column-gap:30px; font-size:13px;}
+  .checklist li{break-inside:avoid;}
+  @media print{ .checklist{columns:2;} }
+
+  .kvs{font-size:13px;}
+  .kvs div{display:flex; gap:10px; padding:5px 0; border-bottom:1px dashed var(--line);}
+  .kvs b{flex:0 0 168px; color:var(--ink-2); font-weight:700;}
+
+  hr{border:none; border-top:1px solid var(--line); margin:26px 0;}
+  .end{margin-top:40px; padding-top:16px; border-top:2px solid var(--ink); font-size:13px; color:var(--ink-3);}
+  .avoid{break-inside:avoid; page-break-inside:avoid;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- ============ COVER ============ -->
+<section class="cover">
+  <div class="mark">
+    <svg class="logo" viewBox="0 0 64 64" aria-hidden="true">
+      <path d="M32 18c-7-9-22-6-22 8 0 12 11 24 22 24s22-12 22-24c0-14-15-17-22-8z" fill="#e5503b"/>
+      <path d="M34 9c4-3 9-2 11 1-3 3-8 3-11-1z" fill="#5a9a48"/>
+      <text x="32" y="43" text-anchor="middle" font-size="22" font-weight="800" fill="#fff" font-family="sans-serif">10</text>
+    </svg>
+    증강 사과게임 · Augmented Apple Game
+  </div>
+
+  <div class="hero">
+    <span class="kicker">Design Brief · 디자인 의뢰서</span>
+    <h1>UI · 테마 · 배경<br>풀 비주얼 리디자인 의뢰</h1>
+    <p class="lede">"합이 10이 되도록 숫자 사과를 드래그로 담는" 사과게임 코어 위에, <em>리그 오브 레전드 아레나</em>식 증강 빌드와 실시간 1대1 대결을 얹은 웹 게임입니다. 게임 로직·기능은 거의 완성됐고, 이제 <strong>보이는 모든 것(UI·테마·배경·아이콘·모션·브랜딩)</strong>을 처음부터 다시 디자인하려 합니다.</p>
+  </div>
+
+  <div>
+    <div class="freehand">
+      <b>이 문서의 전제 — 디자이너 전권 위임.</b> 아래 "절대 제약"(§3) 몇 가지만 지켜주시면, 비주얼 컨셉·무드·컬러·스타일은 <b>전적으로 디자이너의 제안</b>을 따릅니다. 현재 화면 톤에 맞출 필요가 전혀 없습니다. 마음껏 갈아엎어 주세요.
+    </div>
+    <div class="meta">
+      <div><b>프로젝트</b>증강 사과게임 (웹, 데스크톱+모바일)</div>
+      <div><b>의뢰 범위</b>풀 디자인 시스템 (전 화면·전 상태·아이콘·모션)</div>
+      <div><b>현재 상태</b>기능 거의 완성, 개발 진행 중</div>
+      <div><b>문서 버전</b>v1.0 · 2026-05-30</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 1. 한눈에 ============ -->
+<h2 class="sec"><span class="n">01</span>프로젝트 한눈에</h2>
+<p class="sec-lead">바쁘면 이 페이지만 읽어도 됩니다.</p>
+
+<div class="kvs avoid">
+  <div><b>한 줄 정의</b><span>30초 안에 합이 10인 숫자 사과를 드래그로 최대한 많이 제거하고, 라운드 사이 증강을 쌓아 빌드를 만들어 1대1로 겨루는 캐주얼 경쟁 퍼즐 웹게임.</span></div>
+  <div><b>플랫폼</b><span>웹 단일 코드베이스. 데스크톱 + 모바일(터치) 모두. 세로/가로. 320px 폭부터 대응.</span></div>
+  <div><b>기술</b><span>React(메뉴·HUD·오버레이) + PixiJS(사과 보드 캔버스). 정적 배포(GitHub Pages) + Firebase 실시간 백엔드.</span></div>
+  <div><b>의뢰하는 것</b><span>UI·테마·배경·게임 보드 아트·증강/티어 아이콘·모션·브랜딩까지 — <strong>보이는 전부의 재설계 + 일관된 디자인 시스템</strong>.</span></div>
+  <div><b>창작 자유도</b><span>전권 위임. §3의 절대 제약만 지키면 컨셉은 자유.</span></div>
+  <div><b>꼭 피할 것</b><span>"제네릭 AI 룩"(특징 없는 보라-블루 그라데이션 템플릿). 사과게임 DNA(숫자 사과 격자 + 드래그 박스)는 유지.</span></div>
+  <div><b>가장 중요한 감각</b><span>"손맛" — 드래그해서 사과가 펑 터지는 순간이 즉각적이고 만족스러워야 함(아래 4대 기둥 1순위).</span></div>
+</div>
+
+<div class="call">
+  <h4>왜 다시 디자인하나</h4>
+  <p>현재 화면은 개발용으로 빠르게 만든 "따뜻한 다크 + 미니멀" 임시 룩입니다. 게임의 잠재력(중독적 코어 + 증강 빌드의 쾌감 + 실시간 경쟁)에 비해 비주얼 완성도가 못 미칩니다. 제품을 한 단계 끌어올릴 <strong>독창적이고 완성도 높은 비주얼 아이덴티티</strong>가 필요합니다.</p>
+</div>
+
+<!-- ============ 2. 게임 이해 ============ -->
+<h2 class="sec"><span class="n">02</span>게임 이해 — 무엇을, 어떻게 노나</h2>
+<p class="sec-lead">디자인 결정을 내리려면 게임이 어떻게 굴러가는지 알아야 합니다. 4개 레이어로 쌓여 있습니다.</p>
+
+<h3>① 코어 루프 — 사과게임 (Fruit Box)</h3>
+<ul>
+  <li><strong>17열 × 10행</strong> 격자에 <strong>1~9 숫자가 적힌 사과</strong>가 빼곡히 깔립니다(총 170칸).</li>
+  <li>마우스/손가락으로 <strong>직사각형</strong>을 드래그하면, 박스 안에 든 사과들의 <strong>숫자 합이 정확히 10</strong>일 때 모두 사라지고 점수를 얻습니다(사과 1개 = 1점).</li>
+  <li>제한 시간 <strong>30초</strong> 동안 최대 점수를 노립니다. 빠른 판단 + 연속 제거의 리듬이 핵심.</li>
+  <li>그래서 <strong>숫자 가독성</strong>과 <strong>제거 순간의 피드백</strong>이 디자인의 생명입니다.</li>
+</ul>
+
+<h3>② 증강 레이어 — 빌드 쌓기 (LoL 아레나식)</h3>
+<ul>
+  <li>라운드 사이마다 <strong>3개 중 1개</strong> 증강을 고릅니다(리롤 없음). 매치 내내 누적되어 "빌드"가 됩니다.</li>
+  <li>티어가 오릅니다: <span class="tag t-silver">실버</span> (R1·R2) → <span class="tag t-gold">골드</span> (R3·R4) → <span class="tag t-prism">프리즘</span> (R5 고정). 티어가 높을수록 효과가 강하고 화려해야 합니다.</li>
+  <li>6개 <strong>계열</strong>: 시간 · 콤보 · 보드 · 룰 · 하이리스크 · 견제. 각 계열은 고유한 시각 정체성(아이콘·색)이 필요합니다.</li>
+  <li>증강이 쌓일수록 점수가 폭발하는 <strong>성장감</strong>이 느껴져야 합니다(4대 기둥 2순위).</li>
+</ul>
+
+<h3>③ 대결 레이어 — 실시간 1대1</h3>
+<ul>
+  <li><strong>5라운드 × 30초</strong>. 라운드 점수 누적 + 라운드 승자 보너스 → 최종 1위 승.</li>
+  <li>지금은 <strong>오프라인 AI 대결</strong>이 동작합니다(난이도 자동 조절). 온라인 사람 대 사람은 다음 단계.</li>
+  <li><strong>MMR/ELO 랭크</strong>와 7단계 티어가 있습니다(§7). 승패에 따라 ΔMMR 연출이 들어갑니다.</li>
+  <li>끊김 없는 동기화 + 신뢰 가능한 랭크 = <strong>공정한 긴장감</strong>(4대 기둥 3순위).</li>
+</ul>
+
+<h3>④ 소셜 레이어 — 확산</h3>
+<ul>
+  <li>링크/카카오톡 공유, 친구 초대 보상, <strong>데일리 시드 챌린지</strong>(모두 같은 보드로 점수 경쟁).</li>
+  <li>공유 한 번이 새 유저·새 대결로 이어지는 <strong>바이럴 성장</strong>(4대 기둥 4순위) — 공유 카드/결과 화면이 자랑하고 싶게 생겨야 합니다.</li>
+</ul>
+
+<div class="call note avoid">
+  <h4>디자인 우선순위 = 게임의 4대 기둥</h4>
+  <p><strong>1. 즉각적 손맛</strong> (드래그·제거가 즉시 만족스럽게) › <strong>2. 빌드의 쾌감</strong> (증강이 쌓일수록 점수 폭발) › <strong>3. 공정한 긴장감</strong> (실시간 대결·랭크의 신뢰) › <strong>4. 바이럴 성장</strong> (공유가 확산으로). 비주얼·모션 결정은 이 순서대로 무게를 둬 주세요.</p>
+</div>
+
+<!-- ============ 3. 제약 & 자유 ============ -->
+<h2 class="sec"><span class="n">03</span>절대 제약 & 자유 영역</h2>
+<p class="sec-lead">아래 "지켜야 할 것"만 빼면 전부 자유입니다.</p>
+
+<h3>지켜야 할 것 (Hard constraints)</h3>
+<ul>
+  <li><strong>사과게임 DNA 유지</strong>: 숫자가 적힌 사과 격자 + 드래그 박스 선택. 이 핵심 메타포는 바뀌지 않습니다(과일은 꼭 사과가 아니어도 되지만, "숫자 오브젝트 격자를 박스로 묶는" 구조는 유지).</li>
+  <li><strong>숫자 가독성 최우선</strong>: 모바일에서 셀 한 칸이 <strong>~20px</strong>까지 작아집니다. 그 크기에서도 1~9가 즉시 읽혀야 합니다. 빽빽한 170칸이 시각적으로 피로하지 않아야 합니다.</li>
+  <li><strong>반응형</strong>: 320px(모바일 세로) → 데스크톱. 보드는 항상 화면에 꽉 맞게 들어가고, 터치 드래그와 마우스 드래그 모두 자연스러워야 합니다.</li>
+  <li><strong>성능</strong>: 보드는 드래그 중 <strong>60fps</strong> 미리보기 + 제거 파티클이 돕니다. 모바일을 무겁게 하는 과한 블러/그림자/필터 남발은 지양.</li>
+  <li><strong>30초 고텐션 가독성</strong>: 플레이 중 화면(보드·HUD)은 정보가 한눈에 들어와야 합니다. 장식이 판단을 방해하면 안 됩니다.</li>
+  <li><strong>한글 + 숫자</strong>: 모든 카피는 한국어. 폰트는 한글 전 음절 + 숫자 가독성 필수.</li>
+</ul>
+
+<h3>완전 자유 (Your call)</h3>
+<div class="pill-row">
+  <span class="pill">전체 컬러/무드 (다크·라이트·뭐든)</span>
+  <span class="pill">배경 컨셉·일러스트</span>
+  <span class="pill">사과/오브젝트 아트 스타일</span>
+  <span class="pill">타이포 선택</span>
+  <span class="pill">UI 컴포넌트 룩</span>
+  <span class="pill">증강·티어 아이콘 컨셉</span>
+  <span class="pill">모션·이펙트 언어</span>
+  <span class="pill">로고/워드마크</span>
+  <span class="pill">사운드 방향 제안(선택)</span>
+</div>
+<div class="call warn">
+  <h4>단 하나의 안티-패턴</h4>
+  <p>특징 없는 "AI가 만든 것 같은" 룩 — 의미 없는 보라/청록 그라데이션, 글래스모피즘 떡칠, 어디서나 본 둥근 카드의 나열 — 은 피해 주세요. <strong>이 게임만의 기억에 남는 정체성</strong>을 원합니다.</p>
+</div>
+
+<!-- ============ 4. 화면 인벤토리 ============ -->
+<h2 class="sec"><span class="n">04</span>디자인해야 할 화면 &amp; 상태 전부</h2>
+<p class="sec-lead">현재 구현된 화면(A군)과, 시스템이 곧 포함할 화면(B군, 향후 단계지만 디자인 시스템에 미리 반영). 각 화면의 실제 한국어 카피는 §8에 모았습니다.</p>
+
+<h3>A. 지금 있는 화면 (우선 리디자인)</h3>
+<table class="avoid">
+  <thead><tr><th style="width:130px">화면</th><th>구성 요소</th><th style="width:200px">상태(states)</th></tr></thead>
+  <tbody>
+    <tr><td><strong>홈</strong></td><td>로고/워드마크, 타이틀, 한 줄 설명, CTA 버튼 3개(빠른 한 판·30초 / 5라운드 증강 모드 / AI와 대결·5라운드), 최고 점수, 안내 문구</td><td>최고점 0 vs 표시, 버튼 hover/press</td></tr>
+    <tr><td><strong>게임(보드)</strong></td><td>사과 격자(PixiJS 캔버스), 상단 HUD: 라운드 칩(R n/5)·점수·시간 바·남은 초·콤보 칩</td><td>일반, 잔여 ≤5초(경고), 콤보 표시, 선택중 박스(진행/유효), 제거 파티클</td></tr>
+    <tr><td><strong>증강 선택</strong></td><td>티어 배지, 제목("라운드 N · 증강 선택"), 안내("하나를 골라 빌드를 쌓으세요 · 리롤 없음"), 증강 카드 3장(계열·이름·효과 설명)</td><td>티어별(실버/골드/프리즘) 스타일, 카드 hover/선택</td></tr>
+    <tr><td><strong>결과(솔로)</strong></td><td>제목(최고 기록! / 게임 종료), 큰 점수, 최고·라운드 수, 버튼(다시 하기 / 홈으로)</td><td>신기록 vs 일반</td></tr>
+    <tr><td><strong>대결 HUD</strong></td><td>좌(나: 점수·콤보), 중앙(R n/5·라운드 승수 me:opp·시간 바·초), 우(상대 이름·점수)</td><td>잔여 ≤5초, 콤보, 점수 역전 순간</td></tr>
+    <tr><td><strong>대결 결과</strong></td><td>제목(승리!/패배/무승부), 양측 최종 점수(나 : 상대), 라운드 승수, 랭크 ΔMMR 또는 "연습(언랭크)", 버튼(다시 대결 / 홈으로)</td><td>승/패/무, 랭크 vs 언랭크</td></tr>
+  </tbody>
+</table>
+
+<h3>B. 곧 들어올 화면 (시스템에 미리 반영)</h3>
+<table class="avoid">
+  <thead><tr><th style="width:130px">화면/요소</th><th>설명</th><th style="width:120px">단계</th></tr></thead>
+  <tbody>
+    <tr><td>닉네임 설정</td><td>최초 진입 시 닉네임 입력/변경. 텍스트 인풋 + 확인.</td><td>온라인</td></tr>
+    <tr><td>매칭/로비</td><td>빠른 매칭 대기, 비공개 방 만들기, 방 코드 6자 입력, 딥링크 입장.</td><td>온라인</td></tr>
+    <tr><td>카운트다운</td><td>라운드 시작 전 3·2·1 연출.</td><td>대결</td></tr>
+    <tr><td>리더보드 / 티어</td><td>7단계 티어 표시, 랭킹 리스트(닉네임·티어·MMR), 내 프로필.</td><td>랭크</td></tr>
+    <tr><td>데일리 챌린지</td><td>오늘의 시드 보드, 점수 제출, 일자별 랭킹, 공유.</td><td>소셜</td></tr>
+    <tr><td>공유 카드(OG)</td><td>결과·초대를 SNS/카톡에 뿌릴 때의 미리보기 카드 이미지.</td><td>소셜</td></tr>
+    <tr><td>견제(방해) 연출</td><td>상대를 흔드는 효과: 블랙아웃(화면 가림)·셔플·동결(정지)·강탈·잡티·눈속임. 화면 전체에 깔리는 FX 레이어.</td><td>대결4</td></tr>
+    <tr><td>호환 배너 / 전체화면</td><td>인앱 브라우저(카톡 등) 감지 시 "외부 브라우저로 열기" 배너, 전체화면 토글.</td><td>소셜</td></tr>
+    <tr><td>토스트/시스템</td><td>복사 완료·에러·재접속 등 가벼운 알림. 로딩/스플래시.</td><td>전역</td></tr>
+  </tbody>
+</table>
+
+<!-- ============ 5. 보드 아트 ============ -->
+<h2 class="sec"><span class="n">05</span>게임 보드 아트 (가장 중요한 표면)</h2>
+<p class="sec-lead">플레이어가 시간의 90%를 보는 화면입니다. 여기서 게임의 인상이 결정됩니다. 보드는 PixiJS 캔버스에 그려집니다(웹 DOM이 아님) — 디자이너는 벡터 스펙 또는 스프라이트 에셋으로 납품하면 개발이 캔버스에 반영합니다.</p>
+
+<div class="grid2">
+  <div class="card"><h4>사과 — 기본</h4><p>1~9 숫자. 가장 흔한 오브젝트 170개가 깔립니다. 작은 크기에서의 숫자 대비·가독성이 전부입니다.</p></div>
+  <div class="card"><h4>사과 — 황금 (golden)</h4><p>증강 "황금 사과"로 등장. 점수 2배. 일반과 한눈에 구분되되 과하지 않게.</p></div>
+  <div class="card"><h4>사과 — 와일드 (wild)</h4><p>아무 값으로 쓰이는 특수 사과. 시각적으로 "변환 가능"한 느낌.</p></div>
+  <div class="card"><h4>빈 칸 (제거됨)</h4><p>사과가 사라진 자리. 보드 바닥/패널이 보이는 상태.</p></div>
+  <div class="card"><h4>선택 박스 — 진행 중</h4><p>드래그 중이지만 아직 합이 10이 아님(중립 색). 합이 맞으면 즉시 "유효" 상태로 전환.</p></div>
+  <div class="card"><h4>선택 박스 — 유효(=10)</h4><p>합 10 달성. "지금 놓으면 제거!" 신호(현재는 초록). 가장 중요한 긍정 피드백.</p></div>
+  <div class="card"><h4>제거 이펙트</h4><p>사과가 터지는 파티클 버스트 + 짧은 사운드. <strong>손맛의 핵심.</strong> 콤보 시 강해지면 좋음.</p></div>
+  <div class="card"><h4>보드 배경/패널</h4><p>격자 아래 깔리는 면. 사과 가독성을 해치지 않는 선에서 분위기를 만드는 곳.</p></div>
+</div>
+
+<div class="call">
+  <h4>크기 스펙 (가독성 기준)</h4>
+  <p>셀(정사각형) 한 변은 화면에 맞춰 가변입니다. <strong>모바일 최소 ~20px ~ 데스크톱 ~50px</strong> 범위를 가정하고, 숫자는 셀의 약 46% 크기로 들어갑니다. 두 극단 모두에서 또렷해야 합니다. 현재는 사과를 코드로 벡터 드로잉(원형 보디 + 상단 하이라이트 + 잎 줄기)하고 있으나, <strong>스타일은 자유롭게 재정의</strong>해 주세요.</p>
+</div>
+
+<!-- ============ 6. 증강 카탈로그 ============ -->
+<h2 class="sec"><span class="n">06</span>증강 시스템 — 카드 &amp; 아이콘 (전체 카탈로그)</h2>
+<p class="sec-lead">증강은 카드로 제시되고, 각 증강에는 아이콘이 필요합니다. 6개 계열 각각의 시각 정체성 + 3개 티어의 위계가 핵심입니다. 아래는 전체 22종(현재 12종 구현, 나머지는 대결 단계에서 활성화).</p>
+
+<h3>티어 위계</h3>
+<div class="pill-row">
+  <span class="pill"><span class="tag t-silver">실버</span> &nbsp;기본 · 깔끔 · R1·R2</span>
+  <span class="pill"><span class="tag t-gold">골드</span> &nbsp;강함 · 화려 · R3·R4</span>
+  <span class="pill"><span class="tag t-prism">프리즘</span> &nbsp;최상위 · 압도적 · R5 고정</span>
+</div>
+
+<h3>6개 계열 (각각 아이콘/색 정체성 필요)</h3>
+<table class="avoid">
+  <thead><tr><th style="width:90px">계열</th><th>성격</th><th>대표 효과 예</th></tr></thead>
+  <tbody>
+    <tr><td><strong>시간</strong></td><td>시계를 내 편으로</td><td>+시간, 드래그 중 감속, 타이머 정지</td></tr>
+    <tr><td><strong>콤보</strong></td><td>연속·배수 성장</td><td>콤보 유지 시 점수 1.5×, 무한 연쇄</td></tr>
+    <tr><td><strong>보드</strong></td><td>판 자체를 유리하게</td><td>황금/와일드 사과, 자동 정리, 즉시 보충</td></tr>
+    <tr><td><strong>룰</strong></td><td>합 규칙을 바꿈</td><td>합 9 인정, 10·11 인정, 10의 배수 인정</td></tr>
+    <tr><td><strong>하이리스크</strong></td><td>고위험 고수익</td><td>점수 ×1.8~×3, 대신 페널티/시간 압박</td></tr>
+    <tr><td><strong>견제</strong></td><td>상대를 흔듦(대결)</td><td>셔플·동결·강탈·암전·눈속임·잡티</td></tr>
+  </tbody>
+</table>
+
+<h3>전체 증강 목록 (아이콘 1개씩 필요)</h3>
+<table>
+  <thead><tr><th>계열</th><th class="c">티어</th><th style="width:110px">이름</th><th>효과</th><th class="c" style="width:74px">구현</th></tr></thead>
+  <tbody>
+    <tr><td>시간</td><td class="c"><span class="tag t-silver">실버</span></td><td>여유</td><td>라운드 시작 시 +3초</td><td class="c"><span class="tag t-done">현재</span></td></tr>
+    <tr><td>시간</td><td class="c"><span class="tag t-silver">실버</span></td><td>초읽기</td><td>콤보 성공마다 +0.5초</td><td class="c"><span class="tag t-done">현재</span></td></tr>
+    <tr><td>시간</td><td class="c"><span class="tag t-gold">골드</span></td><td>잔상</td><td>드래그하는 동안 시간 60% 감속</td><td class="c"><span class="tag t-done">현재</span></td></tr>
+    <tr><td>시간</td><td class="c"><span class="tag t-prism">프리즘</span></td><td>시간의 지배자</td><td>드래그하지 않는 동안 타이머 정지</td><td class="c"><span class="tag t-done">현재</span></td></tr>
+    <tr><td>콤보</td><td class="c"><span class="tag t-silver">실버</span></td><td>훈련</td><td>4개 이상 한 번에 제거 시 +5%</td><td class="c"><span class="tag t-done">현재</span></td></tr>
+    <tr><td>콤보</td><td class="c"><span class="tag t-gold">골드</span></td><td>연쇄</td><td>콤보 유지 시 점수 1.5× (끊기면 리셋)</td><td class="c"><span class="tag t-done">현재</span></td></tr>
+    <tr><td>콤보</td><td class="c"><span class="tag t-prism">프리즘</span></td><td>무한 연쇄</td><td>콤보 절대 안 끊김, 배수 무제한 누적</td><td class="c"><span class="tag t-soon">예정</span></td></tr>
+    <tr><td>보드</td><td class="c"><span class="tag t-silver">실버</span></td><td>재배치</td><td>시작 시 합 10 짝을 여러 개 만들어 줌</td><td class="c"><span class="tag t-done">현재</span></td></tr>
+    <tr><td>보드</td><td class="c"><span class="tag t-silver">실버</span></td><td>와일드</td><td>라운드당 와일드 사과 1개(아무 값 대체)</td><td class="c"><span class="tag t-soon">예정</span></td></tr>
+    <tr><td>보드</td><td class="c"><span class="tag t-gold">골드</span></td><td>황금 사과</td><td>라운드당 황금 사과 2개(점수 2배)</td><td class="c"><span class="tag t-done">현재</span></td></tr>
+    <tr><td>보드</td><td class="c"><span class="tag t-prism">프리즘</span></td><td>풍요</td><td>제거 자리에 즉시 새 사과 보충(무한 공급)</td><td class="c"><span class="tag t-soon">예정</span></td></tr>
+    <tr><td>룰</td><td class="c"><span class="tag t-silver">실버</span></td><td>친절</td><td>합 9도 인정</td><td class="c"><span class="tag t-done">현재</span></td></tr>
+    <tr><td>룰</td><td class="c"><span class="tag t-gold">골드</span></td><td>11의 길</td><td>합 10·11 모두 인정</td><td class="c"><span class="tag t-done">현재</span></td></tr>
+    <tr><td>룰</td><td class="c"><span class="tag t-prism">프리즘</span></td><td>연금술</td><td>10의 배수면 모두 인정 (10·20·30…)</td><td class="c"><span class="tag t-done">현재</span></td></tr>
+    <tr><td>하이리스크</td><td class="c"><span class="tag t-gold">골드</span></td><td>양날의 검</td><td>점수 1.8×, 실패 드래그마다 −3</td><td class="c"><span class="tag t-soon">예정</span></td></tr>
+    <tr><td>하이리스크</td><td class="c"><span class="tag t-prism">프리즘</span></td><td>유리대포</td><td>점수 3×, 그러나 타이머 2배 속도</td><td class="c"><span class="tag t-done">현재</span></td></tr>
+    <tr><td>견제</td><td class="c"><span class="tag t-silver">실버</span></td><td>눈속임</td><td>시작 1초간 상대 숫자 흐림</td><td class="c"><span class="tag t-soon">예정</span></td></tr>
+    <tr><td>견제</td><td class="c"><span class="tag t-silver">실버</span></td><td>잡티</td><td>시작 시 상대 보드에 잡템 사과 소량</td><td class="c"><span class="tag t-soon">예정</span></td></tr>
+    <tr><td>견제</td><td class="c"><span class="tag t-gold">골드</span></td><td>지진</td><td>라운드 중반 상대 보드 1회 셔플</td><td class="c"><span class="tag t-soon">예정</span></td></tr>
+    <tr><td>견제</td><td class="c"><span class="tag t-gold">골드</span></td><td>동결</td><td>상대 타이머/입력 1.5초 정지</td><td class="c"><span class="tag t-soon">예정</span></td></tr>
+    <tr><td>견제</td><td class="c"><span class="tag t-prism">프리즘</span></td><td>강탈</td><td>이번 라운드 상대 점수의 20% 흡수</td><td class="c"><span class="tag t-soon">예정</span></td></tr>
+    <tr><td>견제</td><td class="c"><span class="tag t-prism">프리즘</span></td><td>암전</td><td>상대 화면 2초 가림</td><td class="c"><span class="tag t-soon">예정</span></td></tr>
+  </tbody>
+</table>
+<p class="muted" style="font-size:12.5px">카드 해부(anatomy)도 정의 필요: 계열 라벨 · 이름 · 효과 설명 · 티어 표식 · (보유 중 표시). 3장이 나란히 놓일 때의 비교 가독성이 중요합니다.</p>
+
+<!-- ============ 7. 랭크/티어 ============ -->
+<h2 class="sec"><span class="n">07</span>랭크 · 티어 시스템 (배지 7종)</h2>
+<p class="sec-lead">MMR/ELO 기반(시작 1000). 7단계 티어 각각에 엠블럼/배지가 필요하고, 승급/강등·ΔMMR 순간의 연출이 필요합니다.</p>
+<table class="avoid">
+  <thead><tr><th>티어</th><th>MMR 구간</th><th>느낌(제안 자유)</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Iron</strong> 아이언</td><td>&lt; 800</td><td>입문</td></tr>
+    <tr><td><strong>Bronze</strong> 브론즈</td><td>800–999</td><td>기본</td></tr>
+    <tr><td><strong>Silver</strong> 실버</td><td>1000–1199</td><td>표준(시작점)</td></tr>
+    <tr><td><strong>Gold</strong> 골드</td><td>1200–1399</td><td>숙련</td></tr>
+    <tr><td><strong>Platinum</strong> 플래티넘</td><td>1400–1599</td><td>상위</td></tr>
+    <tr><td><strong>Diamond</strong> 다이아몬드</td><td>1600–1799</td><td>정예</td></tr>
+    <tr><td><strong>Master</strong> 마스터</td><td>≥ 1800</td><td>최상위</td></tr>
+  </tbody>
+</table>
+<p class="muted" style="font-size:12.5px">주의: 증강 "티어"(실버·골드·프리즘)와 랭크 "티어"(아이언~마스터)는 <strong>다른 체계</strong>입니다. 시각적으로 혼동되지 않게 구분해 주세요.</p>
+
+<!-- ============ 8. 카피 인벤토리 ============ -->
+<h2 class="sec"><span class="n">08</span>카피 인벤토리 (화면에 실제로 들어가는 한국어 문구)</h2>
+<p class="sec-lead">레이아웃 시 실제 텍스트 길이를 가늠할 수 있도록 현재 카피를 모았습니다. 문구 자체도 개선 제안 환영.</p>
+
+<h4>홈</h4>
+<ul>
+  <li>타이틀: <strong>증강 사과게임</strong></li>
+  <li>설명: 합이 <strong>10</strong>이 되도록 사과를 드래그해 담으세요</li>
+  <li>버튼: <strong>빠른 한 판 · 30초</strong> / <strong>5라운드 증강 모드</strong> / <strong>AI와 대결 · 5라운드</strong></li>
+  <li>최고 점수 <span class="mono">{N}</span> · 데스크톱·모바일 모두 드래그로 플레이</li>
+</ul>
+<h4>게임 HUD</h4>
+<ul><li>라운드 칩: <span class="mono">R{n}/5</span> · 점수: <span class="mono">{N}점</span> · 콤보: <span class="mono">{N} 콤보</span> · 시간: <span class="mono">{초}</span></li></ul>
+<h4>증강 선택</h4>
+<ul>
+  <li>티어 배지: <strong>실버 / 골드 / 프리즘</strong></li>
+  <li>제목: <strong>라운드 {N} · 증강 선택</strong> · 안내: 하나를 골라 빌드를 쌓으세요 · 리롤 없음</li>
+  <li>계열 라벨: 시간 / 콤보 / 보드 / 룰 / 하이리스크 / 견제</li>
+</ul>
+<h4>결과(솔로)</h4>
+<ul><li>제목: <strong>최고 기록!</strong> / <strong>게임 종료</strong> · 점수 <span class="mono">{N}점</span> · 최고 {N} · {N}라운드 · 버튼: 다시 하기 / 홈으로</li></ul>
+<h4>대결 HUD / 결과</h4>
+<ul>
+  <li>HUD: 나 / {상대이름} · 점수 · <span class="mono">R{n}/5</span> · 라운드 승수 <span class="mono">{me} : {opp}</span></li>
+  <li>결과 제목: <strong>승리!</strong> / <strong>패배</strong> / <strong>무승부</strong></li>
+  <li>라운드 {me} : {opp} · <span class="mono">연습(언랭크)</span> 또는 <span class="mono">MMR +{N}</span> · 버튼: 다시 대결 / 홈으로</li>
+</ul>
+
+<!-- ============ 9. 현재 토큰 ============ -->
+<h2 class="sec"><span class="n">09</span>현재 디자인 토큰 (전면 교체 대상 · 참고용)</h2>
+<p class="sec-lead">지금 코드에 박혀 있는 값입니다. <strong>그대로 둘 이유가 전혀 없고</strong>, 어떤 변수들이 존재하는지(개발 핸드오프 시 무엇을 바꾸는지)만 참고하시면 됩니다. 새 시스템은 이 변수들을 대체하게 됩니다.</p>
+
+<h4>현재 팔레트</h4>
+<div class="swatches">
+  <span class="sw"><i style="background:#17120f"></i>bg #17120f</span>
+  <span class="sw"><i style="background:#241c17"></i>panel #241c17</span>
+  <span class="sw"><i style="background:#e5503b"></i>apple #e5503b</span>
+  <span class="sw"><i style="background:#ff7d68"></i>apple-soft #ff7d68</span>
+  <span class="sw"><i style="background:#f2b33a"></i>gold #f2b33a</span>
+  <span class="sw"><i style="background:#ffd97a"></i>gold-soft #ffd97a</span>
+  <span class="sw"><i style="background:#6fae5a"></i>leaf #6fae5a</span>
+  <span class="sw"><i style="background:#66c98a"></i>green #66c98a</span>
+  <span class="sw"><i style="background:#9defb0"></i>green-soft #9defb0</span>
+  <span class="sw"><i style="background:#8a7dff"></i>prism-a #8a7dff</span>
+  <span class="sw"><i style="background:#6ad7d0"></i>prism-b #6ad7d0</span>
+  <span class="sw"><i style="background:#fff6ee;border-color:#ccc"></i>text #fff6ee</span>
+  <span class="sw"><i style="background:#cdbcac"></i>muted #cdbcac</span>
+</div>
+<h4>그 외 토큰</h4>
+<div class="kvs avoid">
+  <div><b>폰트</b><span>Pretendard (한글), 숫자는 tabular-nums</span></div>
+  <div><b>라운드</b><span>radius 18px / sm 12px / 카드 24~26px / 버튼 14px / 칩 999px</span></div>
+  <div><b>그림자</b><span>0 18px 50px rgba(0,0,0,.45) 등 부드러운 대형 섀도우</span></div>
+  <div><b>이징</b><span>cubic-bezier(.22, 1, .36, 1) — "soft premium" 스프링감</span></div>
+  <div><b>보드 비율</b><span>사과 반지름 = 셀의 0.4 · 숫자 = 셀의 0.46 · 선택 박스 모서리 = 셀의 0.12</span></div>
+  <div><b>모션 예시</b><span>등장(rise: 14px+scale .98), 팝(pop: scale .6→1), 펄스(저시간 깜빡임)</span></div>
+</div>
+<div class="call note">
+  <h4>토큰은 두 곳에 동기화됩니다</h4>
+  <p>① <span class="mono">src/ui/styles.css</span>의 CSS 변수(React/DOM UI) ② <span class="mono">src/board/theme.ts</span>의 숫자 토큰(Pixi 보드). 새 디자인 시스템은 <strong>하나의 토큰 소스</strong>로 정리해 주시면 개발이 양쪽에 반영하기 좋습니다.</p>
+</div>
+
+<!-- ============ 10. 기술 핸드오프 ============ -->
+<h2 class="sec"><span class="n">10</span>기술 제약 &amp; 핸드오프 (구현 가능해야 합니다)</h2>
+<p class="sec-lead">두 개의 렌더링 세계가 있습니다. 어디에 무엇을 납품하면 되는지.</p>
+<div class="grid2">
+  <div class="card"><h4>① React / CSS 세계</h4><p>홈·오버레이·HUD·메뉴·버튼·카드·배지·인풋·토스트. → <strong>CSS로 구현 가능한 스펙 + 디자인 토큰(CSS 변수)</strong>으로 납품. 컴포넌트 상태(hover/press/disabled/focus) 포함.</p></div>
+  <div class="card"><h4>② PixiJS / 캔버스 세계</h4><p>사과 보드·사과·선택 박스·파티클·견제 FX. → <strong>벡터 드로잉 스펙(색·치수·비율) 또는 스프라이트 에셋(SVG, 그리고 래스터는 @1x/@2x/@3x)</strong>으로 납품. 현재는 코드 벡터 드로잉.</p></div>
+</div>
+<ul>
+  <li><strong>반응형</strong>: 320px → 데스크톱. 보드 자동 맞춤(정사각 셀), 안전영역(노치) 대응(<span class="mono">viewport-fit=cover</span>).</li>
+  <li><strong>인터랙션</strong>: 마우스 드래그 + 터치 드래그, 텍스트 선택/탭 하이라이트 비활성, 전체화면 토글, 가로 모드 힌트.</li>
+  <li><strong>성능 예산</strong>: 드래그 미리보기·파티클 60fps. 모바일 GPU를 의식한 효과(과한 blur/filter 자제).</li>
+  <li><strong>폰트</strong>: 웹폰트 로딩 계획 포함(한글 서브셋 권장). 숫자 가독성 우선.</li>
+  <li><strong>다크/라이트</strong>: 한쪽만 해도 되고 둘 다 제안해도 됩니다(디자이너 판단). 단 토큰 구조로.</li>
+</ul>
+
+<!-- ============ 11. 납품물 ============ -->
+<h2 class="sec"><span class="n">11</span>요청하는 결과물 — 풀 디자인 시스템</h2>
+<p class="sec-lead">아래를 하나의 일관된 시스템으로. (모두 한 번에가 아니라, §13 단계로 진행해도 됩니다.)</p>
+
+<h4>1) 파운데이션</h4>
+<ul class="checklist">
+  <li>컬러 시스템(시맨틱 토큰)</li>
+  <li>타이포 스케일</li>
+  <li>스페이싱·그리드</li>
+  <li>라운드·보더</li>
+  <li>엘리베이션/그림자</li>
+  <li>모션 원칙(지속시간·이징)</li>
+</ul>
+<h4>2) 컴포넌트</h4>
+<ul class="checklist">
+  <li>버튼(primary/gold/ghost/versus + 상태)</li>
+  <li>칩·배지(라운드/콤보/티어)</li>
+  <li>카드(증강/결과)</li>
+  <li>HUD 요소·시간 바</li>
+  <li>오버레이/모달·토스트</li>
+  <li>인풋(닉네임/방 코드)</li>
+  <li>리더보드 행·프로필</li>
+</ul>
+<h4>3) 화면 (전 상태, 모바일+데스크톱)</h4>
+<ul class="checklist">
+  <li>§4 A군 전부</li>
+  <li>§4 B군(시스템 반영)</li>
+  <li>빈/로딩/에러 상태</li>
+  <li>승/패/신기록 변형</li>
+</ul>
+<h4>4) 보드 아트 키트</h4>
+<ul class="checklist">
+  <li>사과 normal/golden/wild</li>
+  <li>숫자 1~9 스타일</li>
+  <li>선택 박스(진행/유효)</li>
+  <li>제거 파티클·콤보 이펙트</li>
+  <li>빈 칸·보드 배경</li>
+</ul>
+<h4>5) 아이코노그래피</h4>
+<ul class="checklist">
+  <li>증강 계열 마크 6종</li>
+  <li>증강 아이콘 22종</li>
+  <li>랭크 티어 배지 7종</li>
+  <li>공유·전체화면 등 기능 아이콘</li>
+</ul>
+<h4>6) 모션</h4>
+<ul class="checklist">
+  <li>제거 버스트·점수/콤보 팝</li>
+  <li>오버레이 전환·카운트다운</li>
+  <li>견제 FX(블랙아웃/셔플/동결/강탈)</li>
+  <li>ΔMMR·승급 연출</li>
+</ul>
+<h4>7) 브랜드</h4>
+<ul class="checklist">
+  <li>로고/워드마크</li>
+  <li>앱 아이콘/파비콘</li>
+  <li>공유(OG) 카드</li>
+  <li>스플래시/로딩</li>
+</ul>
+
+<div class="call avoid">
+  <h4>납품 포맷(권장)</h4>
+  <p>① <strong>Figma</strong> 원본(단일 진실 소스, 오토레이아웃·컴포넌트·배리언트) · ② 아이콘/배지 <strong>SVG</strong> 내보내기 + 래스터 <strong>@1x/2x/3x PNG</strong> · ③ <strong>디자인 토큰</strong>(JSON/Style-Dictionary 또는 CSS 변수 + theme 숫자) · ④ 레드라인/스펙(간격·치수·상태) · ⑤ 핵심 모션은 <strong>Lottie 또는 짧은 영상/스펙</strong>. 개발이 React(CSS) + PixiJS에 바로 옮길 수 있는 형태면 무엇이든 좋습니다.</p>
+</div>
+
+<!-- ============ 12. 무드 & 안티패턴 ============ -->
+<h2 class="sec"><span class="n">12</span>무드 가이드 &amp; 피해야 할 것</h2>
+<div class="grid2">
+  <div class="card"><h4>지향</h4><p>독창적이고 기억에 남는 정체성 · 사과게임 특유의 "톡톡 터지는" 손맛 · 증강이 쌓일 때의 성장·화려함 · 대결의 긴장과 승리의 카타르시스 · 자랑하고 싶은 결과/공유 화면.</p></div>
+  <div class="card"><h4>지양</h4><p>제네릭 AI 룩(의미 없는 보라/청록 그라데이션) · 글래스모피즘 떡칠 · 작은 셀에서 안 읽히는 숫자 · 30초 플레이를 방해하는 장식·모션 · 두 "티어" 체계의 혼동 · 입력을 지연시키는 무거운 전환.</p></div>
+</div>
+
+<!-- ============ 13. 협업/다음 단계 ============ -->
+<h2 class="sec"><span class="n">13</span>협업 &amp; 다음 단계</h2>
+<h4>제안하는 진행 순서</h4>
+<ol>
+  <li><strong>킥오프 + 무드보드</strong> — 방향 2~3안 제안(컨셉/컬러/타이포/사과 스타일).</li>
+  <li><strong>파운데이션 + 핵심 화면</strong> — 홈 · 게임 보드 · 증강 선택 · 결과 먼저 확정.</li>
+  <li><strong>전체 시스템</strong> — 컴포넌트·전 화면·전 상태·아이콘·티어.</li>
+  <li><strong>모션 + 핸드오프</strong> — 이펙트 스펙 + 토큰/에셋 납품.</li>
+</ol>
+<h4>킥오프 때 정하면 좋은 것 (디자이너 주도로)</h4>
+<ul>
+  <li>전체 톤: 다크/라이트, 캐주얼/프리미엄, 사실적/일러스트?</li>
+  <li>"사과"를 유지할지, 다른 모티프로 갈지(숫자 격자 구조는 유지).</li>
+  <li>배경: 정적 일러스트 / 미세 모션 / 단색 — 어디까지?</li>
+  <li>증강·티어 아이콘의 표현 양식(라인/면/3D/엠블럼).</li>
+</ul>
+<div class="call note avoid">
+  <h4>꼭 한 번: 직접 손맛 체험</h4>
+  <p>게임을 로컬에서 <span class="mono">npm install &amp;&amp; npm run dev</span> (→ <span class="mono">localhost:5173</span>)로 실행해 <strong>드래그·제거·콤보·증강 선택</strong>을 직접 만져보시길 강력히 권합니다. 30초의 리듬과 "손맛"을 느껴야 무엇을 디자인하는지 잡힙니다.</p>
+</div>
+
+<h4 style="margin-top:18px">참고: 화면 ↔ 코드 위치 (개발 협업용)</h4>
+<table class="avoid">
+  <thead><tr><th>화면/대상</th><th>코드 위치</th></tr></thead>
+  <tbody>
+    <tr><td>홈</td><td class="mono">src/ui/screens/HomeScreen.tsx</td></tr>
+    <tr><td>게임 화면·HUD</td><td class="mono">src/ui/screens/GameScreen.tsx · components/Hud.tsx</td></tr>
+    <tr><td>증강 선택</td><td class="mono">src/ui/components/AugmentOverlay.tsx</td></tr>
+    <tr><td>결과 / 대결 결과</td><td class="mono">components/ResultOverlay.tsx · VersusResult.tsx</td></tr>
+    <tr><td>대결 HUD</td><td class="mono">src/ui/components/VersusHud.tsx</td></tr>
+    <tr><td>CSS 토큰·스타일</td><td class="mono">src/ui/styles.css</td></tr>
+    <tr><td>보드 렌더·사과·파티클</td><td class="mono">src/board/BoardView.ts</td></tr>
+    <tr><td>보드 디자인 토큰</td><td class="mono">src/board/theme.ts</td></tr>
+    <tr><td>증강 카탈로그(효과·이름)</td><td class="mono">src/augments/data/catalog.ts</td></tr>
+  </tbody>
+</table>
+
+<div class="end">
+  증강 사과게임 — UI/비주얼 풀 리디자인 의뢰서 · v1.0 · 2026-05-30 · 디자이너 전권 위임. 질문·역제안 모두 환영합니다.
+</div>
+
+</div>
+</body>
+</html>

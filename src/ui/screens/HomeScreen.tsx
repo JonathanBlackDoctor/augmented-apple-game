@@ -5,6 +5,7 @@ export function HomeScreen() {
   const startSolo = useGameStore((s) => s.startSolo);
   const startAugment = useGameStore((s) => s.startAugment);
   const startVersus = useGameStore((s) => s.startVersus);
+  const startOnline = useGameStore((s) => s.startOnline);
   return (
     <div className="screen home">
       <div className="home-card">
@@ -33,6 +34,9 @@ export function HomeScreen() {
           </button>
           <button className="btn versus" onClick={() => startVersus(5, 30_000)}>
             AI와 대결 · 5라운드
+          </button>
+          <button className="btn online" onClick={() => startOnline()}>
+            친구와 1:1 대결
           </button>
         </div>
         {best > 0 && <p className="best">최고 점수 {best}</p>}

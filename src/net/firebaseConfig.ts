@@ -1,20 +1,15 @@
-// net/firebaseConfig.ts — PLACEHOLDER (plan §19).
-// Firebase web config keys are PUBLIC by design; real security comes from the
-// RTDB rules (firebase/database.rules.json) + authorized domains + (optional)
-// App Check. Replace the placeholders below with the config object from the
-// Firebase console (Project settings -> Your apps -> Web app), then wire the
-// `net`/`profile` modules in Phase 2.
-//
-// TODO(user): create the Firebase project and paste the real values here.
+// net/firebaseConfig.ts — Firebase web config (plan §19). These keys are PUBLIC
+// by design; security comes from the RTDB rules + authorized domains. Project:
+// augmented-apple-game (RTDB us-central1, Anonymous Auth enabled).
 export const firebaseConfig = {
-  apiKey: 'REPLACE_ME',
-  authDomain: 'REPLACE_ME.firebaseapp.com',
-  databaseURL: 'https://REPLACE_ME-default-rtdb.firebaseio.com',
-  projectId: 'REPLACE_ME',
-  storageBucket: 'REPLACE_ME.appspot.com',
-  messagingSenderId: 'REPLACE_ME',
-  appId: 'REPLACE_ME',
+  apiKey: 'AIzaSyBntFufsRT7aI8oG4tsQHunyzWNtY-PBCM',
+  authDomain: 'augmented-apple-game.firebaseapp.com',
+  databaseURL: 'https://augmented-apple-game-default-rtdb.firebaseio.com',
+  projectId: 'augmented-apple-game',
+  storageBucket: 'augmented-apple-game.firebasestorage.app',
+  messagingSenderId: '185191169212',
+  appId: '1:185191169212:web:32eb1da48b6c3d01eca4b9',
 } as const;
 
-/** Set to true only after the values above are filled in. */
-export const FIREBASE_CONFIGURED = false;
+/** True now that the values above are real. */
+export const FIREBASE_CONFIGURED = true;

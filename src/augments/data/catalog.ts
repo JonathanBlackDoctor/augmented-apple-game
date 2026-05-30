@@ -215,14 +215,41 @@ export const CATALOG: Augment[] = [
   {
     id: 'board.bomb',
     name: '폭탄 사과',
-    desc: '폭탄 사과 2개 (제거 시 각 +5점)',
+    desc: '폭탄 사과 2개 — 제거 시 상하좌우에 남은 사과도 함께 터뜨림',
     tier: 'silver',
     family: 'board',
     hooks: {
       onBoardInit: (b, rng) => tagCells(b, rng, 2, 'bomb'),
+      // When a bomb apple is cleared, blow up its (up to 4) orthogonal
+      // neighbours that are still on the board. Mutates the live engine board
+      // (same reference the UI re-reads via getBoard()) and adds the exploded
+      // cells to result.cells so they animate/score like normal clears. Single
+      // level only — exploded bombs do not chain. Deterministic (geometry-based),
+      // so replay/online sync stay reproducible.
       onClear: (r, c) => {
-        const bombs = c.clearedTags.filter((t) => t === 'bomb').length;
-        return bombs > 0 ? { ...r, finalScore: r.finalScore + bombs * 5 } : r;
+        const board = c.board;
+        const { cols, rows } = board;
+        const extra: number[] = [];
+        r.cells.forEach((idx, i) => {
+          if (c.clearedTags[i] !== 'bomb') return;
+          const col = idx % cols;
+          const row = (idx - col) / cols;
+          const neighbours = [
+            row > 0 ? idx - cols : -1, // up
+            row < rows - 1 ? idx + cols : -1, // down
+            col > 0 ? idx - 1 : -1, // left
+            col < cols - 1 ? idx + 1 : -1, // right
+          ];
+          for (const n of neighbours) {
+            if (n < 0 || board.cells[n] <= 0 || extra.includes(n)) continue;
+            board.cells[n] = 0;
+            if (board.tags) board.tags[n] = 'normal';
+            extra.push(n);
+          }
+        });
+        return extra.length > 0
+          ? { ...r, cells: [...r.cells, ...extra], finalScore: r.finalScore + extra.length }
+          : r;
       },
     },
   },

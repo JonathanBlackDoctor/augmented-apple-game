@@ -205,6 +205,47 @@ describe('new augments', () => {
     else expect(true).toBe(true);
   });
 
+  it('board.bomb explodes the orthogonal neighbours still on the board', () => {
+    const bomb = CATALOG.find((a) => a.id === 'board.bomb')!;
+    // 3x3 board; centre (idx 4) is the cleared bomb (already 0 like in commit).
+    // Neighbours: up=1, down=7, left=3, right=5 — all non-empty.
+    const board: Board = {
+      cols: 3,
+      rows: 3,
+      cells: [2, 3, 2, 4, 0, 6, 1, 7, 8],
+      tags: ['normal', 'normal', 'normal', 'normal', 'normal', 'normal', 'normal', 'normal', 'normal'],
+    };
+    const base = { cells: [4], count: 1, baseScore: 1, finalScore: 1, comboMultiplier: 1 };
+    const ctx = { board, clearedTags: ['bomb'] } as unknown as Parameters<NonNullable<typeof bomb.hooks.onClear>>[1];
+    const res = bomb.hooks.onClear!(base, ctx);
+    // The four orthogonal neighbours are cleared on the board…
+    expect([board.cells[1], board.cells[3], board.cells[5], board.cells[7]]).toEqual([0, 0, 0, 0]);
+    // …non-neighbours (corners) survive…
+    expect([board.cells[0], board.cells[2], board.cells[6], board.cells[8]]).toEqual([2, 2, 1, 8]);
+    // …they're added to the cleared set and each scores +1.
+    expect(res.cells).toEqual(expect.arrayContaining([1, 3, 5, 7]));
+    expect(res.cells.length).toBe(5);
+    expect(res.finalScore).toBe(1 + 4);
+  });
+
+  it('board.bomb only blows up apples that are still there', () => {
+    const bomb = CATALOG.find((a) => a.id === 'board.bomb')!;
+    // Bomb at corner idx 0 (cleared); neighbours right=1 (empty) and down=3 (full).
+    const board: Board = {
+      cols: 3,
+      rows: 3,
+      cells: [0, 0, 5, 6, 0, 0, 0, 0, 0],
+      tags: ['normal', 'normal', 'normal', 'normal', 'normal', 'normal', 'normal', 'normal', 'normal'],
+    };
+    const base = { cells: [0], count: 1, baseScore: 1, finalScore: 1, comboMultiplier: 1 };
+    const ctx = { board, clearedTags: ['bomb'] } as unknown as Parameters<NonNullable<typeof bomb.hooks.onClear>>[1];
+    const res = bomb.hooks.onClear!(base, ctx);
+    // Only the non-empty neighbour (down=3) explodes; the empty one is ignored.
+    expect(board.cells[3]).toBe(0);
+    expect(res.cells).toEqual([0, 3]);
+    expect(res.finalScore).toBe(2);
+  });
+
   it('risk.gambler stays replay-deterministic (uses seeded rng)', () => {
     const owned = ['risk.gambler'];
     const e = createEngine();

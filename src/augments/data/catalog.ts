@@ -1,10 +1,11 @@
-// augments/data/catalog.ts — initial augment set (plan §8.3). Data-driven and
-// extensible. Balance numbers are first-pass and meant for playtest tuning.
+// augments/data/catalog.ts — augment set (plan §8.3). Data-driven and
+// extensible. Balance numbers are tuned via Monte-Carlo playtest (see plan).
 // All entries below are SOLO-useful; pure-disruption augments (family
 // 'disrupt') arrive with versus mode (Phase 4) and are excluded from solo rolls.
-import type { Augment, AppleValue, Board } from '../../contracts';
+import type { Augment, AppleValue, Board, CellTag } from '../../contracts';
 
-function tagGolden(b: Board, rng: import('../../contracts').SeededRng, count: number): void {
+/** Tag `count` random non-empty cells with `tag` (deterministic via rng). */
+function tagCells(b: Board, rng: import('../../contracts').SeededRng, count: number, tag: CellTag): void {
   if (!b.tags) return;
   const n = b.cells.length;
   const used = new Set<number>();
@@ -13,8 +14,16 @@ function tagGolden(b: Board, rng: import('../../contracts').SeededRng, count: nu
     let guard = 0;
     while ((b.cells[idx] <= 0 || used.has(idx)) && guard++ < 40) idx = rng.int(n);
     used.add(idx);
-    b.tags[idx] = 'golden';
+    b.tags[idx] = tag;
   }
+}
+
+/** Trial-division primality for the small sums this game produces. */
+function isPrime(n: number): boolean {
+  if (n < 2) return false;
+  if (n % 2 === 0) return n === 2;
+  for (let d = 3; d * d <= n; d += 2) if (n % d === 0) return false;
+  return true;
 }
 
 export const CATALOG: Augment[] = [
@@ -22,10 +31,10 @@ export const CATALOG: Augment[] = [
   {
     id: 'time.relief',
     name: '여유',
-    desc: '라운드 시작 시 +3초',
+    desc: '라운드 시작 시 +7초',
     tier: 'silver',
     family: 'time',
-    hooks: { modifyRoundConfig: (cfg) => ({ ...cfg, durationMs: cfg.durationMs + 3000 }) },
+    hooks: { modifyRoundConfig: (cfg) => ({ ...cfg, durationMs: cfg.durationMs + 7000 }) },
   },
   {
     id: 'time.countdown',
@@ -41,36 +50,66 @@ export const CATALOG: Augment[] = [
     },
   },
   {
-    id: 'time.afterimage',
-    name: '잔상',
-    desc: '드래그하는 동안 시간 60% 감속',
+    id: 'time.tempo',
+    name: '가속 보상',
+    desc: '콤보 3연속+ 유지 시 제거마다 +1.5초',
+    tier: 'silver',
+    family: 'time',
+    hooks: {
+      onClear: (r, c) => {
+        if (c.comboCount >= 3) c.grantTimeMs(1500);
+        return r;
+      },
+    },
+  },
+  {
+    id: 'time.warmup',
+    name: '워밍업',
+    desc: '라운드 첫 8초 동안 점수 1.5배',
+    tier: 'silver',
+    family: 'time',
+    hooks: {
+      onClear: (r, c) =>
+        c.tMs <= 8000 ? { ...r, finalScore: Math.round(r.finalScore * 1.5) } : r,
+    },
+  },
+  {
+    id: 'time.spurt',
+    name: '막판 스퍼트',
+    desc: '라운드 마지막 7초 동안 점수 2배',
     tier: 'gold',
     family: 'time',
     hooks: {
-      onTick: (s, c) => (c.isDragging ? { ...s, remainingMs: s.remainingMs + c.deltaMs * 0.6 } : s),
+      onClear: (r, c) =>
+        c.tMs >= c.config.durationMs - 7000
+          ? { ...r, finalScore: r.finalScore * 2, comboMultiplier: r.comboMultiplier * 2 }
+          : r,
     },
   },
   {
     id: 'time.lord',
     name: '시간의 지배자',
-    desc: '드래그하지 않는 동안 타이머 정지',
+    desc: '드래그 중 시간 1.5배 감속, 단 그동안 숫자가 보이지 않음',
     tier: 'prismatic',
     family: 'time',
     hooks: {
+      // While dragging, time flows at 2/3 speed (1.5x slower); idle is normal,
+      // so the round always ends (no infinite-pause exploit). The "numbers
+      // hidden while dragging" drawback is applied by the UI layer (BoardView).
       onTick: (s, c) =>
-        c.isDragging ? s : { remainingMs: s.remainingMs + c.deltaMs, paused: true },
+        c.isDragging ? { remainingMs: s.remainingMs + c.deltaMs * (1 / 3), paused: false } : s,
     },
   },
   // ----- combo -----
   {
     id: 'combo.training',
     name: '훈련',
-    desc: '4개 이상 한 번에 제거 시 +5%',
+    desc: '3개 이상 한 번에 제거 시 +10%',
     tier: 'silver',
     family: 'combo',
     hooks: {
       onClear: (r) =>
-        r.count >= 4 ? { ...r, finalScore: r.finalScore + Math.ceil(r.finalScore * 0.05) } : r,
+        r.count >= 3 ? { ...r, finalScore: r.finalScore + Math.ceil(r.finalScore * 0.1) } : r,
     },
   },
   {
@@ -86,23 +125,61 @@ export const CATALOG: Augment[] = [
           : r,
     },
   },
+  {
+    id: 'combo.frenzy',
+    name: '폭주',
+    desc: '점수 ×(1 + 콤보수×3%) — 콤보가 길수록 가속',
+    tier: 'gold',
+    family: 'combo',
+    hooks: {
+      onClear: (r, c) => {
+        const mult = 1 + c.comboCount * 0.03;
+        return { ...r, finalScore: Math.round(r.finalScore * mult), comboMultiplier: r.comboMultiplier * mult };
+      },
+    },
+  },
+  {
+    id: 'combo.massacre',
+    name: '대량 제거',
+    desc: '5개 이상 한 번에 제거 시 점수 2배',
+    tier: 'gold',
+    family: 'combo',
+    hooks: {
+      onClear: (r) =>
+        r.count >= 5
+          ? { ...r, finalScore: r.finalScore * 2, comboMultiplier: r.comboMultiplier * 2 }
+          : r,
+    },
+  },
   // ----- board -----
   {
     id: 'board.rearrange',
     name: '재배치',
-    desc: '라운드 시작 시 합 10 짝을 여러 개 만들어 줌',
+    desc: '라운드 시작 시 합 10짜리 3칸 묶음 8개를 만들어 줌',
     tier: 'silver',
     family: 'board',
     hooks: {
       onBoardInit: (b, rng) => {
-        const n = b.cells.length;
-        for (let k = 0; k < 6; k++) {
-          const idx = rng.int(n);
-          const col = idx % b.cols;
-          if (col < b.cols - 1) {
-            const right = b.cells[idx + 1];
-            if (right > 0) b.cells[idx] = Math.min(9, Math.max(1, 10 - right)) as AppleValue;
-          }
+        const used = new Set<number>();
+        let placed = 0;
+        let guard = 0;
+        while (placed < 8 && guard++ < 200) {
+          const row = rng.int(b.rows);
+          const col = rng.int(Math.max(1, b.cols - 2)); // need col, col+1, col+2
+          const i0 = row * b.cols + col;
+          if (used.has(i0) || used.has(i0 + 1) || used.has(i0 + 2)) continue;
+          // split 10 into three parts each in 1..8
+          const a = 1 + rng.int(5); // 1..5
+          const b2 = 1 + rng.int(Math.max(1, 10 - a - 1)); // >=1, leaves >=1 for c
+          const c = 10 - a - b2;
+          if (c < 1 || c > 9 || b2 < 1 || b2 > 9) continue;
+          b.cells[i0] = a as AppleValue;
+          b.cells[i0 + 1] = b2 as AppleValue;
+          b.cells[i0 + 2] = c as AppleValue;
+          used.add(i0);
+          used.add(i0 + 1);
+          used.add(i0 + 2);
+          placed++;
         }
       },
     },
@@ -110,14 +187,68 @@ export const CATALOG: Augment[] = [
   {
     id: 'board.golden',
     name: '황금 사과',
-    desc: '라운드당 황금 사과 2개 (점수 2배)',
+    desc: '라운드당 황금 사과 5개 (점수 2배)',
     tier: 'gold',
     family: 'board',
     hooks: {
-      onBoardInit: (b, rng) => tagGolden(b, rng, 2),
+      onBoardInit: (b, rng) => tagCells(b, rng, 5, 'golden'),
       onClear: (r, c) => {
         const golden = c.clearedTags.filter((t) => t === 'golden').length;
         return golden > 0 ? { ...r, finalScore: r.finalScore + golden } : r;
+      },
+    },
+  },
+  {
+    id: 'board.gem',
+    name: '보석 사과',
+    desc: '보석 사과 1개 (제거 시 +15점)',
+    tier: 'gold',
+    family: 'board',
+    hooks: {
+      onBoardInit: (b, rng) => tagCells(b, rng, 1, 'gem'),
+      onClear: (r, c) => {
+        const gems = c.clearedTags.filter((t) => t === 'gem').length;
+        return gems > 0 ? { ...r, finalScore: r.finalScore + gems * 15 } : r;
+      },
+    },
+  },
+  {
+    id: 'board.bomb',
+    name: '폭탄 사과',
+    desc: '폭탄 사과 2개 (제거 시 각 +10점)',
+    tier: 'silver',
+    family: 'board',
+    hooks: {
+      onBoardInit: (b, rng) => tagCells(b, rng, 2, 'bomb'),
+      onClear: (r, c) => {
+        const bombs = c.clearedTags.filter((t) => t === 'bomb').length;
+        return bombs > 0 ? { ...r, finalScore: r.finalScore + bombs * 10 } : r;
+      },
+    },
+  },
+  {
+    id: 'board.rainbow',
+    name: '무지개 사과',
+    desc: '만능 사과 3개 — 선택에 넣으면 부족분을 채워 합을 완성',
+    tier: 'prismatic',
+    family: 'board',
+    hooks: {
+      onBoardInit: (b, rng) => tagCells(b, rng, 3, 'wild'),
+      validateSelection: (c) => {
+        if (c.cells.length === 0) return undefined;
+        const tags = c.board.tags;
+        if (!tags) return undefined;
+        let wilds = 0;
+        let nonWildSum = 0;
+        for (const idx of c.cells) {
+          if (tags[idx] === 'wild') wilds++;
+          else nonWildSum += c.board.cells[idx] as number;
+        }
+        if (wilds === 0) return undefined;
+        // Each wild can represent any value 1..9; accept if the shortfall to the
+        // target can be covered by the wild(s).
+        const need = c.targetSum - nonWildSum;
+        return need >= wilds && need <= wilds * 9 ? { accept: true } : undefined;
       },
     },
   },
@@ -128,29 +259,49 @@ export const CATALOG: Augment[] = [
     desc: '합 9도 인정',
     tier: 'silver',
     family: 'rule',
+    conflictsWith: ['rule.eleven', 'rule.alchemy'],
     hooks: {
       validateSelection: (c) => (c.sum === 9 && c.cells.length > 0 ? { accept: true } : undefined),
     },
   },
   {
     id: 'rule.eleven',
-    name: '11의 길',
-    desc: '합 10·11 모두 인정',
+    name: '소수의 길',
+    desc: '합이 10 이상의 소수면 인정 (11·13·17·19·23…)',
     tier: 'gold',
     family: 'rule',
+    conflictsWith: ['rule.kindness', 'rule.alchemy'],
     hooks: {
-      validateSelection: (c) => (c.sum === 11 && c.cells.length > 0 ? { accept: true } : undefined),
+      validateSelection: (c) =>
+        c.sum >= 10 && isPrime(c.sum) && c.cells.length > 0 ? { accept: true } : undefined,
     },
   },
   {
     id: 'rule.alchemy',
     name: '연금술',
-    desc: '10의 배수면 모두 인정 (10·20·30…)',
+    desc: '합이 5의 배수면 인정 (5·10·15·20…)',
     tier: 'prismatic',
     family: 'rule',
+    conflictsWith: ['rule.kindness', 'rule.eleven'],
     hooks: {
       validateSelection: (c) =>
-        c.sum > 0 && c.sum % 10 === 0 && c.cells.length > 0 ? { accept: true } : undefined,
+        c.sum > 0 && c.sum % 5 === 0 && c.cells.length > 0 ? { accept: true } : undefined,
+    },
+  },
+  {
+    id: 'rule.twenty',
+    name: '20의 결단',
+    desc: '합이 정확히 20인 제거 인정 + 그 점수 2배',
+    tier: 'gold',
+    family: 'rule',
+    hooks: {
+      validateSelection: (c) => (c.sum === 20 && c.cells.length > 0 ? { accept: true } : undefined),
+      onClear: (r, c) => {
+        const sum = c.clearedValues.reduce((a, v) => a + v, 0);
+        return sum === 20
+          ? { ...r, finalScore: r.finalScore * 2, comboMultiplier: r.comboMultiplier * 2 }
+          : r;
+      },
     },
   },
   // ----- risk -----
@@ -163,6 +314,30 @@ export const CATALOG: Augment[] = [
     hooks: {
       modifyRoundConfig: (cfg) => ({ ...cfg, durationMs: Math.round(cfg.durationMs / 2) }),
       onClear: (r) => ({ ...r, finalScore: r.finalScore * 3, comboMultiplier: r.comboMultiplier * 3 }),
+    },
+  },
+  {
+    id: 'risk.tightrope',
+    name: '외줄타기',
+    desc: '시간 -8초, 대신 모든 점수 1.6배',
+    tier: 'gold',
+    family: 'risk',
+    hooks: {
+      modifyRoundConfig: (cfg) => ({ ...cfg, durationMs: Math.max(5000, cfg.durationMs - 8000) }),
+      onClear: (r) => ({ ...r, finalScore: Math.round(r.finalScore * 1.6), comboMultiplier: r.comboMultiplier * 1.6 }),
+    },
+  },
+  {
+    id: 'risk.gambler',
+    name: '도박사',
+    desc: '제거마다 50% 점수 3배, 50% 점수 0.4배 (도박)',
+    tier: 'prismatic',
+    family: 'risk',
+    hooks: {
+      onClear: (r, c) => {
+        const mult = c.rng.next() < 0.5 ? 3 : 0.4;
+        return { ...r, finalScore: Math.round(r.finalScore * mult), comboMultiplier: r.comboMultiplier * mult };
+      },
     },
   },
 ];

@@ -150,7 +150,10 @@ export class VersusController {
   }
 
   private handlers: DragHandlers = {
-    onStart: () => this.match?.setDragging(true),
+    onStart: () => {
+      this.match?.setDragging(true);
+      if (this.match?.snapshot().myOwned.includes('time.lord')) this.board.setLabelsHidden(true);
+    },
     onMove: (rect: Rect | null) => {
       if (!this.match || !rect) {
         this.board.showSelection(null, false);
@@ -162,6 +165,7 @@ export class VersusController {
       const m = this.match;
       if (!m) return;
       m.setDragging(false);
+      if (m.snapshot().myOwned.includes('time.lord')) this.board.setLabelsHidden(false);
       this.board.showSelection(null, false);
       if (!rect) return;
       const res = m.myCommit(rect, this.clock.now());

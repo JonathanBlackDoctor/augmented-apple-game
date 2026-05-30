@@ -200,14 +200,22 @@ export class BoardView {
     }
   }
 
+  /** Hide/show the numeric labels (time.lord: numbers vanish while dragging). */
+  setLabelsHidden(hidden: boolean): void {
+    for (const label of this.labels) label.visible = !hidden;
+  }
+
   private drawApple(g: Graphics, cell: number, tag: CellTag): void {
     g.clear();
     const rad = cell * theme.ratio.appleRadius;
-    const isGold = tag === 'golden';
-    const isWild = tag === 'wild';
-    const base = isGold ? theme.color.golden : isWild ? theme.color.wild : theme.color.apple;
-    const edge = isGold ? theme.color.goldenEdge : theme.color.appleEdge;
-    const top = isGold ? theme.color.goldenTop : theme.color.appleTop;
+    const palette: Record<CellTag, { base: number; edge: number; top: number }> = {
+      normal: { base: theme.color.apple, edge: theme.color.appleEdge, top: theme.color.appleTop },
+      golden: { base: theme.color.golden, edge: theme.color.goldenEdge, top: theme.color.goldenTop },
+      gem: { base: theme.color.gem, edge: theme.color.gemEdge, top: theme.color.gemTop },
+      bomb: { base: theme.color.bomb, edge: theme.color.bombEdge, top: theme.color.bombTop },
+      wild: { base: theme.color.wild, edge: theme.color.wildEdge, top: theme.color.wildTop },
+    };
+    const { base, edge, top } = palette[tag] ?? palette.normal;
     // body
     g.circle(0, 0, rad).fill(base).stroke({ color: edge, width: Math.max(1, cell * 0.03), alpha: 0.6 });
     // soft top highlight

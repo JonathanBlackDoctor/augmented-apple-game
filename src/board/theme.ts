@@ -12,7 +12,15 @@ export const theme = {
     golden: 0xf2b33a, // golden apple (augment)
     goldenTop: 0xffd97a,
     goldenEdge: 0xc6871a,
-    wild: 0x8a7dff, // wild apple (augment) - unused in P0
+    wild: 0x8a7dff, // wild apple (augment) — matches any value
+    wildTop: 0xb9b1ff,
+    wildEdge: 0x5b4fd6,
+    gem: 0x3fcfd5, // gem apple (augment) — big flat bonus
+    gemTop: 0x9af0f3,
+    gemEdge: 0x1f9aa0,
+    bomb: 0x4a4a52, // bomb apple (augment) — bonus on clear
+    bombTop: 0x7c7c86,
+    bombEdge: 0x26262b,
     leaf: 0x6fae5a,
     text: 0xfff6ee, // cream numerals
     selStroke: 0x9defb0, // valid selection outline

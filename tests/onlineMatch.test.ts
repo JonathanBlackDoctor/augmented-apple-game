@@ -84,6 +84,28 @@ describe('OnlineMatch — robustness', () => {
     expect(s.winner).toBe('me');
   });
 
+  it('does not falsely forfeit when the clock starts past the disconnect threshold', async () => {
+    // Mirrors a real session: performance.now()-based clock is already seconds in
+    // by the time the match starts, so start()/tick() run at a large `now`.
+    const backend = new InMemoryNetBackend();
+    const sa = new BackendNetSession(backend);
+    const sb = new BackendNetSession(backend);
+    await sa.join('ROOMCLK', A);
+    await sb.join('ROOMCLK', B);
+    const opts = { roomId: 'ROOMCLK', ...FAST, disconnectMs: 1500 };
+    const host = new OnlineMatch({ session: sa, role: 'host', self: A, ...opts });
+    const guest = new OnlineMatch({ session: sb, role: 'guest', self: B, ...opts });
+    const t0 = 60000;
+    await host.start(t0);
+    await guest.start(t0);
+    host.tick(t0);
+    guest.tick(t0);
+    expect(host.snapshot().oppLeft).toBe(false);
+    expect(guest.snapshot().oppLeft).toBe(false);
+    expect(guest.snapshot().phase).not.toBe('matchResult');
+    expect(host.snapshot().phase).not.toBe('matchResult');
+  });
+
   it('flags no-opponent after the lobby timeout', async () => {
     const backend = new InMemoryNetBackend();
     const sa = new BackendNetSession(backend);

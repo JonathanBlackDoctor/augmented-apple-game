@@ -1,9 +1,9 @@
-// matchmaking/roomCode.ts — 6-char room codes (plan appendix B). Excludes
-// visually ambiguous characters I, O, 0, 1. PURE (randomness injected).
+// matchmaking/roomCode.ts — 3-digit numeric room codes. Easy to read aloud and
+// type on a phone keypad. PURE (randomness injected).
 import type { SeededRng } from '../contracts';
 
-const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-export const ROOM_CODE_LEN = 6;
+const ALPHABET = '0123456789';
+export const ROOM_CODE_LEN = 3;
 
 export function makeRoomCode(rng: SeededRng, len: number = ROOM_CODE_LEN): string {
   let s = '';

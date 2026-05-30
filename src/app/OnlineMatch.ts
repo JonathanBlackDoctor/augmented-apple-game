@@ -165,7 +165,13 @@ export class OnlineMatch {
     return buildHookBusFor(owned);
   }
 
-  async start(): Promise<void> {
+  async start(nowMs = 0): Promise<void> {
+    // Anchor our clock before subscribing: the backend replays existing events
+    // synchronously on subscribe, and onEvent records `lastOppSeen = this.nowMs`.
+    // Without this, a replayed opponent `ready` is stamped at nowMs=0 while the
+    // first tick() runs at performance.now()-based time (seconds in), making the
+    // disconnect check fire instantly and declare a bogus forfeit win.
+    this.nowMs = nowMs;
     this.unsub = this.session.on((e) => this.onEvent(e));
     await this.session.send({ t: 'ready', player: this.uid, phase: 'lobby' });
   }

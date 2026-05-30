@@ -7,18 +7,18 @@ import { makeRng } from '../src/core';
 import type { PublicProfile } from '../src/contracts';
 
 describe('room codes', () => {
-  it('generates valid 6-char codes without ambiguous chars', () => {
+  it('generates valid 3-digit numeric codes', () => {
     const rng = makeRng('seed');
     for (let i = 0; i < 50; i++) {
       const code = makeRoomCode(rng);
       expect(code.length).toBe(ROOM_CODE_LEN);
-      expect(/[IO01]/.test(code)).toBe(false);
+      expect(/^[0-9]{3}$/.test(code)).toBe(true);
       expect(isValidRoomCode(code)).toBe(true);
     }
   });
   it('rejects malformed codes', () => {
-    expect(isValidRoomCode('abc')).toBe(false);
-    expect(isValidRoomCode('IIIIII')).toBe(false); // 'I' is excluded
+    expect(isValidRoomCode('12')).toBe(false); // too short
+    expect(isValidRoomCode('12a')).toBe(false); // non-digit
   });
 });
 

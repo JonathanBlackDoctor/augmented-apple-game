@@ -13,10 +13,12 @@ export interface BotTuning {
   blunderChance: number; // chance to pick a random (suboptimal) move
 }
 
+// Tuned down so the bot is beatable: slower "thinking", more blunders, and even
+// 'hard' samples among the top moves instead of playing perfectly.
 export const TUNING: Record<Difficulty, BotTuning> = {
-  easy: { minDelayMs: 1500, maxDelayMs: 2500, pickTop: 1, blunderChance: 0.25 },
-  normal: { minDelayMs: 900, maxDelayMs: 1500, pickTop: 4, blunderChance: 0.08 },
-  hard: { minDelayMs: 400, maxDelayMs: 900, pickTop: 1, blunderChance: 0 },
+  easy: { minDelayMs: 2200, maxDelayMs: 3800, pickTop: 1, blunderChance: 0.5 },
+  normal: { minDelayMs: 1400, maxDelayMs: 2400, pickTop: 6, blunderChance: 0.25 },
+  hard: { minDelayMs: 800, maxDelayMs: 1600, pickTop: 3, blunderChance: 0.1 },
 };
 
 export interface BotDecision {
@@ -39,9 +41,9 @@ export function decide(
   let pick: BotMove;
   if (blunder || diff === 'easy') {
     pick = moves[rng.int(moves.length)];
-  } else if (diff === 'hard') {
-    pick = moves.reduce((a, b) => (b.count > a.count ? b : a));
   } else {
+    // normal & hard: sample among the N largest moves. Even 'hard' no longer
+    // always grabs the single best, so it's strong but beatable.
     const sorted = [...moves].sort((a, b) => b.count - a.count).slice(0, Math.max(1, t.pickTop));
     pick = sorted[rng.int(sorted.length)];
   }

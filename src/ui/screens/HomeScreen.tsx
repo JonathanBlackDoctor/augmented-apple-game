@@ -5,8 +5,6 @@ import { HelpOverlay } from '../components/HelpOverlay';
 
 export function HomeScreen() {
   const best = useGameStore((s) => s.bestTotal);
-  const startSolo = useGameStore((s) => s.startSolo);
-  const startAugment = useGameStore((s) => s.startAugment);
   const startVersus = useGameStore((s) => s.startVersus);
   const startOnline = useGameStore((s) => s.startOnline);
   const startLeaderboard = useGameStore((s) => s.startLeaderboard);
@@ -31,12 +29,6 @@ export function HomeScreen() {
           합이 <b>10</b>이 되도록 사과를 드래그해 담으세요
         </p>
         <div className="home-actions">
-          <button className="btn primary" onClick={() => startSolo()}>
-            빠른 한 판 · 30초
-          </button>
-          <button className="btn gold" onClick={() => startAugment()}>
-            5라운드 증강 모드
-          </button>
           <button className="btn versus" onClick={() => startVersus(5, 30_000)}>
             AI와 대결 · 5라운드
           </button>

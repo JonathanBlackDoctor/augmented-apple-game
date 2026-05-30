@@ -832,6 +832,7 @@ body {
   flex-direction: column;
   gap: 2px;
   min-width: 80px;
+  position: relative; /* anchor for floating "+N" score popups */
 }
 .versus-hud .vs-side.me { align-items: flex-start; }
 .versus-hud .vs-side.opp { align-items: flex-end; }
@@ -853,6 +854,158 @@ body {
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   opacity: 0.85;
+}
+
+/* floating "+N" score popup (opponent gains, anchored by .vs-side) */
+.score-pop {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  font-size: 18px;
+  font-weight: 900;
+  color: var(--apple);
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.7);
+  pointer-events: none;
+  animation: score-float 0.85s var(--ease) both;
+}
+@keyframes score-float {
+  0% {
+    transform: translateY(0) scale(0.7);
+    opacity: 0;
+  }
+  25% {
+    transform: translateY(-8px) scale(1.05);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-30px) scale(1);
+    opacity: 0;
+  }
+}
+
+/* augment-pick countdown (versus) */
+.aug-timer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 320px;
+  margin: 12px auto 0;
+}
+.aug-timer .time-bar {
+  flex: 1;
+}
+.aug-fam-icon {
+  margin-right: 5px;
+  font-size: 13px;
+}
+
+/* mid-round review (versus) */
+.round-check-panel {
+  max-width: 460px;
+  text-align: center;
+}
+.rc-scores {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  margin: 8px 0 14px;
+}
+.rc-side {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 18px;
+  border-radius: var(--radius);
+  background: var(--paper-2);
+  border: 1.5px solid var(--line);
+  min-width: 110px;
+}
+.rc-side.won {
+  border-color: var(--gold);
+  background: linear-gradient(180deg, var(--gold-bg), var(--paper-2) 70%);
+}
+.rc-label {
+  font-size: 12px;
+  color: var(--ink-2);
+}
+.rc-score {
+  font-size: 30px;
+  font-weight: 800;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.rc-vs {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-2);
+}
+.rc-series {
+  font-size: 14px;
+  color: var(--ink-2);
+  margin-bottom: 12px;
+}
+.rc-series strong {
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+/* owned-augment build sidebar (during play) */
+.owned-augments {
+  position: absolute;
+  top: 50%;
+  left: 10px;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 4;
+  pointer-events: none;
+  max-width: 132px;
+}
+.owned-aug-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: var(--paper-2);
+  border: 1.5px solid var(--line);
+  box-shadow: var(--shadow-sm);
+  animation: pop 0.25s var(--ease) both;
+}
+.owned-aug-chip.gold {
+  border-color: var(--gold);
+  background: linear-gradient(180deg, var(--gold-bg), var(--paper-2) 70%);
+}
+.owned-aug-chip.prismatic {
+  border-color: transparent;
+  background:
+    linear-gradient(var(--paper-2), var(--paper-2)) padding-box,
+    linear-gradient(125deg, #8a7dff, #6ad7d0, #ffd97a) border-box;
+}
+.owned-aug-icon {
+  font-size: 14px;
+  line-height: 1;
+}
+.owned-aug-name {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+@media (max-width: 560px) {
+  .owned-aug-name {
+    display: none;
+  }
+  .owned-augments {
+    left: 4px;
+  }
 }
 .result-card.versus .vs-final {
   display: flex;

@@ -163,6 +163,7 @@ export class MatchController {
   private handlers: DragHandlers = {
     onStart: () => {
       this.engine.setDragging(true);
+      if (this.owned.includes('time.lord')) this.board.setLabelsHidden(true);
     },
     onMove: (rect: Rect | null) => {
       if (!this.roundActive || !rect) {
@@ -174,6 +175,7 @@ export class MatchController {
     },
     onEnd: (rect: Rect | null) => {
       this.engine.setDragging(false);
+      if (this.owned.includes('time.lord')) this.board.setLabelsHidden(false);
       this.board.showSelection(null, false);
       if (!this.roundActive || !rect) return;
       const res = this.engine.commit({

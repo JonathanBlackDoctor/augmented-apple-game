@@ -6,9 +6,10 @@ export type AppleValue = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
 export type Cell = AppleValue | 0; // 0 = empty (cleared)
 
 /** Optional per-cell tag layer for augment-driven board features
- *  (golden = score x2, wild = matches any value). Kept parallel to `cells`
- *  so the base numeric board stays simple and deterministic. */
-export type CellTag = 'normal' | 'golden' | 'wild';
+ *  (golden = score x2, gem = big flat bonus, bomb = bonus on clear,
+ *  wild = matches any value). Kept parallel to `cells` so the base numeric
+ *  board stays simple and deterministic. */
+export type CellTag = 'normal' | 'golden' | 'gem' | 'bomb' | 'wild';
 
 export interface Board {
   cols: number;

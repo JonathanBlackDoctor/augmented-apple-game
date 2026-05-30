@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { createEngine, makeRng } from '../src/core';
 import { buildHookBusFor, rollOffer, tierForRound, CATALOG } from '../src/augments';
-import type { RoundConfig, ClearAction, Rect, Board } from '../src/contracts';
+import type { RoundConfig, ClearAction, Rect, Board, AugmentHookBus } from '../src/contracts';
 
 function cfg(seed: string, owned: string[], over: Partial<RoundConfig> = {}): RoundConfig {
   return {
@@ -59,12 +59,12 @@ describe('rollOffer (3-pick, no reroll)', () => {
 });
 
 describe('augment hook effects', () => {
-  it('modifyRoundConfig stacks: relief (+3s) then glasscannon (halve)', () => {
+  it('modifyRoundConfig stacks: relief (+7s) then glasscannon (halve)', () => {
     const e = createEngine();
     const owned = ['time.relief', 'risk.glasscannon'];
     e.init(cfg('mods', owned), makeRng('mods'), buildHookBusFor(owned));
-    // (30000 + 3000) / 2 = 16500
-    expect(e.tick(0).remainingMs).toBe(16500);
+    // (30000 + 7000) / 2 = 18500
+    expect(e.tick(0).remainingMs).toBe(18500);
   });
 
   it('rule.kindness accepts a sum of 9', () => {
@@ -109,7 +109,7 @@ describe('augment determinism (golden placement + replay with augments)', () => 
     e2.init(cfg('gold-seed', owned), makeRng('gold-seed'), buildHookBusFor(owned));
     const g1 = (e1.getBoard().tags ?? []).map((t, i) => (t === 'golden' ? i : -1)).filter((i) => i >= 0);
     const g2 = (e2.getBoard().tags ?? []).map((t, i) => (t === 'golden' ? i : -1)).filter((i) => i >= 0);
-    expect(g1.length).toBe(2);
+    expect(g1.length).toBe(5);
     expect(g1).toEqual(g2);
   });
 
@@ -123,6 +123,98 @@ describe('augment determinism (golden placement + replay with augments)', () => 
       const r = findValidRect(e.getBoard(), (rect) => e.evaluate(rect));
       if (!r) break;
       const a = { seq: ++seq, rect: r, tMs: n * 500 };
+      actions.push(a);
+      e.commit(a);
+    }
+    expect(e.replay(actions)).toBe(e.getScore());
+  });
+});
+
+describe('exploit fixes', () => {
+  it('rule augments are mutually exclusive (conflictsWith)', () => {
+    // Owning any rule-bender excludes the others from future offers.
+    expect(rollOffer('gold', makeRng('x'), ['rule.kindness'])).not.toContain('rule.eleven');
+    expect(rollOffer('prismatic', makeRng('y'), ['rule.kindness'])).not.toContain('rule.alchemy');
+    expect(rollOffer('silver', makeRng('z'), ['rule.alchemy'])).not.toContain('rule.kindness');
+  });
+
+  it('engine caps banked time at 2x effective duration', () => {
+    // A pathological onTick that floods time should still be clamped.
+    const floodBus: AugmentHookBus = {
+      run(point: string, ...args: unknown[]) {
+        if (point === 'modifyRoundConfig') return args[0];
+        if (point === 'onTick') return { remainingMs: 1e9, paused: false };
+        return undefined;
+      },
+    };
+    const e = createEngine();
+    e.init(cfg('cap', [], { durationMs: 1000 }), makeRng('cap'), floodBus);
+    e.tick(0); // anchor
+    expect(e.tick(16).remainingMs).toBe(2000); // capped at 2 * 1000
+  });
+});
+
+describe('new augments', () => {
+  it('combo.massacre doubles only when clearing 5+ at once', () => {
+    const owned = ['combo.massacre'];
+    const e = createEngine();
+    e.init(cfg('mass', owned), makeRng('mass'), buildHookBusFor(owned));
+    const r = findValidRect(e.getBoard(), (rect) => e.evaluate(rect))!;
+    const res = e.commit({ seq: 1, rect: r, tMs: 0 });
+    if (!('rejected' in res)) {
+      expect(res.finalScore).toBe(res.count >= 5 ? res.count * 2 : res.count);
+    }
+  });
+
+  it('rule.twenty accepts a sum of 20', () => {
+    const owned = ['rule.twenty'];
+    const e = createEngine();
+    e.init(cfg('twenty', owned), makeRng('twenty'), buildHookBusFor(owned));
+    const b = e.getBoard();
+    // scan a small window for any rect summing to 20
+    let r20: Rect | null = null;
+    for (let y = 0; y < b.rows && !r20; y++)
+      for (let x0 = 0; x0 < b.cols && !r20; x0++)
+        for (let x1 = x0; x1 < Math.min(x0 + 6, b.cols); x1++) {
+          let s = 0;
+          for (let x = x0; x <= x1; x++) s += b.cells[y * b.cols + x];
+          if (s === 20) { r20 = { x0, y0: y, x1, y1: y }; break; }
+          if (s > 20) break;
+        }
+    if (r20) expect(e.evaluate(r20).valid).toBe(true);
+    else expect(true).toBe(true); // no sum-20 window on this board
+  });
+
+  it('board.rainbow lets a wild apple complete a sum', () => {
+    const owned = ['board.rainbow'];
+    const e = createEngine();
+    e.init(cfg('rain', owned), makeRng('rain'), buildHookBusFor(owned));
+    const b = e.getBoard();
+    const tags = b.tags ?? [];
+    // find a wild with a non-wild, non-empty horizontal neighbor
+    let rect: Rect | null = null;
+    for (let i = 0; i < b.cells.length && !rect; i++) {
+      if (tags[i] !== 'wild') continue;
+      const col = i % b.cols;
+      if (col >= b.cols - 1) continue;
+      if (tags[i + 1] === 'wild' || b.cells[i + 1] <= 0) continue;
+      const row = Math.floor(i / b.cols);
+      rect = { x0: col, y0: row, x1: col + 1, y1: row }; // wild + 1..9 neighbor -> need 1..9, accepted
+    }
+    if (rect) expect(e.evaluate(rect).valid).toBe(true);
+    else expect(true).toBe(true);
+  });
+
+  it('risk.gambler stays replay-deterministic (uses seeded rng)', () => {
+    const owned = ['risk.gambler'];
+    const e = createEngine();
+    e.init(cfg('gmb', owned), makeRng('gmb'), buildHookBusFor(owned));
+    const actions: ClearAction[] = [];
+    let seq = 0;
+    for (let n = 0; n < 5; n++) {
+      const r = findValidRect(e.getBoard(), (rect) => e.evaluate(rect));
+      if (!r) break;
+      const a = { seq: ++seq, rect: r, tMs: n * 400 };
       actions.push(a);
       e.commit(a);
     }

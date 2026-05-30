@@ -43,9 +43,25 @@ export function cellCenter(l: BoardLayout, col: number, row: number): { cx: numb
   return { cx: l.originX + (col + 0.5) * l.cell, cy: l.originY + (row + 0.5) * l.cell };
 }
 
-/** Map a drag (two pixel points) to a grid Rect: every cell whose CENTER lies
- *  within the dragged pixel box is included (fruit-box "apples in the box").
- *  Returns null when no cell center is captured. */
+function clampInt(v: number, lo: number, hi: number): number {
+  return v < lo ? lo : v > hi ? hi : v;
+}
+
+/** Pixel point (canvas coords) -> the grid cell that contains it. Points that
+ *  fall in the padding or outside the grid clamp to the nearest edge cell, so
+ *  a tap *always* resolves to a real cell (never "between" cells). */
+export function pointToCell(l: BoardLayout, x: number, y: number): { col: number; row: number } {
+  const col = clampInt(Math.floor((x - l.originX) / l.cell), 0, l.cols - 1);
+  const row = clampInt(Math.floor((y - l.originY) / l.cell), 0, l.rows - 1);
+  return { col, row };
+}
+
+/** Map a drag (two pixel points in canvas coords) to an inclusive grid Rect.
+ *  Cell-snapped marquee: selects the block spanning the cell under the drag's
+ *  start and the cell under the current point. A tap (a≈b) selects the single
+ *  cell under the pointer. Intentionally forgiving — small/imprecise drags and
+ *  taps always register (the old "cell-center inside the box" rule dropped most
+ *  clicks). Returns null only for a degenerate layout. */
 export function pointerToRect(
   l: BoardLayout,
   ax: number,
@@ -53,29 +69,13 @@ export function pointerToRect(
   bx: number,
   by: number,
 ): Rect | null {
-  const minX = Math.min(ax, bx);
-  const maxX = Math.max(ax, bx);
-  const minY = Math.min(ay, by);
-  const maxY = Math.max(ay, by);
-
-  let x0 = Infinity;
-  let x1 = -Infinity;
-  for (let c = 0; c < l.cols; c++) {
-    const cx = l.originX + (c + 0.5) * l.cell;
-    if (cx >= minX && cx <= maxX) {
-      if (c < x0) x0 = c;
-      if (c > x1) x1 = c;
-    }
-  }
-  let y0 = Infinity;
-  let y1 = -Infinity;
-  for (let r = 0; r < l.rows; r++) {
-    const cy = l.originY + (r + 0.5) * l.cell;
-    if (cy >= minY && cy <= maxY) {
-      if (r < y0) y0 = r;
-      if (r > y1) y1 = r;
-    }
-  }
-  if (x1 < x0 || y1 < y0) return null;
-  return { x0, y0, x1, y1 };
+  if (l.cell <= 0) return null;
+  const a = pointToCell(l, ax, ay);
+  const b = pointToCell(l, bx, by);
+  return {
+    x0: Math.min(a.col, b.col),
+    y0: Math.min(a.row, b.row),
+    x1: Math.max(a.col, b.col),
+    y1: Math.max(a.row, b.row),
+  };
 }

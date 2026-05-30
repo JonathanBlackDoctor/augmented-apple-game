@@ -52,12 +52,12 @@ export const CATALOG: Augment[] = [
   {
     id: 'time.tempo',
     name: '가속 보상',
-    desc: '콤보 3연속+ 유지 시 제거마다 +1.5초',
+    desc: '콤보 3연속+ 유지 시 제거마다 +0.5초',
     tier: 'silver',
     family: 'time',
     hooks: {
       onClear: (r, c) => {
-        if (c.comboCount >= 3) c.grantTimeMs(1500);
+        if (c.comboCount >= 3) c.grantTimeMs(500);
         return r;
       },
     },
@@ -229,11 +229,15 @@ export const CATALOG: Augment[] = [
   {
     id: 'board.rainbow',
     name: '무지개 사과',
-    desc: '만능 사과 3개 — 선택에 넣으면 부족분을 채워 합을 완성',
+    desc: '만능 사과 5개 — 부족분을 채워 합 완성, 제거 시 각 +8점',
     tier: 'prismatic',
     family: 'board',
     hooks: {
-      onBoardInit: (b, rng) => tagCells(b, rng, 3, 'wild'),
+      onBoardInit: (b, rng) => tagCells(b, rng, 5, 'wild'),
+      onClear: (r, c) => {
+        const wilds = c.clearedTags.filter((t) => t === 'wild').length;
+        return wilds > 0 ? { ...r, finalScore: r.finalScore + wilds * 8 } : r;
+      },
       validateSelection: (c) => {
         if (c.cells.length === 0) return undefined;
         const tags = c.board.tags;

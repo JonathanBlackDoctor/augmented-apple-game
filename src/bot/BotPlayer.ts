@@ -18,8 +18,8 @@ export interface BotTuning {
 export const TUNING: Record<Difficulty, BotTuning> = {
   // easy always plays a *random* valid move (see decide), so its only real knob
   // is the think delay — longer delay = fewer moves = lower score.
-  easy: { minDelayMs: 3400, maxDelayMs: 5600, pickTop: 1, blunderChance: 0.5 },
-  normal: { minDelayMs: 1400, maxDelayMs: 2400, pickTop: 6, blunderChance: 0.25 },
+  easy: { minDelayMs: 3800, maxDelayMs: 6400, pickTop: 1, blunderChance: 0.5 },
+  normal: { minDelayMs: 1600, maxDelayMs: 2800, pickTop: 6, blunderChance: 0.33 },
   hard: { minDelayMs: 800, maxDelayMs: 1600, pickTop: 3, blunderChance: 0.1 },
 };
 

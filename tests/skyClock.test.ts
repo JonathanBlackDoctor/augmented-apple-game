@@ -16,12 +16,12 @@ describe('skyClock day-night progression', () => {
     expect(endOfR1).toBeCloseTo(ROUND_P[1], 5);
   });
 
-  it('the final round and the match end at deepest night (p=1)', () => {
+  it('the final round and the match end at daybreak (p=1 ≡ p=0, a seamless loop)', () => {
     expect(roundTarget(4, 5, 0, 30_000)).toBeCloseTo(1, 5);
     expect(anchor(5, 5)).toBe(1);
   });
 
-  it('a single-round match sweeps the whole day from dawn to night', () => {
+  it('a single-round match sweeps the whole day and loops back to morning', () => {
     expect(roundTarget(0, 1, 30_000, 30_000)).toBeCloseTo(ROUND_P[0], 5);
     expect(roundTarget(0, 1, 0, 30_000)).toBeCloseTo(1, 5);
   });

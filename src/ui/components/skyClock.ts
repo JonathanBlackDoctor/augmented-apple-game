@@ -1,15 +1,19 @@
 // skyClock.ts — pure mapping from match progress → day-night phase p ∈ [0,1].
 // DayNightSky drives the sun/moon from this so time advances WITH the round
 // clock: each round sweeps from its own start-of-day anchor toward the next
-// round's, and the match ends at deepest night. Because the position is derived
-// from the live game clock (remainingMs / durationMs) it inherits every time
-// augment for free — when a slow-time augment drags the clock the sky slows by
-// the same factor, and whenever the clock is frozen (augment-pick screen, the
-// pause between rounds) remainingMs stops moving so the sky holds in place.
+// round's, and the match ends at daybreak (p=1 ≡ p=0), so the sky is a true
+// loop — finishing a match leaves it exactly where the home auto-cycle resumes,
+// with no R5→R1 jump. Because the position is derived from the live game clock
+// (remainingMs / durationMs) it inherits every time augment for free — when a
+// slow-time augment drags the clock the sky slows by the same factor, and
+// whenever the clock is frozen (augment-pick screen, the pause between rounds)
+// remainingMs stops moving so the sky holds in place.
 
-// Start-of-round time-of-day anchors, tuned to the DayNightSky keyframes
-// (R1 아침 · R2 낮 · R3 해질녘 · R4 노을 · R5 밤).
-export const ROUND_P = [0.06, 0.3, 0.52, 0.74, 0.95];
+// Start-of-round time-of-day anchors, tuned to the DayNightSky keyframes. The
+// day runs as one seamless loop (아침/낮 → 오후 → 해질녘 → 밤 → 황혼 → 아침),
+// so the final round breaks into dawn (p→1) and wraps cleanly back to morning:
+// R1 아침/낮 · R2 오후 · R3 해질녘 · R4 밤 · R5 황혼(동틀녘).
+export const ROUND_P = [0.0, 0.2, 0.42, 0.64, 0.85];
 export const DAY_START = ROUND_P[0];
 
 const clamp = (v: number, a: number, b: number): number => Math.max(a, Math.min(b, v));

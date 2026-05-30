@@ -223,8 +223,11 @@ body {
   border-radius: 50% 50% 0 0 / 100% 100% 0 0;
 }
 .dn-hill[data-h='far'] {
-  bottom: 8%;
-  height: 32%;
+  /* Sit the box bottom just below the viewport so the radial gradient's opaque
+     base is clipped off-screen — otherwise its hard rectangular edge showed as
+     a stray horizontal line across the bottom of the screen. */
+  bottom: -2%;
+  height: 40%;
   animation: dn-sway 22s ease-in-out infinite;
 }
 .dn-hill[data-h='mid'] {
@@ -250,6 +253,10 @@ body {
 }
 .dn-trees {
   position: absolute;
+  /* `.dn-stage > *` forces inset:0; reset top so bottom+height anchors the
+     orchard row to the GROUND (without this it sticks to the top of the
+     screen as a row of green blobs). */
+  inset: auto;
   left: 0;
   right: 0;
   bottom: 0;

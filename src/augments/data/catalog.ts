@@ -215,7 +215,7 @@ export const CATALOG: Augment[] = [
   {
     id: 'board.bomb',
     name: '폭탄 사과',
-    desc: '폭탄 사과 2개 — 제거 시 상하좌우에 남은 사과도 함께 터뜨림',
+    desc: '폭탄 사과 2개 — 제거 시 상하좌우에 남은 사과도 함께 터뜨림 (터진 사과 각 +2점)',
     tier: 'silver',
     family: 'board',
     hooks: {
@@ -248,7 +248,7 @@ export const CATALOG: Augment[] = [
           }
         });
         return extra.length > 0
-          ? { ...r, cells: [...r.cells, ...extra], finalScore: r.finalScore + extra.length }
+          ? { ...r, cells: [...r.cells, ...extra], finalScore: r.finalScore + extra.length * 2 }
           : r;
       },
     },

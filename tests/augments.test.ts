@@ -222,10 +222,10 @@ describe('new augments', () => {
     expect([board.cells[1], board.cells[3], board.cells[5], board.cells[7]]).toEqual([0, 0, 0, 0]);
     // …non-neighbours (corners) survive…
     expect([board.cells[0], board.cells[2], board.cells[6], board.cells[8]]).toEqual([2, 2, 1, 8]);
-    // …they're added to the cleared set and each scores +1.
+    // …they're added to the cleared set and each scores +2.
     expect(res.cells).toEqual(expect.arrayContaining([1, 3, 5, 7]));
     expect(res.cells.length).toBe(5);
-    expect(res.finalScore).toBe(1 + 4);
+    expect(res.finalScore).toBe(1 + 4 * 2);
   });
 
   it('board.bomb only blows up apples that are still there', () => {
@@ -243,7 +243,7 @@ describe('new augments', () => {
     // Only the non-empty neighbour (down=3) explodes; the empty one is ignored.
     expect(board.cells[3]).toBe(0);
     expect(res.cells).toEqual([0, 3]);
-    expect(res.finalScore).toBe(2);
+    expect(res.finalScore).toBe(1 + 1 * 2);
   });
 
   it('risk.gambler stays replay-deterministic (uses seeded rng)', () => {

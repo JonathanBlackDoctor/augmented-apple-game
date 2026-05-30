@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>캔디 글로스 — 사과 구현 스펙</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700&display=swap" />
+<link rel="stylesheet" href="src/candy.css" />
+<style>
+  :root{
+    --ink:#1c1714; --ink-2:#4a423b; --ink-3:#7b7068; --line:#e7e0d8; --line-2:#d8cfc4;
+    --paper:#ffffff; --paper-2:#faf7f2; --paper-3:#f4efe7; --apple:#d4513a;
+  }
+  *{box-sizing:border-box}
+  html{font-size:15px}
+  body{ margin:0; color:var(--ink); background:var(--paper-2);
+    font-family:'Pretendard','Pretendard Variable',-apple-system,system-ui,sans-serif; line-height:1.62; -webkit-font-smoothing:antialiased;}
+  .wrap{max-width:920px; margin:0 auto; padding:30px 30px 90px;}
+  h1{font-size:32px; font-weight:800; letter-spacing:-.6px; margin:0 0 10px; line-height:1.12;}
+  h2{font-size:18px; font-weight:800; letter-spacing:-.3px; margin:40px 0 4px; padding-top:16px; border-top:2px solid var(--ink); display:flex; align-items:baseline; gap:9px;}
+  h2 .n{color:var(--apple); font-variant-numeric:tabular-nums;}
+  h3{font-size:13px; font-weight:800; text-transform:uppercase; letter-spacing:.4px; color:var(--ink-2); margin:20px 0 10px;}
+  p{margin:0 0 .7em;}
+  .muted{color:var(--ink-3);}
+  .kicker{display:inline-block; font-size:11px; font-weight:800; letter-spacing:1.4px; text-transform:uppercase; color:var(--apple); border:1.5px solid var(--apple); border-radius:999px; padding:5px 12px; margin-bottom:14px;}
+  .lede{font-size:15px; color:var(--ink-2); max-width:74ch;}
+  .sec-lead{color:var(--ink-2); font-size:13.5px; margin:6px 0 14px; max-width:78ch;}
+
+  .row{display:flex; gap:24px; align-items:flex-start; flex-wrap:wrap;}
+  .panel{background:var(--paper); border:1px solid var(--line); border-radius:14px; padding:18px 20px;}
+  .stage{background:var(--paper-3); border:1px solid var(--line); border-radius:14px; padding:20px; display:flex; gap:22px; align-items:center; justify-content:center; flex-wrap:wrap;}
+  .cap{font-size:11.5px; font-weight:700; color:var(--ink-3); text-align:center; margin-top:8px;}
+  .item{display:flex; flex-direction:column; align-items:center; gap:8px;}
+
+  table{width:100%; border-collapse:collapse; margin:6px 0 14px; font-size:12.5px;}
+  th,td{text-align:left; vertical-align:top; padding:7px 10px; border-bottom:1px solid var(--line);}
+  thead th{background:var(--paper-3); font-size:10.5px; letter-spacing:.4px; text-transform:uppercase; color:var(--ink-3); font-weight:800; border-bottom:2px solid var(--line-2);}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12px;}
+  td .sw{display:inline-block; width:13px; height:13px; border-radius:3px; vertical-align:-2px; margin-right:6px; box-shadow:inset 0 0 0 1px rgba(0,0,0,.1);}
+  pre{background:#1c1714; color:#f3ece2; border-radius:12px; padding:14px 16px; overflow:auto; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:12px; line-height:1.6; margin:8px 0 16px;}
+  pre .c{color:#9b8f80;}
+  pre .k{color:#ff9c7c;}
+
+  .mini-scenes{display:grid; grid-template-columns:repeat(5,1fr); gap:10px; margin:6px 0 6px;}
+  @media(max-width:680px){ .mini-scenes{grid-template-columns:repeat(2,1fr);} }
+  .mini-scenes .scene{height:120px;}
+  .ms-cap{font-size:11px; font-weight:700; color:var(--ink-2); text-align:center; padding-top:6px;}
+  .ms-cap b{color:var(--apple); margin-right:4px;}
+
+  .filelist{list-style:none; padding:0; margin:0;}
+  .filelist li{display:flex; gap:12px; padding:9px 0; border-bottom:1px solid var(--line); font-size:13px;}
+  .filelist .fn{font-family:ui-monospace,Menlo,monospace; font-size:12.5px; color:var(--ink); min-width:230px; font-weight:600;}
+  .filelist .fd{color:var(--ink-2);}
+  .footer{margin-top:48px; padding-top:16px; border-top:2px solid var(--ink); font-size:12px; color:var(--ink-3);}
+  @media print{ body{background:#fff;} .stage,.mini-scenes .scene{ -webkit-print-color-adjust:exact; print-color-adjust:exact; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <span class="kicker">구현 스펙 · v1.0 final</span>
+  <h1>캔디 글로스 — 사과 구현 스펙</h1>
+  <p class="lede">확정된 캔디 글로스 사과를 <strong>완전히 동일하게</strong> 재현하기 위한 정밀 스펙입니다. 모든 좌표는 사과 바운딩박스를
+    <strong>0–100 으로 정규화</strong>했고, 그라데이션은 <strong>아래→위 페인트 순서</strong>로 기재했습니다. 광택(스페큘러)은 <strong>0 으로 확정</strong>,
+    밤 외곽선은 미사용입니다. 페이지의 모든 사과는 이 스펙으로 실시간 렌더된 실물입니다.</p>
+
+  <!-- 1 실루엣 -->
+  <h2><span class="n">01</span> 실루엣 & 비율</h2>
+  <p class="sec-lead">둥글고 통통한 사과. 상단 중앙에 줄기가 앉는 옅은 딤플. 사과는 셀을 가득 채웁니다.</p>
+  <div class="row">
+    <div class="stage" style="flex:0 0 auto;"><div id="silo"></div></div>
+    <div class="panel" style="flex:1; min-width:280px;">
+      <h3>실루엣 path (viewBox 0 0 100 100)</h3>
+      <pre class="mono">M45 14C48 17 52 17 55 14C68 9 91 23
+91 51C91 74 73 90 50 90C27 90 9 74
+9 51C9 23 32 9 45 14Z</pre>
+      <table>
+        <thead><tr><th>요소</th><th>top</th><th>left</th><th>w</th><th>h</th><th>rotate</th></tr></thead>
+        <tbody>
+          <tr><td>줄기</td><td>-3%</td><td>46%</td><td>7%</td><td>22%</td><td>13°</td></tr>
+          <tr><td>잎</td><td>-9%</td><td>52%</td><td>32%</td><td>29%</td><td>-30°</td></tr>
+        </tbody>
+      </table>
+      <p class="muted" style="font-size:12px;">LOD: 셀 ≤ 24px 에서는 줄기·잎 생략, 숫자만 표시.</p>
+    </div>
+  </div>
+
+  <!-- 2 컬러 -->
+  <h2><span class="n">02</span> 컬러 토큰</h2>
+  <p class="sec-lead">베이스 톤은 차분한 배경에 맞춘 <strong>소프트 코럴</strong>이 확정값. 보디는 세 정지점의 선형 그라데이션입니다.</p>
+  <table>
+    <thead><tr><th>토큰</th><th>값</th><th>용도</th></tr></thead>
+    <tbody>
+      <tr><td>tone.top</td><td><span class="sw" style="background:#e8705a"></span><span class="mono">#e8705a</span></td><td>보디 상단</td></tr>
+      <tr><td>tone.mid</td><td><span class="sw" style="background:#d4513a"></span><span class="mono">#d4513a</span></td><td>보디 중앙</td></tr>
+      <tr><td>tone.bot</td><td><span class="sw" style="background:#9c3a2a"></span><span class="mono">#9c3a2a</span></td><td>보디 하단</td></tr>
+      <tr><td>leaf1 / leaf2</td><td><span class="sw" style="background:#8fc873"></span><span class="mono">#8fc873</span> → <span class="sw" style="background:#5E9A4E"></span><span class="mono">#5E9A4E</span></td><td>잎</td></tr>
+      <tr><td>number</td><td><span class="sw" style="background:#FFF4EC"></span><span class="mono">#FFF4EC</span></td><td>숫자</td></tr>
+    </tbody>
+  </table>
+  <p class="muted" style="font-size:12px;">대체 톤(옵션): 오차드 레드 <span class="mono">#e85c3e/#cf3f22/#92301a</span> · 딥 체리 <span class="mono">#e24a3c/#bf2f22/#7e2014</span> · 웜 피치 <span class="mono">#f0845f/#df5c3c/#a84329</span>.</p>
+
+  <!-- 3 보디 레이어 -->
+  <h2><span class="n">03</span> 보디 그라데이션 레이어</h2>
+  <p class="sec-lead">아래에서 위로 3개 레이어를 합성합니다. <strong>hl(하늘 반사)</strong>과 <strong>amb(하단 음영)</strong>은 시간대에 따라 계산됩니다(05 참고).</p>
+  <div class="row">
+    <div class="stage" style="flex:0 0 auto;"><div id="bodyDemo"></div></div>
+    <div class="panel" style="flex:1; min-width:300px;">
+      <pre><span class="c">/* 아래 → 위 (CSS는 첫 줄이 맨 위) */</span>
+<span class="k">3 ambient</span> radial 54% 36% @50% 100%
+        rgba(70,16,8,<b>amb</b>) → transparent 68%
+<span class="k">2 sheen  </span> radial 86% 78% @50% 2%
+        <b>hl</b> → transparent 60%
+<span class="k">1 base   </span> linear 176deg
+        top 4% · mid 54% · bot 100%</pre>
+      <p class="muted" style="font-size:12px;">스페큘러(흰 점) = <strong>0</strong>(미사용). 림 라이트는 04, 광원 계산은 05.</p>
+    </div>
+  </div>
+
+  <!-- 4 림 라이트 -->
+  <h2><span class="n">04</span> 환경 림 라이트 (screen)</h2>
+  <p class="sec-lead">해·달 빛이 가장자리에 닿는 표현. <strong>screen 블렌드</strong>, 색은 해/달 디스크 색(<span class="mono">rim</span>), 불투명도는 <span class="mono">rim_a</span>(05). 어두울수록 강해집니다.</p>
+  <div class="row">
+    <div class="panel" style="flex:1; min-width:300px;">
+      <pre>opacity: <b>rim_a</b>;  mix-blend-mode: screen;
+radial 120% 95% @82% 80%  rim → transparent 40%
+radial  90% 30% @50%  2%  rim → transparent 60%</pre>
+    </div>
+  </div>
+
+  <!-- 5 광원 모델 -->
+  <h2><span class="n">05</span> 낮밤 광원 모델</h2>
+  <p class="sec-lead">시간 <span class="mono">t∈[0,1]</span> 를 5 키프레임(R1=0 … R5=1) 사이로 선형 보간한 프레임 <span class="mono">f</span> 와 잠금 계수로 사과 변수를 계산합니다.</p>
+  <pre>sky=0.6  rim=0.55  depth=0.35  gloss=0  nightOutline=false
+
+<b>hl</b>       = mix(#ffffff, f.sky1, sky * 0.72)
+<b>amb</b>      = 0.22 + depth*0.5 + f.star*0.16
+<b>rim</b>      = f.disc            <span class="c">// 해/달 색</span>
+<b>rim_a</b>    = min(rim * (0.34 + 0.66*max(f.star,0.22)), 1)
+<b>shadow_a</b> = 0.6 + depth*0.6</pre>
+  <table>
+    <thead><tr><th>R</th><th>시간</th><th>sky0 / sky1 / sky2</th><th>해·달(disc)</th><th>star</th></tr></thead>
+    <tbody>
+      <tr><td>R1</td><td>아침</td><td class="mono">#A9C8E4 #FCE6CB #F8CF9E</td><td><span class="sw" style="background:#FFF1CC"></span><span class="mono">#FFF1CC</span></td><td>0</td></tr>
+      <tr><td>R2</td><td>한낮</td><td class="mono">#8FBFE9 #EAF3F7 #FCF4DE</td><td><span class="sw" style="background:#FFFEF6"></span><span class="mono">#FFFEF6</span></td><td>0</td></tr>
+      <tr><td>R3</td><td>오후</td><td class="mono">#A6BFDC #FFE7B8 #FFD295</td><td><span class="sw" style="background:#FFE3A4"></span><span class="mono">#FFE3A4</span></td><td>0</td></tr>
+      <tr><td>R4</td><td>해질녘</td><td class="mono">#7E6CA6 #FF9C76 #FFC062</td><td><span class="sw" style="background:#FF865A"></span><span class="mono">#FF865A</span></td><td>0.22</td></tr>
+      <tr><td>R5</td><td>밤</td><td class="mono">#10173A #1E2A52 #34375F</td><td><span class="sw" style="background:#DCE4FF"></span><span class="mono">#DCE4FF</span></td><td>1.0</td></tr>
+    </tbody>
+  </table>
+  <h3>다섯 시간대 위의 실물</h3>
+  <div class="mini-scenes" id="cycleRow"></div>
+
+  <!-- 6 변형 -->
+  <h2><span class="n">06</span> 황금 / 와일드 변형</h2>
+  <p class="sec-lead">같은 실루엣·같은 광원 모델을 공유하되 보디 그라데이션과 숫자 색이 다릅니다. 와일드 기호는 <strong>★</strong>.</p>
+  <div class="stage"><div id="variantRow"></div></div>
+  <div class="row" style="margin-top:14px;">
+    <div class="panel" style="flex:1; min-width:280px;">
+      <h3>황금 — 숫자 <span class="mono">#5a3c08</span></h3>
+      <pre>linear 176deg #f4c659 4% · #dca21f 54% · #ad7d13
+radial 86% 78% @50% 2%  #ffe9a8 → transparent
+radial 54% 36% @50% 100% rgba(90,60,8,amb) → tr.</pre>
+    </div>
+    <div class="panel" style="flex:1; min-width:280px;">
+      <h3>와일드 — 숫자 <span class="mono">#ffffff</span></h3>
+      <pre>linear 176deg #9e92ff 4% · #7d6df0 54% · #5f4cd6
+radial 86% 78% @50% 2%  #c8c0ff → transparent
+radial 60% 50% @70% 70% rgba(120,220,200,.4) → tr.</pre>
+    </div>
+  </div>
+
+  <!-- 7 타이포 -->
+  <h2><span class="n">07</span> 숫자 타이포</h2>
+  <p class="sec-lead"><strong>Quicksand</strong> 확정(폴백 Pretendard). 둥글고 부드러운 인상. tabular-nums.</p>
+  <table>
+    <thead><tr><th>속성</th><th>값</th></tr></thead>
+    <tbody>
+      <tr><td>family</td><td class="mono">Quicksand → Pretendard</td></tr>
+      <tr><td>weight</td><td>600 · 작은(≤24px) 700 · 기호 700</td></tr>
+      <tr><td>size</td><td class="mono">기본 0.47 × 셀 · 기호 0.52 · (≤24px) 0.52</td></tr>
+      <tr><td>color / shadow</td><td class="mono">#FFF4EC · 0 1px 2px rgba(120,28,14,.34)</td></tr>
+    </tbody>
+  </table>
+  <div class="stage"><div id="numRow"></div></div>
+  <h3 style="margin-top:18px;">크기 검증 (오후 빛)</h3>
+  <div class="stage"><div id="sizeRow"></div></div>
+
+  <!-- 8 파일 -->
+  <h2><span class="n">08</span> 납품 파일</h2>
+  <ul class="filelist">
+    <li><span class="fn">assets/apple-spec.json</span><span class="fd">전체 토큰·그라데이션·광원 모델 (기계가독). 구현의 단일 진실 소스.</span></li>
+    <li><span class="fn">assets/apple-silhouette.svg</span><span class="fd">실루엣 path (정규화 0–100).</span></li>
+    <li><span class="fn">src/candy.css</span><span class="fd">사과·무대 레퍼런스 구현(CSS 변수 구동).</span></li>
+    <li><span class="fn">src/candy.js</span><span class="fd">시간+룩 엔진(applyLookTo, 키프레임 보간). 광원 모델 원본.</span></li>
+    <li><span class="fn">src/scene.js</span><span class="fd">낮밤 키프레임·색 보간 유틸.</span></li>
+    <li><span class="fn">src/candy-tweaks.jsx · tweaks-panel.jsx</span><span class="fd">조정 패널(선택). 잠금값이 기본.</span></li>
+    <li><span class="fn">사과 레퍼런스 (단일파일).html</span><span class="fd">오프라인 단일 파일 — 픽셀 비교용 인터랙티브 레퍼런스.</span></li>
+  </ul>
+  <div class="panel" style="margin-top:8px;">
+    <h3>PixiJS 포팅 메모</h3>
+    <p style="font-size:13px; margin:0;" class="muted">코드 벡터 렌더(<span class="mono">BoardView.ts</span>) 기준: 실루엣 path 를 마스크로 쓰고, 보디 3레이어를 같은 순서로 그린 뒤 림 라이트를 <strong>screen</strong> 으로 합성하세요. <span class="mono">hl·amb·rim·rim_a·shadow_a</span> 는 매 프레임 라운드 진행도 <span class="mono">t</span> 로 05의 식대로 계산하면 됩니다(사과별이 아니라 시간당 1회 계산해 공유).</p>
+  </div>
+
+  <div class="footer">증강 사과게임 — 캔디 글로스 구현 스펙 · v1.0 final · 2026-05-31 · 광택 0 · 밤 외곽선 미사용 · 폰트 Quicksand.</div>
+
+</div>
+
+<script src="src/scene.js"></script>
+<script>
+(function(){
+  const el=(t,c)=>{const e=document.createElement(t); if(c)e.className=c; return e;};
+  const PATH='M45 14C48 17 52 17 55 14C68 9 91 23 91 51C91 74 73 90 50 90C27 90 9 74 9 51C9 23 32 9 45 14Z';
+  const MASK=`url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><path d='${PATH}' fill='#000'/></svg>`)}")`;
+  const h2r=h=>[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)];
+  const r2h=a=>'#'+a.map(v=>Math.round(Math.max(0,Math.min(255,v))).toString(16).padStart(2,'0')).join('');
+  const mix=(A,B,k)=>{const a=h2r(A),b=h2r(B);return r2h([a[0]+(b[0]-a[0])*k,a[1]+(b[1]-a[1])*k,a[2]+(b[2]-a[2])*k]);};
+  const LOOK={tone:['#e8705a','#d4513a','#9c3a2a'],gloss:0,sky:0.6,rim:0.55,depth:0.35};
+
+  function look(target,t){
+    const f=window.SCENE.frame(t), s=target.style;
+    s.setProperty('--top',LOOK.tone[0]); s.setProperty('--mid',LOOK.tone[1]); s.setProperty('--bot',LOOK.tone[2]);
+    s.setProperty('--gloss',LOOK.gloss);
+    s.setProperty('--hl',mix('#ffffff',f.sky1,LOOK.sky*0.72));
+    s.setProperty('--amb',(0.22+LOOK.depth*0.5+f.star*0.16).toFixed(3));
+    s.setProperty('--rim',f.disc);
+    s.setProperty('--rim-a',Math.min(LOOK.rim*(0.34+0.66*Math.max(f.star,0.22)),1).toFixed(3));
+    s.setProperty('--out-a','0'); s.setProperty('--out-w','0');
+    s.setProperty('--leaf1','#8fc873'); s.setProperty('--leaf2','#5E9A4E');
+    s.setProperty('--shadow-a',(0.6+LOOK.depth*0.6).toFixed(2));
+  }
+  function apple(type,val,size,t){
+    const a=el('div','apple '+type);
+    a.style.setProperty('--s',size+'px'); a.style.setProperty('--spx',size); a.style.setProperty('--mask',MASK);
+    if(size<=24) a.classList.add('xs');
+    a.innerHTML='<span class="out"></span><span class="b"></span><span class="sh"></span><span class="rl"></span><span class="st"></span><span class="lf"></span><span class="n"></span>';
+    const n=a.querySelector('.n');
+    if(type==='wild'){ n.textContent='★'; n.classList.add('mark'); } else n.textContent=val;
+    look(a, t==null?0.5:t);
+    return a;
+  }
+  function scene(t){
+    const s=el('div','scene trio');
+    s.innerHTML='<div class="stars"></div><div class="sun"></div><div class="hill"></div><div class="field"></div>';
+    window.SCENE.apply(t,s);
+    return s;
+  }
+
+  // 01 silhouette
+  document.getElementById('silo').appendChild(apple('normal',6,96,0.5));
+  // 03 body demo
+  document.getElementById('bodyDemo').appendChild(apple('normal',6,96,0.5));
+  // 05 cycle
+  const CY=[['R1','아침',0],['R2','한낮',0.25],['R3','오후',0.5],['R4','해질녘',0.75],['R5','밤',1]];
+  const cyc=document.getElementById('cycleRow');
+  CY.forEach(([r,nm,t])=>{
+    const cell=el('div'); const sc=scene(t); const f=sc.querySelector('.field'); f.style.gap='9px';
+    f.appendChild(apple('normal',6,46,t)); f.appendChild(apple('gold',3,46,t)); f.appendChild(apple('wild',null,46,t));
+    cell.appendChild(sc);
+    const cap=el('div','ms-cap'); cap.innerHTML='<b>'+r+'</b>'+nm; cell.appendChild(cap);
+    cyc.appendChild(cell);
+  });
+  // 06 variants
+  const vr=document.getElementById('variantRow'); vr.style.display='flex'; vr.style.gap='26px';
+  [['normal',6,'기본'],['gold',3,'황금'],['wild',null,'와일드 ★']].forEach(([ty,v,lab])=>{
+    const it=el('div','item'); it.appendChild(apple(ty,v,64,0.5)); const c=el('div','cap'); c.textContent=lab; it.appendChild(c); vr.appendChild(it);
+  });
+  // 07 numbers
+  const nr=document.getElementById('numRow'); nr.style.display='flex'; nr.style.gap='12px'; nr.style.flexWrap='wrap'; nr.style.alignItems='center';
+  for(let i=1;i<=9;i++) nr.appendChild(apple('normal',i,42,0.5));
+  // 07 sizes
+  const sr=document.getElementById('sizeRow'); sr.style.display='flex'; sr.style.gap='26px'; sr.style.alignItems='flex-end'; sr.style.flexWrap='wrap';
+  [[20,'20px'],[30,'30px'],[40,'40px'],[50,'50px']].forEach(([s,lab])=>{
+    const it=el('div','item'); it.appendChild(apple('normal',8,s,0.5)); const c=el('div','cap'); c.textContent=lab; it.appendChild(c); sr.appendChild(it);
+  });
+})();
+</script>
+</body>
+</html>

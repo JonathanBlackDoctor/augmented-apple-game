@@ -1,0 +1,109 @@
+{
+  "$schema": "apple-spec/1.0",
+  "name": "증강 사과게임 — 캔디 글로스 사과 (확정)",
+  "version": "1.0-final",
+  "date": "2026-05-31",
+  "notes": "모든 좌표는 사과 바운딩박스를 0–100 으로 정규화. 그라데이션 레이어는 '아래→위' 페인트 순서로 기재(배열의 0번이 가장 아래). 색은 시간대에 따라 일부 변수가 동적으로 계산됨(lightModel 참고).",
+
+  "geometry": {
+    "silhouette": {
+      "viewBox": "0 0 100 100",
+      "path": "M45 14C48 17 52 17 55 14C68 9 91 23 91 51C91 74 73 90 50 90C27 90 9 74 9 51C9 23 32 9 45 14Z",
+      "describe": "둥글고 통통한 사과. 상단 중앙(44~56,15 부근)에 줄기가 앉는 옅은 딤플."
+    },
+    "appleFillsCell": true,
+    "stem":  { "topPct": -3, "leftPct": 46, "wPct": 7,  "hPct": 22, "rotateDeg": 13,  "fill": "linear 180deg #8a5630 → #5f3a1f" },
+    "leaf":  { "topPct": -9, "leftPct": 52, "wPct": 32, "hPct": 29, "rotateDeg": -30, "fill": "linear 135deg var(leaf1) → var(leaf2)", "vein": "rgba(28,60,24,0.32)" },
+    "lod":   { "hideStemLeafAtPxLessOrEqual": 24 }
+  },
+
+  "palette": {
+    "tone_final": { "name": "소프트 코럴", "top": "#e8705a", "mid": "#d4513a", "bot": "#9c3a2a" },
+    "tone_alts": {
+      "오차드 레드": ["#e85c3e", "#cf3f22", "#92301a"],
+      "딥 체리":     ["#e24a3c", "#bf2f22", "#7e2014"],
+      "웜 피치":     ["#f0845f", "#df5c3c", "#a84329"]
+    },
+    "leaf":   { "leaf1": "#8fc873", "leaf2": "#5E9A4E" },
+    "number": "#FFF4EC"
+  },
+
+  "body": {
+    "comment": "type=normal. 아래→위 순서로 합성.",
+    "layers": [
+      { "id": "base",   "kind": "linear", "angleDeg": 176, "stops": [["top","4%"],["mid","54%"],["bot","100%"]] },
+      { "id": "sheen",  "kind": "radial", "shape": "86% 78%", "at": "50% 2%",   "stops": [["hl","0%"],["transparent","60%"]], "comment": "하늘 반사(상단 시트). 색 hl 은 lightModel 로 계산." },
+      { "id": "ambient","kind": "radial", "shape": "54% 36%", "at": "50% 100%", "stops": [["rgba(70,16,8,amb)","0%"],["transparent","68%"]], "comment": "하단 코어 음영. 알파 amb 는 lightModel." }
+    ],
+    "specular": { "enabled": false, "default": 0, "comment": "광택(흰 점) 0 으로 확정. 켤 경우: radial 46% 38% at 35% 24%, rgba(255,255,255,gloss) → transparent 78%." },
+    "rimLight": {
+      "blend": "screen", "opacity": "rim_a (lightModel)",
+      "layers": [
+        { "kind": "radial", "shape": "120% 95%", "at": "82% 80%", "stops": [["rim","0%"],["transparent","40%"]] },
+        { "kind": "radial", "shape": "90% 30%",  "at": "50% 2%",  "stops": [["rim","0%"],["transparent","60%"]] }
+      ],
+      "comment": "해/달 빛이 가장자리에 닿는 효과. 색 rim 은 해·달 디스크 색."
+    },
+    "outline": { "enabled": false, "default": 0, "color": "#fff3ea", "comment": "밤 외곽선 미사용으로 확정. 켤 경우 사과를 (1+3/px) 스케일한 크림 실루엣을 뒤에 깔고 alpha=star." },
+    "dropShadow": "0 (0.03·cell) (0.055·cell) rgba(40,16,10, 0.3·shadow_a)"
+  },
+
+  "variants": {
+    "gold": {
+      "number": "#5a3c08",
+      "leaf": "linear 135deg #cdd07a → #9aa24e",
+      "layers_bottom_to_top": [
+        { "kind": "linear", "angleDeg": 176, "stops": [["#f4c659","4%"],["#dca21f","54%"],["#ad7d13","100%"]] },
+        { "kind": "radial", "shape": "86% 78%", "at": "50% 2%",   "stops": [["#ffe9a8","0%"],["transparent","60%"]] },
+        { "kind": "radial", "shape": "46% 38%", "at": "35% 24%",  "stops": [["rgba(255,255,255,0.55)","0%"],["transparent","70%"]] },
+        { "kind": "radial", "shape": "54% 36%", "at": "50% 100%", "stops": [["rgba(90,60,8,amb)","0%"],["transparent","68%"]] }
+      ]
+    },
+    "wild": {
+      "number": "#ffffff",
+      "mark": "★",
+      "leaf": "linear 135deg #9fe6c4 → #56b78c",
+      "stem": "linear 180deg #6a5cc0 → #473a90",
+      "layers_bottom_to_top": [
+        { "kind": "linear", "angleDeg": 176, "stops": [["#9e92ff","4%"],["#7d6df0","54%"],["#5f4cd6","100%"]] },
+        { "kind": "radial", "shape": "86% 78%", "at": "50% 2%",   "stops": [["#c8c0ff","0%"],["transparent","60%"]] },
+        { "kind": "radial", "shape": "60% 50%", "at": "70% 70%",  "stops": [["rgba(120,220,200,0.4)","0%"],["transparent","62%"]], "comment": "이리데센트 청록 글린트" },
+        { "kind": "radial", "shape": "46% 38%", "at": "35% 24%",  "stops": [["rgba(255,255,255,0.5)","0%"],["transparent","70%"]] },
+        { "kind": "radial", "shape": "54% 36%", "at": "50% 100%", "stops": [["rgba(40,24,90,amb)","0%"],["transparent","68%"]] }
+      ]
+    }
+  },
+
+  "typography": {
+    "family": "Quicksand (확정). 폴백 Pretendard.",
+    "weight": 600,
+    "weight_small": 700,
+    "weight_mark": 700,
+    "color": "#FFF4EC",
+    "tabularNumerals": true,
+    "letterSpacing": 0,
+    "sizeRatio": { "normal": 0.47, "mark": 0.52, "atPxLessOrEqual24": 0.52 },
+    "shadow": "0 1px 2px rgba(120,28,14,0.34)",
+    "shadow_small": "0 1px 1.5px rgba(120,28,14,0.45)"
+  },
+
+  "lightModel": {
+    "comment": "시간 t∈[0,1] 를 5 키프레임 사이로 보간(선형). round R1..R5 는 t=0,0.25,0.5,0.75,1. 사과 변수는 보간된 프레임 f 와 아래 계수로 계산.",
+    "tweakable_locked": { "sky": 0.6, "rim": 0.55, "depth": 0.35, "gloss": 0, "nightOutline": false, "leaf": "green" },
+    "formulas": {
+      "hl":      "mix(#ffffff, f.sky1, sky * 0.72)",
+      "amb":     "0.22 + depth*0.5 + f.star*0.16",
+      "rim":     "f.disc",
+      "rim_a":   "min(rim * (0.34 + 0.66 * max(f.star, 0.22)), 1)",
+      "out_a":   "nightOutline ? f.star : 0",
+      "shadow_a":"0.6 + depth*0.6"
+    },
+    "keyframes": [
+      { "round": "R1", "name": "아침",   "sky": ["#A9C8E4","#FCE6CB","#F8CF9E"], "hill": "#6E9F52", "disc": "#FFF1CC", "star": 0.0 },
+      { "round": "R2", "name": "한낮",   "sky": ["#8FBFE9","#EAF3F7","#FCF4DE"], "hill": "#73A655", "disc": "#FFFEF6", "star": 0.0 },
+      { "round": "R3", "name": "오후",   "sky": ["#A6BFDC","#FFE7B8","#FFD295"], "hill": "#6C9A4D", "disc": "#FFE3A4", "star": 0.0 },
+      { "round": "R4", "name": "해질녘", "sky": ["#7E6CA6","#FF9C76","#FFC062"], "hill": "#54693F", "disc": "#FF865A", "star": 0.22 },
+      { "round": "R5", "name": "밤",     "sky": ["#10173A","#1E2A52","#34375F"], "hill": "#1A2F3C", "disc": "#DCE4FF", "star": 1.0 }
+    ]
+  }
+}

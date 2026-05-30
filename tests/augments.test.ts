@@ -86,7 +86,7 @@ describe('augment hook effects', () => {
     else expect(true).toBe(true); // board had no adjacent 9-pair; effect covered elsewhere
   });
 
-  it('glasscannon triples clear score', () => {
+  it('glasscannon doubles clear score', () => {
     const owned = ['risk.glasscannon'];
     const e = createEngine();
     e.init(cfg('triple', owned), makeRng('triple'), buildHookBusFor(owned));
@@ -94,8 +94,8 @@ describe('augment hook effects', () => {
     const before = e.getScore();
     const res = e.commit({ seq: 1, rect: r, tMs: 0 });
     if (!('rejected' in res)) {
-      expect(res.finalScore).toBe(res.count * 3);
-      expect(e.getScore()).toBe(before + res.count * 3);
+      expect(res.finalScore).toBe(res.count * 2);
+      expect(e.getScore()).toBe(before + res.count * 2);
     }
   });
 });
@@ -155,14 +155,14 @@ describe('exploit fixes', () => {
 });
 
 describe('new augments', () => {
-  it('combo.massacre doubles only when clearing 5+ at once', () => {
+  it('combo.massacre triples only when clearing 5+ at once', () => {
     const owned = ['combo.massacre'];
     const e = createEngine();
     e.init(cfg('mass', owned), makeRng('mass'), buildHookBusFor(owned));
     const r = findValidRect(e.getBoard(), (rect) => e.evaluate(rect))!;
     const res = e.commit({ seq: 1, rect: r, tMs: 0 });
     if (!('rejected' in res)) {
-      expect(res.finalScore).toBe(res.count >= 5 ? res.count * 2 : res.count);
+      expect(res.finalScore).toBe(res.count >= 5 ? res.count * 3 : res.count);
     }
   });
 

@@ -104,36 +104,36 @@ export const CATALOG: Augment[] = [
   {
     id: 'combo.training',
     name: '훈련',
-    desc: '3개 이상 한 번에 제거 시 +10%',
+    desc: '3개 이상 한 번에 제거 시 +30%',
     tier: 'silver',
     family: 'combo',
     hooks: {
       onClear: (r) =>
-        r.count >= 3 ? { ...r, finalScore: r.finalScore + Math.ceil(r.finalScore * 0.1) } : r,
+        r.count >= 3 ? { ...r, finalScore: r.finalScore + Math.ceil(r.finalScore * 0.3) } : r,
     },
   },
   {
     id: 'combo.chain',
     name: '연쇄',
-    desc: '콤보 유지 시 점수 1.5배 (끊기면 리셋)',
+    desc: '4개 이상 한 번에 제거 시 점수 2배',
     tier: 'gold',
     family: 'combo',
     hooks: {
-      onClear: (r, c) =>
-        c.comboCount >= 2
-          ? { ...r, finalScore: Math.round(r.finalScore * 1.5), comboMultiplier: r.comboMultiplier * 1.5 }
+      onClear: (r) =>
+        r.count >= 4
+          ? { ...r, finalScore: r.finalScore * 2, comboMultiplier: r.comboMultiplier * 2 }
           : r,
     },
   },
   {
     id: 'combo.frenzy',
     name: '폭주',
-    desc: '점수 ×(1 + 콤보수×3%) — 콤보가 길수록 가속',
+    desc: '점수 ×(1 + 한 번에 제거한 사과 수×5%) — 크게 제거할수록 가속',
     tier: 'gold',
     family: 'combo',
     hooks: {
-      onClear: (r, c) => {
-        const mult = 1 + c.comboCount * 0.03;
+      onClear: (r) => {
+        const mult = 1 + r.count * 0.05;
         return { ...r, finalScore: Math.round(r.finalScore * mult), comboMultiplier: r.comboMultiplier * mult };
       },
     },
@@ -141,13 +141,13 @@ export const CATALOG: Augment[] = [
   {
     id: 'combo.massacre',
     name: '대량 제거',
-    desc: '5개 이상 한 번에 제거 시 점수 2배',
+    desc: '5개 이상 한 번에 제거 시 점수 3배',
     tier: 'gold',
     family: 'combo',
     hooks: {
       onClear: (r) =>
         r.count >= 5
-          ? { ...r, finalScore: r.finalScore * 2, comboMultiplier: r.comboMultiplier * 2 }
+          ? { ...r, finalScore: r.finalScore * 3, comboMultiplier: r.comboMultiplier * 3 }
           : r,
     },
   },
@@ -155,7 +155,7 @@ export const CATALOG: Augment[] = [
   {
     id: 'board.rearrange',
     name: '재배치',
-    desc: '라운드 시작 시 합 10짜리 3칸 묶음 8개를 만들어 줌',
+    desc: '라운드 시작 시 합 10짜리 3칸 묶음 2개를 만들어 줌',
     tier: 'silver',
     family: 'board',
     hooks: {
@@ -163,7 +163,7 @@ export const CATALOG: Augment[] = [
         const used = new Set<number>();
         let placed = 0;
         let guard = 0;
-        while (placed < 8 && guard++ < 200) {
+        while (placed < 2 && guard++ < 200) {
           const row = rng.int(b.rows);
           const col = rng.int(Math.max(1, b.cols - 2)); // need col, col+1, col+2
           const i0 = row * b.cols + col;
@@ -201,43 +201,39 @@ export const CATALOG: Augment[] = [
   {
     id: 'board.gem',
     name: '보석 사과',
-    desc: '보석 사과 1개 (제거 시 +15점)',
+    desc: '보석 사과 1개 (제거 시 +20점)',
     tier: 'gold',
     family: 'board',
     hooks: {
       onBoardInit: (b, rng) => tagCells(b, rng, 1, 'gem'),
       onClear: (r, c) => {
         const gems = c.clearedTags.filter((t) => t === 'gem').length;
-        return gems > 0 ? { ...r, finalScore: r.finalScore + gems * 15 } : r;
+        return gems > 0 ? { ...r, finalScore: r.finalScore + gems * 20 } : r;
       },
     },
   },
   {
     id: 'board.bomb',
     name: '폭탄 사과',
-    desc: '폭탄 사과 2개 (제거 시 각 +10점)',
+    desc: '폭탄 사과 2개 (제거 시 각 +5점)',
     tier: 'silver',
     family: 'board',
     hooks: {
       onBoardInit: (b, rng) => tagCells(b, rng, 2, 'bomb'),
       onClear: (r, c) => {
         const bombs = c.clearedTags.filter((t) => t === 'bomb').length;
-        return bombs > 0 ? { ...r, finalScore: r.finalScore + bombs * 10 } : r;
+        return bombs > 0 ? { ...r, finalScore: r.finalScore + bombs * 5 } : r;
       },
     },
   },
   {
     id: 'board.rainbow',
     name: '무지개 사과',
-    desc: '만능 사과 5개 — 부족분을 채워 합 완성, 제거 시 각 +8점',
+    desc: '만능 사과 5개 — 부족분을 채워 합 완성',
     tier: 'prismatic',
     family: 'board',
     hooks: {
       onBoardInit: (b, rng) => tagCells(b, rng, 5, 'wild'),
-      onClear: (r, c) => {
-        const wilds = c.clearedTags.filter((t) => t === 'wild').length;
-        return wilds > 0 ? { ...r, finalScore: r.finalScore + wilds * 8 } : r;
-      },
       validateSelection: (c) => {
         if (c.cells.length === 0) return undefined;
         const tags = c.board.tags;
@@ -312,12 +308,12 @@ export const CATALOG: Augment[] = [
   {
     id: 'risk.glasscannon',
     name: '유리대포',
-    desc: '점수 3배, 그러나 타이머 2배 속도',
+    desc: '점수 2배, 그러나 타이머 2배 속도',
     tier: 'prismatic',
     family: 'risk',
     hooks: {
       modifyRoundConfig: (cfg) => ({ ...cfg, durationMs: Math.round(cfg.durationMs / 2) }),
-      onClear: (r) => ({ ...r, finalScore: r.finalScore * 3, comboMultiplier: r.comboMultiplier * 3 }),
+      onClear: (r) => ({ ...r, finalScore: r.finalScore * 2, comboMultiplier: r.comboMultiplier * 2 }),
     },
   },
   {
@@ -334,12 +330,12 @@ export const CATALOG: Augment[] = [
   {
     id: 'risk.gambler',
     name: '도박사',
-    desc: '제거마다 50% 점수 3배, 50% 점수 0.4배 (도박)',
+    desc: '제거마다 50% 점수 2배, 50% 점수 0.5배 (도박)',
     tier: 'prismatic',
     family: 'risk',
     hooks: {
       onClear: (r, c) => {
-        const mult = c.rng.next() < 0.5 ? 3 : 0.4;
+        const mult = c.rng.next() < 0.5 ? 2 : 0.5;
         return { ...r, finalScore: Math.round(r.finalScore * mult), comboMultiplier: r.comboMultiplier * mult };
       },
     },

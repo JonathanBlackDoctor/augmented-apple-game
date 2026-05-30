@@ -1,5 +1,11 @@
+import { useEffect, useState } from 'react';
 import { useGameStore } from '../../app/store';
 import { useVersusStore } from '../../app/versusStore';
+
+interface Pop {
+  seq: number;
+  amount: number;
+}
 
 export function VersusHud({ onPause }: { onPause?: () => void }) {
   const s = useGameStore();
@@ -9,6 +15,15 @@ export function VersusHud({ onPause }: { onPause?: () => void }) {
   const pct = Math.max(0, Math.min(1, s.durationMs ? s.remainingMs / s.durationMs : 0));
   const secs = Math.max(0, Math.ceil(s.remainingMs / 1000));
   const low = secs <= 5;
+
+  // Mirror the bot's "+N" gain pulses into a short list of floating popups.
+  const [pops, setPops] = useState<Pop[]>([]);
+  useEffect(() => {
+    if (v.oppGainSeq === 0) return;
+    setPops((cur) => [...cur, { seq: v.oppGainSeq, amount: v.oppGainAmount }]);
+  }, [v.oppGainSeq, v.oppGainAmount]);
+  const removePop = (seq: number): void => setPops((cur) => cur.filter((p) => p.seq !== seq));
+
   return (
     <div className="hud versus-hud">
       <div className="vs-side me">
@@ -39,6 +54,11 @@ export function VersusHud({ onPause }: { onPause?: () => void }) {
       <div className="vs-side opp">
         <span className="vs-label">{v.oppName}</span>
         <span className="vs-score">{oppTotal}</span>
+        {pops.map((p) => (
+          <span key={p.seq} className="score-pop" onAnimationEnd={() => removePop(p.seq)}>
+            +{p.amount}
+          </span>
+        ))}
       </div>
     </div>
   );

@@ -2,7 +2,7 @@
 import { create } from 'zustand';
 import type { AugTier } from '../contracts';
 
-export type Phase = 'home' | 'round' | 'augment' | 'result';
+export type Phase = 'home' | 'round' | 'roundCheck' | 'augment' | 'result';
 export type Mode = 'solo' | 'augment' | 'versus' | 'online' | 'leaderboard';
 
 const BEST_KEY = 'aag.bestTotal.v1';

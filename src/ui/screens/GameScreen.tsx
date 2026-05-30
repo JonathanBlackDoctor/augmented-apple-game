@@ -3,11 +3,14 @@ import { makeRng } from '../../core';
 import { useGameStore } from '../../app/store';
 import { getSettings } from '../../app/settingsStore';
 import { MatchController, type MatchPlan } from '../../app/MatchController';
-import { VersusController } from '../../app/VersusController';
+import { VersusController, AUGMENT_MS } from '../../app/VersusController';
+import { useVersusStore } from '../../app/versusStore';
 import { buildHookBusFor, rollOffer, tierForRound } from '../../augments';
 import { Hud } from '../components/Hud';
 import { VersusHud } from '../components/VersusHud';
 import { AugmentOverlay } from '../components/AugmentOverlay';
+import { RoundCheckOverlay } from '../components/RoundCheckOverlay';
+import { OwnedAugments } from '../components/OwnedAugments';
 import { ResultOverlay } from '../components/ResultOverlay';
 import { VersusResult } from '../components/VersusResult';
 import { SettingsOverlay } from '../components/SettingsOverlay';
@@ -43,6 +46,7 @@ export function GameScreen() {
   const versusRef = useRef<VersusController | null>(null);
   const phase = useGameStore((s) => s.phase);
   const mode = useGameStore((s) => s.mode);
+  const overlayRemainingMs = useVersusStore((s) => s.overlayRemainingMs);
   const isVersus = mode === 'versus';
   const [paused, setPaused] = useState(false);
   const [overlay, setOverlay] = useState<'settings' | 'help' | null>(null);
@@ -125,7 +129,14 @@ export function GameScreen() {
     <div className="screen game">
       {isVersus ? <VersusHud onPause={pauseHandler} /> : <Hud onPause={pauseHandler} />}
       <div className="board-host" ref={hostRef} />
-      {phase === 'augment' && <AugmentOverlay onPick={onPick} />}
+      {isVersus && <OwnedAugments />}
+      {phase === 'roundCheck' && isVersus && <RoundCheckOverlay />}
+      {phase === 'augment' &&
+        (isVersus ? (
+          <AugmentOverlay onPick={onPick} remainingMs={overlayRemainingMs} totalMs={AUGMENT_MS} />
+        ) : (
+          <AugmentOverlay onPick={onPick} />
+        ))}
       {phase === 'result' &&
         (isVersus ? (
           <VersusResult onReplay={onReplay} onHome={onHome} />

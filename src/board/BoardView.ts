@@ -17,6 +17,14 @@ interface Particle {
   r: number;
 }
 
+interface Popup {
+  t: Text;
+  x: number;
+  y: number;
+  life: number; // 1 → 0
+  max: number; // ms
+}
+
 export class BoardView {
   readonly app: Application;
   private gridLayer = new Container();
@@ -27,6 +35,7 @@ export class BoardView {
   private bodies: Graphics[] = [];
   private labels: Text[] = [];
   private particles: Particle[] = [];
+  private popups: Popup[] = [];
 
   private layout: BoardLayout | null = null;
   private board: Board | null = null;
@@ -133,6 +142,37 @@ export class BoardView {
     }
   }
 
+  /** Float a "+N" score popup at the centroid of the cleared cells. */
+  scorePopup(cellIndices: number[], value: number): void {
+    if (!this.layout || !this.board || cellIndices.length === 0 || value <= 0) return;
+    const l = this.layout;
+    let sx = 0;
+    let sy = 0;
+    for (const idx of cellIndices) {
+      const col = idx % this.board.cols;
+      const row = Math.floor(idx / this.board.cols);
+      const { cx, cy } = cellCenter(l, col, row);
+      sx += cx;
+      sy += cy;
+    }
+    const cx = sx / cellIndices.length;
+    const cy = sy / cellIndices.length;
+    const t = new Text({
+      text: `+${value}`,
+      style: {
+        fontFamily: theme.font,
+        fontSize: Math.round(l.cell * 0.7),
+        fontWeight: '900',
+        fill: theme.color.golden,
+        stroke: { color: theme.color.numShadow, width: Math.max(2, l.cell * 0.06) },
+      },
+    });
+    t.anchor.set(0.5);
+    t.position.set(cx, cy);
+    this.fxLayer.addChild(t);
+    this.popups.push({ t, x: cx, y: cy, life: 1, max: 750 });
+  }
+
   destroy(): void {
     this.mounted = false;
     try {
@@ -147,23 +187,41 @@ export class BoardView {
 
   private onTick = (): void => {
     const dt = this.app.ticker.deltaMS;
-    if (this.particles.length === 0) return;
-    const next: Particle[] = [];
-    for (const p of this.particles) {
-      p.life -= dt / p.max;
-      if (p.life <= 0) {
-        p.g.destroy();
-        continue;
+    if (this.particles.length > 0) {
+      const next: Particle[] = [];
+      for (const p of this.particles) {
+        p.life -= dt / p.max;
+        if (p.life <= 0) {
+          p.g.destroy();
+          continue;
+        }
+        p.x += p.vx * (dt / 16.67);
+        p.y += p.vy * (dt / 16.67);
+        p.vy += 0.012 * (this.layout?.cell ?? 30) * (dt / 16.67); // gravity
+        p.g.position.set(p.x, p.y);
+        p.g.alpha = Math.max(0, p.life);
+        p.g.scale.set(0.6 + p.life * 0.4);
+        next.push(p);
       }
-      p.x += p.vx * (dt / 16.67);
-      p.y += p.vy * (dt / 16.67);
-      p.vy += 0.012 * (this.layout?.cell ?? 30) * (dt / 16.67); // gravity
-      p.g.position.set(p.x, p.y);
-      p.g.alpha = Math.max(0, p.life);
-      p.g.scale.set(0.6 + p.life * 0.4);
-      next.push(p);
+      this.particles = next;
     }
-    this.particles = next;
+    if (this.popups.length > 0) {
+      const cell = this.layout?.cell ?? 30;
+      const next: Popup[] = [];
+      for (const p of this.popups) {
+        p.life -= dt / p.max;
+        if (p.life <= 0) {
+          p.t.destroy();
+          continue;
+        }
+        p.y -= 0.03 * cell * (dt / 16.67); // drift upward
+        p.t.position.set(p.x, p.y);
+        p.t.alpha = Math.min(1, p.life * 1.6); // hold, then fade out
+        p.t.scale.set(0.7 + (1 - p.life) * 0.4);
+        next.push(p);
+      }
+      this.popups = next;
+    }
   };
 
   private rebuild(): void {

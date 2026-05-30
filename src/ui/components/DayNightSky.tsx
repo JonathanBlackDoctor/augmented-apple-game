@@ -113,14 +113,6 @@ export function DayNightSky() {
       })),
     [],
   );
-  const trees = useMemo(
-    () =>
-      Array.from({ length: 13 }, (_, i) => ({
-        left: `${3 + i * 7.6 + rnd(i + 1) * 3}%`,
-        transform: `scale(${0.8 + rnd(i + 3) * 0.7})`,
-      })),
-    [],
-  );
   const motes = useMemo(
     () =>
       Array.from({ length: 16 }, (_, i) => {
@@ -169,7 +161,6 @@ export function DayNightSky() {
   const moonRef = useRef<HTMLDivElement>(null);
   const starsRef = useRef<HTMLDivElement>(null);
   const cloudsRef = useRef<HTMLDivElement>(null);
-  const treesRef = useRef<HTMLDivElement>(null);
   const hFarRef = useRef<HTMLDivElement>(null);
   const hMidRef = useRef<HTMLDivElement>(null);
   const hNearRef = useRef<HTMLDivElement>(null);
@@ -238,7 +229,6 @@ export function DayNightSky() {
         )}, transparent 76%)`;
       if (hNearRef.current)
         hNearRef.current.style.background = `radial-gradient(120% 100% at 34% 100%, ${s.gNear}, transparent 80%)`;
-      if (treesRef.current) treesRef.current.style.setProperty('--tree', s.tree);
       // particles — daylight sun-motes, 오후~해질녘 blossom petals, night fireflies
       const day = clamp(1 - smooth(0.4, 0.55, p) + smooth(0.9, 1.0, p), 0, 1);
       if (motesRef.current) motesRef.current.style.opacity = String(day * 0.9);
@@ -300,11 +290,6 @@ export function DayNightSky() {
         <div className="dn-hill" ref={hFarRef} data-h="far" />
         <div className="dn-hill" ref={hMidRef} data-h="mid" />
         <div className="dn-hill" ref={hNearRef} data-h="near" />
-      </div>
-      <div className="dn-trees" ref={treesRef}>
-        {trees.map((t, i) => (
-          <i key={i} style={t} />
-        ))}
       </div>
       <div className="dn-fx">
         <div className="dn-motes" ref={motesRef}>

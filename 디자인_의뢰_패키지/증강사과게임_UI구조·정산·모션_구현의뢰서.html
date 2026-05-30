@@ -1,0 +1,795 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>증강 사과게임 — UI 구조 · 설정 · 라운드 정산 · 모션 구현 의뢰서</title>
+<style>
+  :root{
+    --ink:#181410; --ink-2:#463d34; --ink-3:#7c7167; --ink-4:#a99c8d;
+    --line:#e8e1d6; --line-2:#d8cdbd;
+    --paper:#ffffff; --paper-2:#faf7f1; --paper-3:#f3efe6; --paper-4:#ece6da;
+    /* 이 문서의 고유 액센트 = "블루프린트 인디고"(구조/구현). 비주얼 의뢰서의
+       사과-레드와 구분해 "어떻게 짜이고 어떻게 움직이나" 문서임을 신호한다. */
+    --accent:#4b46d6; --accent-2:#332ea8; --accent-bg:#eeedfb;
+    --apple:#e5503b; --apple-bg:#fdece8;
+    --gold:#bf8410; --gold-bg:#fbf1d8;
+    --green:#2f9d63; --green-bg:#e6f5ec;
+    --teal:#108a8a; --teal-bg:#e0f3f3;
+    --rose:#cf3b57; --rose-bg:#fbe9ed;
+    --silver:#8a96a2; --prism:#7a6df0;
+    --ease:cubic-bezier(.22,1,.36,1);
+    --ease-out:cubic-bezier(.16,1,.3,1);
+  }
+  *{box-sizing:border-box}
+  html{font-size:15px; -webkit-text-size-adjust:100%;}
+  body{
+    margin:0; color:var(--ink); background:var(--paper-3);
+    font-family:'Pretendard Variable','Pretendard',-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic',system-ui,sans-serif;
+    line-height:1.64; -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+  }
+  .wrap{max-width:910px; margin:0 auto; padding:30px 34px 80px; background:var(--paper);}
+  h1,h2,h3,h4{line-height:1.24; margin:0 0 .4em;}
+  p{margin:0 0 .85em;}
+  a{color:var(--accent); text-decoration:none;}
+  small{color:var(--ink-3);}
+  strong{font-weight:700;}
+  em{font-style:normal; color:var(--accent-2); font-weight:600;}
+  .muted{color:var(--ink-3);}
+  .mono{font-family:ui-monospace,'SFMono-Regular',Menlo,Consolas,monospace; font-size:.86em; background:var(--paper-3); padding:1px 6px; border-radius:5px; color:var(--ink-2);}
+
+  /* ── cover ── */
+  .cover{padding:8px 0 4px; border-bottom:3px solid var(--ink); margin-bottom:6px;}
+  .mark{display:flex; align-items:center; gap:11px; font-weight:800; letter-spacing:-.2px; font-size:14.5px; color:var(--ink-2);}
+  .mark .logo{width:32px;height:32px;display:block;}
+  .kicker{display:inline-flex; align-items:center; gap:7px; font-size:12px; font-weight:800; letter-spacing:1.4px; text-transform:uppercase; color:#fff; background:var(--accent); border-radius:999px; padding:5px 14px; margin:26px 0 18px;}
+  .cover h1{font-size:40px; font-weight:900; letter-spacing:-1.3px; margin:0 0 16px; line-height:1.1;}
+  .cover .lede{font-size:17.5px; color:var(--ink-2); max-width:64ch; line-height:1.56;}
+  .meta{margin-top:26px; border-top:1.5px solid var(--line-2); padding-top:16px; display:flex; flex-wrap:wrap; gap:20px 38px; font-size:13px;}
+  .meta b{display:block; font-size:10.5px; letter-spacing:.9px; text-transform:uppercase; color:var(--ink-3); font-weight:800; margin-bottom:3px;}
+  .lead-box{margin:24px 0 10px; background:var(--accent-bg); border:1px solid #dcd9f6; border-radius:14px; padding:18px 20px; font-size:14px; color:var(--ink-2);}
+  .lead-box b{color:var(--accent-2);}
+
+  /* ── section system ── */
+  h2.sec{font-size:24px; font-weight:900; letter-spacing:-.5px; margin:50px 0 4px; padding-top:20px; border-top:2px solid var(--ink); display:flex; align-items:baseline; gap:12px;}
+  h2.sec .n{color:var(--accent); font-variant-numeric:tabular-nums; font-size:20px; font-weight:900;}
+  .sec-lead{color:var(--ink-2); font-size:14.5px; margin:6px 0 18px;}
+  h3{font-size:17px; font-weight:800; margin:26px 0 7px; letter-spacing:-.2px;}
+  h4{font-size:14px; font-weight:800; margin:16px 0 5px; color:var(--ink-2);}
+  ul,ol{margin:0 0 13px; padding-left:21px;}
+  li{margin:4px 0;}
+  li::marker{color:var(--accent);}
+  hr{border:none; border-top:1px solid var(--line); margin:28px 0;}
+
+  /* ── tags ── */
+  .tag{display:inline-block; font-size:10.5px; font-weight:800; padding:2px 8px; border-radius:999px; white-space:nowrap; letter-spacing:.2px; vertical-align:middle;}
+  .t-now{background:var(--paper-4); color:#6a5f51;}
+  .t-issue{background:var(--rose-bg); color:#a82743;}
+  .t-redesign{background:var(--accent-bg); color:var(--accent-2);}
+  .t-motion{background:var(--teal-bg); color:#0a6a6a;}
+  .t-new{background:var(--green-bg); color:#1c7a48;}
+  .t-silver{background:#eef1f4; color:#566875;}
+  .t-gold{background:var(--gold-bg); color:#8a5e08;}
+  .t-prism{background:#efeaff; color:#5b48d6;}
+  .t-pri{background:var(--apple-bg); color:#b8331f;}
+
+  /* ── tables ── */
+  table{width:100%; border-collapse:collapse; margin:12px 0 20px; font-size:12.8px;}
+  th,td{text-align:left; vertical-align:top; padding:8px 10px; border-bottom:1px solid var(--line);}
+  thead th{background:var(--paper-3); font-size:11px; letter-spacing:.4px; text-transform:uppercase; color:var(--ink-3); font-weight:800; border-bottom:2px solid var(--line-2);}
+  tbody tr:nth-child(even){background:var(--paper-2);}
+  td.c,th.c{text-align:center;}
+  td code,.mono{font-variant-numeric:tabular-nums;}
+
+  /* ── callouts ── */
+  .call{border-left:4px solid var(--accent); background:var(--paper-2); border-radius:0 12px 12px 0; padding:14px 18px; margin:16px 0 20px;}
+  .call.issue{border-left-color:var(--rose); background:var(--rose-bg);}
+  .call.motion{border-left-color:var(--teal); background:var(--teal-bg);}
+  .call.note{border-left-color:var(--green); background:var(--green-bg);}
+  .call.warn{border-left-color:var(--gold); background:var(--gold-bg);}
+  .call h4{margin:0 0 5px; color:var(--ink); font-size:13.5px;}
+  .call p{margin:0 0 .4em; font-size:13.3px; color:var(--ink-2);}
+  .call p:last-child{margin:0;}
+
+  .pill-row{display:flex; flex-wrap:wrap; gap:7px; margin:8px 0 16px;}
+  .pill{font-size:11.5px; font-weight:700; padding:5px 12px; border-radius:999px; background:var(--paper-3); color:var(--ink-2); border:1px solid var(--line);}
+
+  /* ── cards / grids ── */
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:8px 0 16px;}
+  .grid3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin:8px 0 16px;}
+  .card{border:1px solid var(--line); border-radius:14px; padding:14px 16px; background:var(--paper);}
+  .card h4{margin-top:0;}
+  .card p{font-size:12.8px; margin:0; color:var(--ink-2);}
+  @media(max-width:680px){ .grid2,.grid3{grid-template-columns:1fr;} }
+
+  /* "현재 → 문제 → 재설계" 블록 */
+  .triad{border:1px solid var(--line); border-radius:14px; overflow:hidden; margin:10px 0 20px;}
+  .triad > div{padding:12px 16px; border-bottom:1px solid var(--line);}
+  .triad > div:last-child{border-bottom:none;}
+  .triad .lbl{font-size:10.5px; font-weight:800; letter-spacing:.6px; text-transform:uppercase; display:inline-block; margin-bottom:4px;}
+  .triad .now{background:var(--paper-2);}
+  .triad .now .lbl{color:#6a5f51;}
+  .triad .iss{background:var(--rose-bg);}
+  .triad .iss .lbl{color:#a82743;}
+  .triad .re .lbl{color:var(--accent-2);}
+  .triad p{margin:0; font-size:13px; color:var(--ink-2);}
+  .triad ul{margin:2px 0 0; font-size:13px;}
+
+  .kvs{font-size:13px; margin:4px 0 14px;}
+  .kvs div{display:flex; gap:12px; padding:6px 0; border-bottom:1px dashed var(--line);}
+  .kvs b{flex:0 0 150px; color:var(--ink-2); font-weight:700;}
+
+  /* ── flow map ── */
+  .flow{background:var(--paper-2); border:1px solid var(--line); border-radius:14px; padding:18px; margin:12px 0 18px; overflow-x:auto;}
+  .flow-row{display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:6px 0;}
+  .node{font-size:12px; font-weight:700; padding:7px 12px; border-radius:9px; border:1.5px solid var(--accent); color:var(--accent-2); background:#fff; white-space:nowrap;}
+  .node.start{border-color:var(--ink); color:var(--ink); background:var(--paper-4);}
+  .node.loop{border-style:dashed;}
+  .node.term{border-color:var(--green); color:#1c7a48; background:var(--green-bg);}
+  .arrow{color:var(--ink-3); font-weight:800;}
+  .arrow small{display:block; font-size:9.5px; color:var(--ink-4); font-weight:600;}
+
+  /* ── motion spec ── */
+  .motion-tbl td:nth-child(1){font-weight:700; white-space:nowrap;}
+  .demo-cell{display:flex; align-items:center; gap:10px;}
+  .chip{display:inline-flex; align-items:center; justify-content:center; min-width:34px; height:30px; padding:0 9px; border-radius:8px; font-weight:800; font-size:13px; font-variant-numeric:tabular-nums;}
+  .chip.apple{background:var(--apple); color:#fff;}
+  .chip.gold{background:var(--gold); color:#fff;}
+  .chip.green{background:var(--green); color:#fff;}
+  .chip.ind{background:var(--accent); color:#fff;}
+  .bar{width:96px; height:9px; border-radius:999px; background:var(--paper-4); overflow:hidden;}
+  .bar > i{display:block; height:100%; border-radius:999px; background:linear-gradient(90deg,var(--green),#62c98e);}
+  .swatches{display:flex; flex-wrap:wrap; gap:7px; margin:8px 0;}
+  .sw{display:flex; align-items:center; gap:7px; font-size:11px; color:var(--ink-2); border:1px solid var(--line); border-radius:8px; padding:4px 9px 4px 5px;}
+  .sw i{width:18px;height:18px;border-radius:5px; display:block; border:1px solid rgba(0,0,0,.08);}
+
+  .checklist{columns:2; column-gap:32px; font-size:13px;}
+  .checklist li{break-inside:avoid;}
+  .avoid{break-inside:avoid; page-break-inside:avoid;}
+  .end{margin-top:48px; padding-top:18px; border-top:2px solid var(--ink); font-size:12.5px; color:var(--ink-3);}
+
+  /* ── live motion demos (reduced-motion 안전) ── */
+  @property --num{ syntax:'<integer>'; initial-value:0; inherits:false; }
+  .count{font-variant-numeric:tabular-nums; font-weight:900; color:var(--accent-2);}
+  .count::after{ counter-reset:c var(--num); content:counter(c); }
+  .d-count{ --num:0; animation:dcount 2.4s var(--ease-out) infinite alternate; }
+  @keyframes dcount{ to{ --num:1280; } }
+  .d-bar > i{ animation:dbar 2.6s var(--ease) infinite alternate; }
+  @keyframes dbar{ from{width:18%;} to{width:100%;} }
+  .d-pop{ animation:dpop 1.8s var(--ease) infinite; }
+  @keyframes dpop{ 0%{transform:scale(.5);opacity:0;} 18%{transform:scale(1.14);opacity:1;} 34%,100%{transform:scale(1);opacity:1;} }
+  .d-pulse{ animation:dpulse 1s ease-in-out infinite; }
+  @keyframes dpulse{ 0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(207,59,87,.5);} 50%{transform:scale(1.06);box-shadow:0 0 0 6px rgba(207,59,87,0);} }
+  .d-ring{ animation:dring 1.6s var(--ease) infinite; }
+  @keyframes dring{ 0%,100%{box-shadow:0 0 0 0 rgba(47,157,99,.0);} 30%{box-shadow:0 0 0 5px rgba(47,157,99,.35);} 60%{box-shadow:0 0 0 9px rgba(47,157,99,0);} }
+  .d-rise{ animation:drise 2.2s var(--ease-out) infinite; }
+  @keyframes drise{ 0%{transform:translateY(10px) scale(.97);opacity:0;} 22%,80%{transform:none;opacity:1;} 100%{transform:translateY(-4px);opacity:0;} }
+  .d-float{ animation:dfloat 1.9s var(--ease-out) infinite; }
+  @keyframes dfloat{ 0%{transform:translateY(6px) scale(.8);opacity:0;} 25%{opacity:1;} 100%{transform:translateY(-18px) scale(1);opacity:0;} }
+  @media (prefers-reduced-motion: reduce){
+    .d-count,.d-bar>i,.d-pop,.d-pulse,.d-ring,.d-rise,.d-float{animation:none !important;}
+    .count{--num:1280;} .d-bar>i{width:100%;}
+  }
+
+  @media print{
+    body{background:#fff;}
+    .wrap{max-width:none; padding:0 6mm;}
+    .checklist{columns:2;}
+    h2.sec{break-after:avoid;}
+    .triad,.card,.call,table,.flow{break-inside:avoid;}
+  }
+  @media(max-width:680px){
+    html{font-size:14px;} .wrap{padding:20px 16px 60px;}
+    .cover h1{font-size:30px;} .checklist{columns:1;}
+    .kvs b{flex-basis:110px;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- ===================== COVER ===================== -->
+<section class="cover">
+  <div class="mark">
+    <svg class="logo" viewBox="0 0 64 64" aria-hidden="true">
+      <path d="M32 18c-7-9-22-6-22 8 0 12 11 24 22 24s22-12 22-24c0-14-15-17-22-8z" fill="#e5503b"/>
+      <path d="M34 9c4-3 9-2 11 1-3 3-8 3-11-1z" fill="#5a9a48"/>
+      <text x="32" y="43" text-anchor="middle" font-size="22" font-weight="800" fill="#fff" font-family="sans-serif">10</text>
+    </svg>
+    증강 사과게임 · Augmented Apple Game
+  </div>
+
+  <span class="kicker">● Implementation Brief · 구현 의뢰서</span>
+  <h1>UI 구조 · 설정 · 라운드 정산<br>구조적 재설계 &amp; 모션 구현 의뢰</h1>
+  <p class="lede">이 문서는 "어떻게 보이나"가 아니라 <em>어떻게 짜이고(구조), 어떻게 반응하며(상태), 어떻게 움직이나(모션)</em>를 다룹니다. 화면 흐름(IA)·오버레이/HUD 시스템·<strong>설정</strong>·<strong>라운드/매치 정산</strong>·전 상태·정밀 모션을 <strong>현재 코드 기준</strong>으로 해부하고, 구조적 재설계와 구현(implementation-ready) 산출물을 의뢰합니다.</p>
+
+  <div class="lead-box">
+    <b>두 의뢰서의 관계 — 짝 문서입니다.</b> 같은 폴더의 <span class="mono">증강사과게임_디자인의뢰서.html</span>(v1.0)은
+    <b>비주얼 아이덴티티 전권 위임</b>(컬러·무드·사과 아트·브랜딩)을 다룹니다. <b>이 문서</b>는 그 비주얼을 실제 제품에 얹기 위한
+    <b>구조·인터랙션·모션·구현</b> 레이어를 다룹니다 — 특히 비주얼 의뢰서가 거의 비워둔 <b>설정·라운드 정산·플로우(IA)·정밀 모션</b>을 채웁니다.
+    두 문서는 함께 한 벌입니다.
+  </div>
+
+  <div class="meta">
+    <div><b>프로젝트</b>증강 사과게임 (웹 · 데스크톱+모바일)</div>
+    <div><b>의뢰 범위</b>IA·화면 구조·전 상태·설정·정산·모션 구현</div>
+    <div><b>기술</b>React + CSS / PixiJS 캔버스 / zustand</div>
+    <div><b>현재 상태</b>기능 구현 완료, 구조·연출 미성숙</div>
+    <div><b>문서 버전</b>v1.0 · 2026-05-30</div>
+  </div>
+</section>
+
+<!-- ===================== 00 ===================== -->
+<h2 class="sec"><span class="n">00</span><span>한 장 요약 — 무엇을 맡기나</span></h2>
+<p class="sec-lead">바쁘면 이 절만 읽으세요. 이 의뢰서는 <strong>세 개의 산출물 기둥</strong>을 요청합니다.</p>
+<div class="grid3">
+  <div class="card"><h4>① 구조 재설계 (IA)</h4><p>화면·상태·플로우의 정보 구조를 다시 짭니다. 흩어진 5개 모드, 중복된 오버레이/HUD, 우회하는 온라인 플로우를 <strong>일관된 한 시스템</strong>으로.</p></div>
+  <div class="card"><h4>② 정밀 UI 디자인</h4><p>모든 화면의 모든 상태(빈·로딩·에러·승/패/신기록 등)를 모바일+데스크톱으로. <strong>설정·정산</strong>은 특히 깊게.</p></div>
+  <div class="card"><h4>③ 모션 구현</h4><p>드래그·제거·정산·전환·카운트다운·MMR 연출을 <strong>구현 가능한 스펙</strong>(지속·이징·트리거)으로. CSS/Lottie/Pixi로 바로 이식.</p></div>
+</div>
+<div class="call">
+  <h4>가장 중요한 한 가지</h4>
+  <p>지금 게임은 <strong>점수가 조용히 쌓이고 라운드가 조용히 넘어갑니다.</strong> 30초의 긴장과 빌드 성장의 쾌감이 <strong>연출(정산 모먼트)로 환산되지 못하고</strong> 있어요. 이 의뢰의 심장은 <strong>"라운드 정산"을 카타르시스의 순간으로 설계·구현</strong>하는 것입니다(§07).</p>
+</div>
+<div class="pill-row">
+  <span class="pill"><span class="tag t-now">현재</span> 코드에 있는 것</span>
+  <span class="pill"><span class="tag t-issue">문제</span> 구조적 결함</span>
+  <span class="pill"><span class="tag t-redesign">재설계</span> 요청</span>
+  <span class="pill"><span class="tag t-motion">모션</span> 움직임 스펙</span>
+  <span class="pill"><span class="tag t-new">신규</span> 새로 추가</span>
+</div>
+
+<!-- ===================== 01 ===================== -->
+<h2 class="sec"><span class="n">01</span><span>게임 30초 브리핑 (문서 자체 완결)</span></h2>
+<p class="sec-lead">디자인 결정을 위한 최소 이해. 4겹으로 쌓여 있습니다.</p>
+<ul>
+  <li><strong>코어 루프</strong> — 격자에 1~9 숫자 사과가 깔리고(기본 17×10=170칸), 드래그로 만든 <strong>직사각형 안 사과들의 합이 정확히 10</strong>이면 제거+득점. 제한 시간(기본 30초) 안에 최대 점수.</li>
+  <li><strong>증강 레이어</strong> — 라운드 사이 <strong>3택1·리롤 없음</strong>으로 능력을 누적해 "빌드"를 만듦. 티어 상승: <span class="tag t-silver">실버</span>(R1·2) → <span class="tag t-gold">골드</span>(R3·4) → <span class="tag t-prism">프리즘</span>(R5). 계열 6종(시간·콤보·보드·룰·하이리스크·견제).</li>
+  <li><strong>대결 레이어</strong> — <strong>5라운드×30초</strong>, <strong>라운드 점수 누적 + 라운드 승자 보너스 → 최종 1위</strong>. 현재 AI 대결 + 온라인 1:1 구현. MMR/ELO + 7티어(아이언~마스터).</li>
+  <li><strong>소셜 레이어</strong> — 링크/코드 초대, (예정) 데일리 시드 챌린지·공유 카드.</li>
+</ul>
+<div class="call note">
+  <h4>꼭: 직접 손맛 체험</h4>
+  <p><span class="mono">npm install &amp;&amp; npm run dev</span> → <span class="mono">localhost:5173</span>. 드래그→제거→콤보→증강 선택을 직접 만지셔야 "정산을 어디에 끼워야 하는지" 감이 옵니다. 30초의 리듬이 이 의뢰의 전부입니다.</p>
+</div>
+
+<!-- ===================== 02 ===================== -->
+<h2 class="sec"><span class="n">02</span><span>기술 구조 — 두 개의 렌더링 세계 + 상태 모델</span></h2>
+<p class="sec-lead">"어디에 무엇을 납품하면 구현되나"의 지도. 디자인은 이 경계 위에서 결정됩니다.</p>
+<div class="grid3">
+  <div class="card"><h4>① React / CSS (DOM)</h4><p>홈·HUD·모든 오버레이/모달·설정·정산·로비·리더보드·토스트. → <strong>CSS 스펙 + 토큰(CSS 변수)</strong>으로 납품. <span class="mono">src/ui/**</span></p></div>
+  <div class="card"><h4>② PixiJS (캔버스)</h4><p>사과 격자·사과·선택 박스·제거 파티클·점수 팝업·AI 미니뷰·(예정)견제 FX. → <strong>벡터 드로잉 스펙 또는 스프라이트</strong>. <span class="mono">src/board/BoardView.ts</span></p></div>
+  <div class="card"><h4>③ 살아있는 하늘 (배경)</h4><p>아침→낮→해질녘→밤→황혼 <strong>이음매 없는 1일 루프</strong>가 게임 시계에 연동(시간 증강·일시정지 시 멈춤). 시그니처 자산. <span class="mono">DayNightSky.tsx</span></p></div>
+</div>
+<div class="call issue avoid">
+  <h4><span class="tag t-issue">문제</span> 토큰이 두 곳에 흩어져 있다</h4>
+  <p>색·치수가 <span class="mono">src/ui/styles.css</span>(CSS 변수 215개)와 <span class="mono">src/board/theme.ts</span>(Pixi 숫자 토큰)에 <strong>이중 관리</strong>됩니다. 새 시스템은 <strong>하나의 토큰 소스</strong>(JSON/Style-Dictionary)에서 DOM·Pixi 양쪽으로 파생되게 정리해 주세요. 사과 룩은 별도 핸드오프 패키지(<span class="mono">apple_design_handoff/</span>)가 이미 있으니 그 스펙과 충돌 없이 통합해야 합니다.</p>
+</div>
+
+<h3>상태 모델 (zustand) — 모든 화면 전환의 근원</h3>
+<p>UI는 두 축의 곱으로 라우팅됩니다(<span class="mono">src/app/store.ts</span>, <span class="mono">App.tsx</span>):</p>
+<table class="avoid">
+  <thead><tr><th style="width:90px">축</th><th>값</th><th>의미</th></tr></thead>
+  <tbody>
+    <tr><td><span class="mono">phase</span></td><td><span class="mono">home · round · roundCheck · augment · result</span></td><td>매치 내부 진행 단계</td></tr>
+    <tr><td><span class="mono">mode</span></td><td><span class="mono">solo · augment · versus · online · leaderboard</span></td><td>어떤 종류의 플레이인가</td></tr>
+  </tbody>
+</table>
+<div class="call issue">
+  <h4><span class="tag t-issue">문제</span> <span class="mono">online</span>·<span class="mono">leaderboard</span>는 phase 머신을 우회한다</h4>
+  <p><span class="mono">solo/augment/versus</span>는 phase로 흐르지만, <span class="mono">online</span>은 자체 스토어(<span class="mono">onlineStore</span>)·자체 HUD·<strong>자체 증강 패널·자체 결과 카드</strong>를 따로 가집니다. 그 결과 <strong>같은 화면이 두 벌</strong> 존재하고 서로 어긋나 있습니다(아래 §03·§05.4 참조). 재설계의 1차 목표는 <strong>이 분기를 하나의 정산/오버레이 시스템으로 수렴</strong>시키는 것입니다.</p>
+</div>
+
+<!-- ===================== 03 ===================== -->
+<h2 class="sec"><span class="n">03</span><span>정보 구조(IA) &amp; 화면 플로우 — 현재 지도 + 재설계</span></h2>
+<p class="sec-lead">이 절이 "구조적 재설계"의 뼈대입니다. 먼저 지금 흐름을 그대로 펼칩니다.</p>
+
+<h3>현재 플로우 <span class="tag t-now">현재</span></h3>
+<div class="flow avoid">
+  <div class="flow-row">
+    <span class="node start">홈</span>
+    <span class="arrow">→</span>
+    <span class="node">빠른 한 판 (solo)</span>
+    <span class="arrow">→<small>1R·30s</small></span>
+    <span class="node">round</span>
+    <span class="arrow">→</span>
+    <span class="node term">result</span>
+  </div>
+  <div class="flow-row">
+    <span class="node start">홈</span>
+    <span class="arrow">→</span>
+    <span class="node">5R 증강 (augment)</span>
+    <span class="arrow">→</span>
+    <span class="node">round</span>
+    <span class="arrow">→<small>정산 없음</small></span>
+    <span class="node loop">augment 선택</span>
+    <span class="arrow">↺×5</span>
+    <span class="node term">result</span>
+  </div>
+  <div class="flow-row">
+    <span class="node start">홈</span>
+    <span class="arrow">→</span>
+    <span class="node">AI 대결 (versus)</span>
+    <span class="arrow">→</span>
+    <span class="node">round</span>
+    <span class="arrow">→</span>
+    <span class="node loop">roundCheck<small>3.5s 자동</small></span>
+    <span class="arrow">→</span>
+    <span class="node loop">augment<small>12s 자동</small></span>
+    <span class="arrow">↺×5</span>
+    <span class="node term">result+MMR</span>
+  </div>
+  <div class="flow-row">
+    <span class="node start">홈</span>
+    <span class="arrow">→</span>
+    <span class="node">온라인 (online)</span>
+    <span class="arrow">→</span>
+    <span class="node">menu/hosting/connecting</span>
+    <span class="arrow">→</span>
+    <span class="node">countdown</span>
+    <span class="arrow">→</span>
+    <span class="node loop">round ↔ augment ↺×5</span>
+    <span class="arrow">→</span>
+    <span class="node term">result+MMR</span>
+  </div>
+  <div class="flow-row">
+    <span class="node start">홈</span><span class="arrow">→</span><span class="node">랭킹 (leaderboard)</span><span class="arrow">→</span><span class="node term">홈</span>
+  </div>
+</div>
+
+<h3>구조적 문제 7가지 <span class="tag t-issue">문제</span></h3>
+<table class="avoid">
+  <thead><tr><th style="width:30px">#</th><th style="width:170px">문제</th><th>근거 (코드 기준)</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td>홈의 평면적 메뉴</td><td>CTA 5개(<span class="mono">빠른 한 판/5라운드 증강/AI 대결/친구와 1:1/랭킹</span>)가 위계·그룹 없이 일렬. 설정·도움말은 하단 작은 ghost. "혼자/대결/순위"의 묶음이 안 읽힘.</td></tr>
+    <tr><td>2</td><td>정산 모먼트의 비대칭</td><td><strong>솔로 증강 모드는 라운드 정산(점검)이 아예 없음</strong> — 라운드 끝→바로 증강 선택. 대결만 <span class="mono">roundCheck</span> 존재. 같은 "라운드를 끝냈다"가 모드마다 다르게 끝남.</td></tr>
+    <tr><td>3</td><td>HUD 3벌 분산</td><td><span class="mono">Hud</span>·<span class="mono">VersusHud</span>·<span class="mono">OnlineHud</span>가 별개 컴포넌트. 콤보 칩 위치/일시정지 버튼 유무/상대 +N 팝업 유무가 제각각.</td></tr>
+    <tr><td>4</td><td>증강 패널 2벌</td><td><span class="mono">AugmentOverlay</span>(아이콘+타이머) vs <span class="mono">OnlineScreen</span> 내부 인라인 패널(<strong>계열 아이콘·카운트다운 없음</strong>)이 갈라짐.</td></tr>
+    <tr><td>5</td><td>결과 카드 3벌</td><td><span class="mono">ResultOverlay</span>(솔로)·<span class="mono">VersusResult</span>·<span class="mono">OnlineScreen</span> 결과가 각자 마크업. 정산 연출을 한 번 만들면 셋 다 못 씀.</td></tr>
+    <tr><td>6</td><td>빌드(보유 증강) 가시성</td><td><span class="mono">OwnedAugments</span> 사이드바가 <strong>대결에서만</strong> 표시(<span class="mono">isVersus &amp;&amp; …</span>). 솔로 증강 모드도 빌드를 쌓는데 안 보임. 증강 <strong>선택 화면에서도 현재 빌드를 못 봄</strong>(블라인드 픽).</td></tr>
+    <tr><td>7</td><td>오버레이 dismiss 규칙 불일치</td><td>설정·도움말은 배경 클릭 닫힘, 증강·결과·일시정지·정산은 안 닫힘. 공유 전환/백드롭/포커스 규칙이 없음.</td></tr>
+  </tbody>
+</table>
+
+<h3>재설계 방향 <span class="tag t-redesign">재설계</span></h3>
+<ul>
+  <li><strong>홈을 "허브"로 재구성</strong>: 1차 행동(이어하기/빠른 한 판) → 모드 그룹(혼자 · 대결 · 순위) → 유틸(설정·도움말·프로필)의 명확한 위계. 모드 카드에 <strong>상태 미리보기</strong>(최고점·내 티어·온라인 가능여부).</li>
+  <li><strong>단일 매치 셸</strong>: <span class="mono">round → 정산 → (증강) → round</span> 루프를 <strong>모든 모드 공통</strong>으로. 솔로 증강 모드에도 가벼운 라운드 정산을 추가(§07). 온라인을 별도 셸에서 공통 셸로 흡수.</li>
+  <li><strong>오버레이 시스템 단일화</strong>: 백드롭·진입/이탈 전환·포커스 트랩·dismiss 규칙·z-레이어를 §04.1로 통일. 증강/정산/결과/설정/도움말/일시정지가 같은 셸의 변형.</li>
+  <li><strong>HUD 1 시스템 · 3 변형</strong>(솔로 / 대결 / 온라인) — §04.2.</li>
+  <li><strong>네비게이션 일관성</strong>: 뒤로/홈/일시정지의 위치와 동작을 전 화면 통일. 모바일 제스처(스와이프-다운으로 정산 스킵 등) 정의.</li>
+</ul>
+
+<!-- ===================== 04 ===================== -->
+<h2 class="sec"><span class="n">04</span><span>전역 시스템 재설계 (파운데이션)</span></h2>
+<p class="sec-lead">화면별로 들어가기 전, 모든 화면이 공유하는 다섯 가지 시스템을 먼저 확정합니다.</p>
+
+<h3>4.1 오버레이 / 모달 시스템 <span class="tag t-redesign">재설계</span> <span class="tag t-motion">모션</span></h3>
+<p>현재 모든 오버레이는 <span class="mono">.overlay &gt; .card</span> 한 겹이고 전환이 없습니다. 통일 사양을 요청합니다:</p>
+<div class="kvs avoid">
+  <div><b>백드롭</b><span>일관된 dim + (가벼운) 배경 처리. 보드가 비치는 라운드 중 오버레이와, 보드를 가리는 메뉴 오버레이를 구분.</span></div>
+  <div><b>진입/이탈</b><span>백드롭 페이드 + 카드 rise(아래에서 14px↑ + scale .98→1). 이탈은 역재생(빠르게). 지속·이징은 §09 표.</span></div>
+  <div><b>dismiss 규칙</b><span>닫기 가능(설정·도움말·프로필) vs 불가(정산·증강 선택·카운트다운)를 <strong>명시적 유형</strong>으로. 닫기 가능은 백드롭 클릭+ESC+스와이프다운, 닫기 버튼 항상 존재.</span></div>
+  <div><b>z-레이어</b><span>하늘(0) → 보드 캔버스(1) → HUD(2) → 빌드 사이드바(2) → 오버레이 백드롭(3) → 오버레이 카드(4) → 토스트(5) → 인앱 배너(6). 충돌 없는 맵 납품.</span></div>
+  <div><b>포커스/접근성</b><span>모달 오픈 시 포커스 트랩, 첫 포커스 대상 지정, 닫으면 호출 버튼으로 복귀. <span class="mono">aria-modal</span>·라벨.</span></div>
+  <div><b>스택</b><span>일시정지 위에 설정/도움말이 겹쳐 열림(현재 구조). 2단 스택의 백드롭·전환 정의.</span></div>
+</div>
+
+<h3>4.2 HUD 시스템 <span class="tag t-redesign">재설계</span></h3>
+<p>3개 컴포넌트를 <strong>1 시스템 · 3 변형 · 공유 슬롯</strong>으로. 현재 슬롯 구성(코드 기준):</p>
+<table class="avoid">
+  <thead><tr><th>변형</th><th>좌</th><th>중앙</th><th>우</th></tr></thead>
+  <tbody>
+    <tr><td><strong>솔로</strong> <span class="mono">Hud</span></td><td>라운드칩 <span class="mono">R n/5</span> · 점수 · "점"</td><td>시간 바 + 남은 초(≤5초 경고)</td><td>콤보 칩 · 일시정지</td></tr>
+    <tr><td><strong>대결</strong> <span class="mono">VersusHud</span></td><td>나: 라벨·점수·콤보</td><td><span class="mono">R n/5</span> · 라운드 승수 <span class="mono">me:opp</span> · 일시정지 · 시간 바·초</td><td>상대: 이름·점수·<strong>+N 플로팅</strong></td></tr>
+    <tr><td><strong>온라인</strong> <span class="mono">OnlineHud</span></td><td>내 이름·점수·콤보</td><td><span class="mono">R n/5</span> · 승수 · 시간 바·초(비활성 시 "—")</td><td>상대 이름(<span class="mono">(대기)</span>)·점수</td></tr>
+  </tbody>
+</table>
+<div class="call">
+  <h4>요청</h4>
+  <p>공통 슬롯(나 / 시간·라운드 / 상대|콤보·일시정지)을 정의하고, 모드별로 슬롯을 채우거나 비웁니다. <strong>일시정지·콤보·상대 +N·저시간 경고</strong>는 어느 변형이든 같은 컴포넌트·같은 모션. 세로(모바일)에서 HUD가 보드 상단을 덮지 않도록 세이프 영역·높이 정의.</p>
+</div>
+
+<h3>4.3 디자인 토큰 단일화 <span class="tag t-redesign">재설계</span></h3>
+<p>색·간격·라운드·그림자·이징·z·모션 듀레이션을 <strong>시맨틱 토큰</strong>으로. DOM(CSS 변수)과 Pixi(<span class="mono">theme.ts</span> 숫자) 양쪽 파생. 현재 값은 <strong>전면 교체 대상</strong>이며, 어떤 변수 군이 있는지만 참고:</p>
+<div class="swatches">
+  <span class="sw"><i style="background:#fbf5e9"></i>paper</span>
+  <span class="sw"><i style="background:#3a2a1e"></i>ink</span>
+  <span class="sw"><i style="background:#e04a36"></i>apple</span>
+  <span class="sw"><i style="background:#e3a12a"></i>gold</span>
+  <span class="sw"><i style="background:#3e9f63"></i>valid(green)</span>
+  <span class="sw"><i style="background:#8a7dff"></i>prism-a</span>
+  <span class="sw"><i style="background:#6ad7d0"></i>prism-b</span>
+</div>
+<p class="muted" style="font-size:12.5px">반경 18/14px · 그림자 부드러운 갈색 대형 · 이징 <span class="mono">cubic-bezier(.22,1,.36,1)</span> · 폰트 Pretendard(한글)+tabular-nums(숫자). 보드 비율: 사과 반지름 0.42·셀, 숫자 0.48·셀, 선택 박스 모서리 0.16·셀.</p>
+
+<h3>4.4 레이아웃 · 반응형 골격 <span class="tag t-redesign">재설계</span></h3>
+<ul>
+  <li><strong>320px(모바일 세로) → 데스크톱</strong> 전 구간. 보드는 항상 화면에 꽉 맞춤(정사각 셀), 세로에서는 세로 격자로 스왑(작은 화면 셀 ~20px에서도 1~9 즉독).</li>
+  <li><strong>세이프 에어리어</strong>(<span class="mono">viewport-fit=cover</span> 노치), HUD·하단 컨트롤·토스트가 이를 존중.</li>
+  <li>오버레이 카드 최대폭·내부 그리드(증강 3카드, 설정 행, 정산 점수)의 모바일 재배치(가로→세로) 규칙.</li>
+</ul>
+
+<h3>4.5 모션 원칙 <span class="tag t-motion">모션</span></h3>
+<div class="grid2">
+  <div class="card"><h4>듀레이션 스케일</h4><p>micro 90–140ms(버튼/토글) · UI 180–260ms(오버레이/칩) · 정산/연출 320–900ms(점수 카운트·바·MMR). 입력 피드백은 항상 micro.</p></div>
+  <div class="card"><h4>레이어드 & 의미</h4><p>중요도=무게. 긍정(합10·신기록·승리)은 크고 화려하게, 중립(전환)은 절제. 콤보가 길수록 이펙트가 누적 강화.</p></div>
+  <div class="card"><h4>입력 우선</h4><p>30초 플레이 중에는 어떤 모션도 입력을 지연/가림 금지. 보드 드래그 미리보기·제거는 60fps 보장(무거운 blur/filter 자제).</p></div>
+  <div class="card"><h4>감속 선호</h4><p><span class="mono">prefers-reduced-motion</span>에서 모든 장식 모션 off + 즉시 상태. 정산은 "스킵 가능"으로 동등 정보 제공.</p></div>
+</div>
+
+<!-- ===================== 05 ===================== -->
+<h2 class="sec"><span class="n">05</span><span>화면별 정밀 명세</span></h2>
+<p class="sec-lead">각 화면을 <span class="tag t-now">현재 구조</span> → <span class="tag t-issue">문제</span> → <span class="tag t-redesign">재설계 요구</span> → <strong>상태 전부</strong> → <span class="tag t-motion">모션</span>으로 해부합니다. 카피 실제 문구는 §11.</p>
+
+<!-- 5.1 홈 -->
+<h3>5.1 홈 <span class="mono">HomeScreen.tsx</span></h3>
+<div class="triad avoid">
+  <div class="now"><span class="lbl">현재</span><p>중앙 <span class="mono">home-card</span>: SVG 로고("10" 새긴 사과) → 타이틀 "증강 사과게임" → 한 줄 설명 → CTA 5개 세로 나열 → (최고점&gt;0이면) "최고 점수 N" → 힌트 → 하단 <span class="mono">⚙ 설정</span>/<span class="mono">? 도움말</span> 작은 버튼. 뒤로 낮밤 하늘 자동 순환(60초).</p></div>
+  <div class="iss"><span class="lbl">문제</span><ul><li>5개 CTA가 동일 위계 — "지금 한 판"과 "랭킹 보기"가 같은 무게.</li><li>최고점/티어/온라인 상태가 카드에 묻혀 동기 부여 약함.</li><li>설정·도움말이 시각적으로 버려진 위치.</li></ul></div>
+  <div class="re"><span class="lbl">재설계 요구</span><ul><li>위계: <strong>주(빠른 한 판) → 모드 그룹(혼자/대결/순위) → 유틸</strong>. 모드 카드에 상태 메타(최고점·내 티어·온라인 인원/지연).</li><li>로고/워드마크를 비주얼 의뢰서 브랜딩과 연결.</li><li>하늘 순환과 호응하는 정적/미세모션 헤더.</li></ul></div>
+</div>
+<p><strong>상태</strong>: 최고점 0(숨김) vs 표시 · 온라인 가용/불가 · 진행 중 매치 "이어하기"(신규) · 버튼 hover/press/focus/disabled.</p>
+<p class="muted" style="font-size:12.5px"><span class="tag t-motion">모션</span> 최초 진입 카드 stagger rise, 모드 카드 hover lift, 하늘과 동기화된 헤더 톤.</p>
+
+<!-- 5.2 게임 보드+HUD -->
+<h3>5.2 게임 보드 + HUD (솔로 · 증강) <span class="mono">GameScreen.tsx · Hud.tsx</span></h3>
+<div class="triad avoid">
+  <div class="now"><span class="lbl">현재</span><p>전체 화면 보드 호스트(Pixi) 위에 상단 HUD 한 줄. 점수=<span class="mono">총점+라운드점수</span> 연속 표기. 시간 바는 남은 비율, 남은 초가 ≤5면 <span class="mono">.low</span> 경고. 콤보&gt;1일 때만 콤보 칩. 일시정지 버튼은 라운드 중에만 활성.</p></div>
+  <div class="iss"><span class="lbl">문제</span><ul><li>증강 모드인데 <strong>보유 빌드가 화면에 없음</strong>(사이드바는 대결 전용).</li><li>점수가 "연속"이라 한 번의 큰 제거가 시각적으로 안 터짐.</li><li>저시간 경고가 바 색만 — 긴박함 부족.</li></ul></div>
+  <div class="re"><span class="lbl">재설계 요구</span><ul><li>솔로/증강에도 빌드 칩 노출(§04.2 슬롯).</li><li>큰 제거 시 점수 카운트 점프 + 보드 점수 팝업 동기화.</li><li>저시간(≤5s, ≤3s) 단계적 긴박 연출(바+숫자+화면 가장자리 미세).</li></ul></div>
+</div>
+<p><strong>상태</strong>: 일반 · 잔여 ≤5초 · ≤3초 · 콤보 표시(2,3,…) · 드래그 중(진행/유효 박스) · 제거 직후 · 일시정지 진입 직전(라운드 phase에서만 일시정지 가능).</p>
+<p class="muted" style="font-size:12.5px"><span class="tag t-motion">모션</span> 점수 증가 카운트업(<span class="count d-count"></span> 처럼) · 콤보 칩 pop · 시간 바 저시간 펄스 · 일시정지 진입 시 보드 dim+blur 약하게.</p>
+
+<!-- 5.3 대결 HUD -->
+<h3>5.3 대결 HUD (vs AI / 온라인) <span class="mono">VersusHud.tsx · OnlineHud.tsx</span></h3>
+<div class="triad avoid">
+  <div class="now"><span class="lbl">현재</span><p>좌(나: 점수·콤보) · 중앙(<span class="mono">R n/5</span>·승수 <span class="mono">me:opp</span>·시간) · 우(상대: 이름·점수). AI 모드는 상대 득점 시 우측에 <strong>"+N" 플로팅</strong>이 떠오르고(<span class="mono">score-pop</span>), 코너에 <strong>AI 미니 보드(PiP)</strong>가 상대 수를 비춤. 온라인은 +N·미니뷰 없음, 상대 미입장 시 "(대기)"·시간 "—".</p></div>
+  <div class="iss"><span class="lbl">문제</span><ul><li>같은 "대결 HUD"가 두 컴포넌트로 갈려 피드백 비대칭(+N·미니뷰 유무).</li><li>점수 <strong>역전 순간</strong>이 강조되지 않음 — 경쟁의 핵심 감정.</li><li>승수(라운드 스코어보드)가 작은 텍스트라 시리즈 긴장 약함.</li></ul></div>
+  <div class="re"><span class="lbl">재설계 요구</span><ul><li>+N·미니뷰·역전 강조를 <strong>공통화</strong>(온라인에도).</li><li>역전/동점/리드 상태의 색·모션 신호.</li><li>승수를 "베스트오브5" 점등 인디케이터로(라운드별 점 5개).</li></ul></div>
+</div>
+<p><strong>상태</strong>: 리드 / 동점 / 추격 / 역전 순간 · 잔여 ≤5초 · 콤보 · 상대 미입장(온라인) · 상대 +N · 미니뷰 on/off(설정).</p>
+<p class="muted" style="font-size:12.5px"><span class="tag t-motion">모션</span> 상대 +N floating(아래 <span class="chip ind d-float" style="padding:0 7px;min-width:0">+8</span>) · 역전 시 양측 점수 스왑 강조 · 미니뷰 상대 마지막 수 0.5초 플래시(현재 구현됨).</p>
+
+<!-- 5.4 증강 선택 -->
+<h3>5.4 증강 선택 <span class="mono">AugmentOverlay.tsx</span> (+ 온라인 인라인본)</h3>
+<div class="triad avoid">
+  <div class="now"><span class="lbl">현재</span><p>오버레이 패널: 티어 배지(실버/골드/프리즘) → 제목 "라운드 N · 증강 선택" → "하나를 골라 빌드를 쌓으세요 · 리롤 없음" → (대결만) <strong>12초 카운트다운 바+숫자</strong>, 0이면 자동 선택 → 카드 3장(<span class="mono">계열 아이콘+라벨 · 이름 · 효과 설명</span>). 계열 아이콘은 이모지(⏱️🔥🍎📏🎲⚔️) <strong>임시</strong>.</p></div>
+  <div class="iss"><span class="lbl">문제</span><ul><li><strong>블라인드 픽</strong>: 지금 내 빌드를 못 본 채 선택(시너지 판단 불가).</li><li>온라인 인라인본은 <strong>아이콘·카운트다운이 빠진</strong> 다른 패널.</li><li>티어 위계가 배지 한 개 — "프리즘은 압도적"이 안 느껴짐.</li><li>"리롤 없음"의 긴장(되돌릴 수 없는 선택)이 연출로 없음.</li></ul></div>
+  <div class="re"><span class="lbl">재설계 요구</span><ul><li>패널에 <strong>현재 빌드 스트립</strong> 동반(획득 시 합류 애니메이션).</li><li>단일 컴포넌트로 통합(온라인 포함), 카운트다운 항상.</li><li>티어별 카드 프레임·광채·이펙트 위계(실버→골드→프리즘 점증).</li><li>계열 6종 아이콘 정식화(이모지 대체) — 비주얼 의뢰서 아이콘 키트와 연동.</li></ul></div>
+</div>
+<p><strong>상태</strong>: 티어 3종 · 카드 hover/press/focus · 선택 직후(나머지 2장 dismiss) · 카운트다운 ≤3초 경고 · 자동 선택 발화 · (대결) 상대가 고르는 중 표시(선택적).</p>
+<div class="call motion"><h4><span class="tag t-motion">모션</span> 증강 선택 시퀀스</h4><p>카드 입장 stagger rise → 선택 카드 확대+발광, 미선택 2장 빠르게 후퇴 → 선택 증강이 <strong>빌드 스트립으로 날아가 합류</strong>(획득감) → 카운트다운 바는 시간 증강과 동일 이징. 프리즘은 입장 시 prism 그라데이션 스윕.</p></div>
+
+<!-- 5.5 라운드 정산 -->
+<h3>5.5 라운드 정산 · "라운드 점검" <span class="mono">RoundCheckOverlay.tsx</span> &nbsp;<span class="tag t-pri">핵심</span></h3>
+<div class="triad avoid">
+  <div class="now"><span class="lbl">현재 (대결 전용)</span><p>라운드 종료 후 3.5초 오버레이: 라운드칩 "라운드 N/총" → "라운드 점검" → 판정("내가 이긴 라운드!/상대가 이긴 라운드/비긴 라운드") → <span class="mono">나 점수 vs 상대 점수</span>(이긴 쪽 <span class="mono">.won</span> 강조) → "누적 전적 me : opp" → 줄어드는 시간 바 → <strong>자동으로 다음(증강)으로</strong>. <span class="mono">ROUND_CHECK_MS=3500</span>.</p></div>
+  <div class="iss"><span class="lbl">문제</span><ul><li><strong>솔로/증강 모드엔 이 화면이 없음</strong> — 라운드를 끝낸 보람 0.</li><li><strong>점수가 어떻게 합산됐는지</strong> 안 보임: 라운드 점수→누적 총점 반영, <strong>라운드 승자 보너스</strong>(확정 스펙)가 화면에 전혀 드러나지 않음.</li><li>3.5초 <strong>자동</strong> 진행만 — 스킵/머무름 불가, 정보 흡수 강제.</li><li>누적 전적이 숫자 텍스트라 "베스트오브5"의 시리즈감 약함.</li></ul></div>
+  <div class="re"><span class="lbl">재설계 요구</span><ul><li><strong>모든 모드 공통</strong> 라운드 정산(솔로=개인 베스트/델타 중심, 대결=대결 중심).</li><li><strong>정산 회계를 시각화</strong>: 라운드 점수 → (승자 보너스 +) → 누적 총점 갱신을 단계적 카운트업으로.</li><li><strong>스킵 가능</strong>(탭/스와이프) + 자동 진행 병행. 감속 선호 시 즉시.</li><li>시리즈 인디케이터(라운드별 승패 점등).</li></ul></div>
+</div>
+<p><strong>상태</strong>: 내가 이긴 라운드 / 상대가 이긴 / 비김 · 시리즈 리드/추격/매치포인트(다음 라운드가 승부 확정 가능) · 마지막 라운드 직전(→ 결과로) · 솔로(개인 라운드 요약) 변형.</p>
+<div class="call motion avoid"><h4><span class="tag t-motion">모션</span> 라운드 정산 코레오그래피 (제안 타임라인 ~2.6–3.5s, 스킵 가능)</h4>
+  <p>① 라운드 점수 양측 카운트업(<span class="count d-count"></span>) → ② 승자 측 보너스 칩 pop(+보너스) → ③ 누적 총점 바/숫자 갱신(밀어 올림) → ④ 시리즈 점등 1칸 추가(<span class="d-pop" style="display:inline-block;width:12px;height:12px;border-radius:50%;background:var(--green)"></span>) → ⑤ "다음" 카운트다운 바. 매치포인트면 ④에서 강조 펄스. 솔로면 ①이 "이번 라운드 +N", ③이 개인 누적/신기록 추적 바.</p>
+</div>
+
+<!-- 5.6 매치 정산/결과 -->
+<h3>5.6 매치 정산 · 결과 <span class="mono">ResultOverlay · VersusResult · OnlineScreen</span> &nbsp;<span class="tag t-pri">핵심</span></h3>
+<div class="triad avoid">
+  <div class="now"><span class="lbl">현재</span><p><strong>솔로</strong>: "최고 기록!/게임 종료" → 큰 점수 + "점" → "최고 N · N라운드" → 다시 하기/홈으로. &nbsp;<strong>대결</strong>: "승리!/패배/무승부"(<span class="mono">.win/.loss/.draw</span>) → <span class="mono">나 점수 : 상대 점수</span> → "라운드 me:opp" + (언랭크면)"연습(언랭크)" → 랭크면 "MMR ±N" → 다시 대결/홈으로. &nbsp;<strong>온라인</strong>: 거의 동일 + 상대 이탈 시 "상대가 나갔습니다 · 부전승".</p></div>
+  <div class="iss"><span class="lbl">문제</span><ul><li>전부 <strong>정적 카드</strong> — 카운트업/바/티어 변화 등 매치를 마무리하는 연출 0.</li><li>"MMR +N"이 숫자 한 줄 — <strong>티어 게이지/승급·강등</strong> 순간이 없음(7티어 시스템인데).</li><li>라운드별 흐름(어디서 이기고 졌나) 요약 없음.</li><li>신기록이 텍스트 라벨뿐 — 자랑/공유 욕구 유발 약함.</li><li>3벌 마크업이 갈려 연출을 한 번 만들어도 공유 불가.</li></ul></div>
+  <div class="re"><span class="lbl">재설계 요구</span><ul><li><strong>단일 결과/정산 컴포넌트</strong>(솔로/대결/온라인 변형).</li><li>연출: 최종 점수 카운트업 → 라운드별 스트립(R1–R5 결과) → (대결)MMR 바 채움 + 티어 칩 변화/승급 연출 → CTA.</li><li><strong>신기록</strong> 전용 강조(배지·파티클·"공유" 진입점, 비주얼 의뢰서 OG 카드 연계).</li><li>부전승·무승부·언랭크 등 변형 명시.</li></ul></div>
+</div>
+<p><strong>상태</strong>: 솔로(신기록 / 일반) · 대결(승/패/무 × 랭크/언랭크) · 온라인(+ 상대 이탈 부전승) · MMR 상승/하락/승급/강등.</p>
+<div class="call motion avoid"><h4><span class="tag t-motion">모션</span> 매치 정산 시퀀스 (제안)</h4>
+  <p>승/패/무 헤더 인 → 최종 점수 카운트업(양측 동시) → 라운드 스트립 좌→우 점등 → <strong>MMR 바</strong> 현재→신규로 채움(<span class="bar d-bar" style="display:inline-block;vertical-align:middle"><i></i></span>) + 델타 칩 floating → 티어 경계 넘으면 승급 연출(티어 칩 교체+파티클) → CTA 등장. 신기록이면 점수 위로 신기록 배지 pop + 가장자리 파티클.</p>
+</div>
+
+<!-- 5.7 일시정지 -->
+<h3>5.7 일시정지 <span class="mono">PauseOverlay.tsx</span></h3>
+<p><span class="tag t-now">현재</span> "일시정지" → 이어하기/설정/도움말/다시 시작/홈 세로 버튼. 열리면 시계·AI 봇 정지(공유 클럭 pause), 하늘도 멈춤. 설정/도움말은 일시정지 <strong>위에</strong> 겹쳐 열림.</p>
+<p><span class="tag t-issue">문제</span> 버튼 5개 동일 위계 · 정지 중 보드 상태(진행 중 점수/남은 시간) 미표시 · 겹침 전환 없음. &nbsp;<span class="tag t-redesign">재설계</span> 1차(이어하기) 강조 + 보조 그리드, 현재 라운드 요약(점수·남은 시간) 표시, §04.1 스택 전환 적용.</p>
+
+<!-- 5.8 도움말 -->
+<h3>5.8 도움말 <span class="mono">HelpOverlay.tsx</span></h3>
+<p><span class="tag t-now">현재</span> "플레이 방법" + 4줄 설명(합10 드래그 / 콤보 / 증강 모드 / AI 대결+미니뷰) + 확인. &nbsp;<span class="tag t-redesign">재설계</span> 정적 텍스트 → <strong>미니 데모/일러스트</strong>(드래그→제거 한 컷, 콤보, 증강) 권장. 최초 1회 온보딩 변형(선택).</p>
+
+<!-- 5.9 온라인 로비 -->
+<h3>5.9 온라인 로비 <span class="mono">OnlineScreen.tsx</span></h3>
+<div class="triad avoid">
+  <div class="now"><span class="lbl">현재 (stage별)</span><p><strong>menu</strong>: "친구와 1:1 대결" · 닉네임 입력+저장 · "방 만들기" · 코드 3자리 입력+입장 · 에러 줄 · 홈으로. &nbsp;<strong>hosting</strong>: 큰 방 코드 · "초대 링크 복사" · (아무도 없으면)"AI와 대결로 전환" / (대기 중)스피너 · 취소. &nbsp;<strong>connecting</strong>: "연결 중…" 스피너. &nbsp;<strong>countdown</strong>: "곧 시작!". &nbsp;<strong>result</strong>: §5.6.</p></div>
+  <div class="iss"><span class="lbl">문제</span><ul><li>"초대 링크 복사"가 <strong>피드백 없이</strong> 클립보드에 씀(토스트 부재).</li><li>에러가 인라인 텍스트 — 토스트/상태 디자인 없음.</li><li>방 코드 입력/표시·로딩·카운트다운이 각자 임시 룩.</li><li>닉네임 설정이 로비 안에만 — 최초 진입/프로필 흐름과 분리.</li></ul></div>
+  <div class="re"><span class="lbl">재설계 요구</span><ul><li>각 stage를 §04.1 오버레이 시스템으로 통일, 전환 정의.</li><li>코드 입력 컴포넌트(3자리 세그먼트), 복사=토스트, 대기=상대 합류 연출.</li><li>"곧 시작!"을 3·2·1 카운트다운으로 격상(스펙).</li><li>닉네임/아바타를 프로필 모달로 승격(홈에서도 접근).</li></ul></div>
+</div>
+<p><strong>상태</strong>: menu(기본/에러) · hosting(대기/미입장→AI전환) · connecting · countdown · 상대 합류 · 정원 초과 난입 무시 · 상대 이탈.</p>
+
+<!-- 5.10 리더보드 -->
+<h3>5.10 리더보드 <span class="mono">LeaderboardScreen.tsx</span></h3>
+<p><span class="tag t-now">현재</span> "랭킹 · 상위 20" → 로딩 스피너 / 빈 상태("아직 기록이 없어요…") / 리스트 행(<span class="mono">순위 · 아바타 · 닉네임 · 티어 · MMR</span>) → 홈으로. &nbsp;<span class="tag t-issue">문제</span> 행 디자인·티어 표기가 텍스트, <strong>내 위치/내 행 강조 없음</strong>, 7티어 위계 미시각화, 페이지네이션/실시간 갱신감 없음. &nbsp;<span class="tag t-redesign">재설계</span> 티어 배지(7종, 비주얼 의뢰서 키트), 내 행 고정 강조, 상위 3 단상, 빈/로딩/에러 상태, 진입 stagger.</p>
+
+<!-- 5.11 시스템 -->
+<h3>5.11 인앱 배너 · 토스트 · 시스템(로딩/에러/빈) <span class="mono">InAppBanner.tsx</span> + 신규</h3>
+<ul>
+  <li><span class="tag t-now">현재</span> 인앱 배너: 카톡/인스타 인앱 감지 시 "외부 브라우저로 열기" + 닫기. 스피너(<span class="mono">.spinner</span>)가 로딩 공통.</li>
+  <li><span class="tag t-issue">문제</span> <strong>토스트 시스템 부재</strong>(복사 완료·에러·재접속 알림이 없거나 인라인). 로딩=스피너 하나, 스플래시/첫 로드 화면 없음.</li>
+  <li><span class="tag t-new">신규</span> <strong>토스트</strong>(성공/정보/에러, 자동 소멸, 세이프영역 존중) · <strong>스플래시/로딩</strong>(하늘 위 로고, 폰트/에셋 로드) · 표준 <strong>빈/에러</strong> 패턴 · 인앱 배너 재디자인.</li>
+</ul>
+
+<!-- ===================== 06 ===================== -->
+<h2 class="sec"><span class="n">06</span><span>설정(Settings) 심화 재설계 &nbsp;<span class="tag t-pri">핵심</span></span></h2>
+<p class="sec-lead">비주얼 의뢰서가 다루지 않은 영역. 현재 설정은 단일 평면 리스트입니다(<span class="mono">SettingsOverlay.tsx</span> · <span class="mono">settingsStore.ts</span>, localStorage <span class="mono">aag.settings.v1</span>).</p>
+
+<h3>현재 설정 항목 (정확) <span class="tag t-now">현재</span></h3>
+<table class="avoid">
+  <thead><tr><th style="width:120px">항목</th><th style="width:90px">컨트롤</th><th>값 / 기본값</th><th>적용 시점</th></tr></thead>
+  <tbody>
+    <tr><td>사운드</td><td>토글</td><td>on / <strong>off</strong> · 기본 on</td><td>즉시</td></tr>
+    <tr><td>AI 미니화면</td><td>토글</td><td>on/off · 기본 on (대결 PiP)</td><td>즉시</td></tr>
+    <tr><td>AI 난이도</td><td>세그먼트</td><td>자동 / 쉬움 / 보통 / 어려움 · 기본 자동</td><td><strong>다음 게임</strong></td></tr>
+    <tr><td>라운드 시간</td><td>세그먼트</td><td>20 / 30 / 45 / 60초 · 기본 30</td><td><strong>다음 게임</strong></td></tr>
+    <tr><td>사과 개수</td><td>세그먼트</td><td>적게 11×7 / 보통 17×10 / 많이 21×12 · 기본 보통</td><td><strong>다음 게임</strong></td></tr>
+    <tr><td>사과 크기</td><td>세그먼트</td><td>작게 .6 / 보통 .8 / 크게 1.0 (보드 축소율) · 기본 .8</td><td><strong>다음 게임</strong></td></tr>
+  </tbody>
+</table>
+<p class="muted" style="font-size:12.5px">하단 안내: "시간·사과 개수·사과 크기·AI 난이도는 다음 게임부터 적용돼요." 버튼: 기본값 / 완료. 진입점 2곳(홈 하단, 일시정지 메뉴) — 같은 모달.</p>
+
+<div class="call issue avoid">
+  <h4><span class="tag t-issue">문제</span> 구조적 결함</h4>
+  <p><strong>① 그룹 없음</strong>: 솔로 관련(시간·개수·크기·사운드)과 대결 전용(AI 난이도·AI 미니화면)이 한 리스트에 뒤섞임. <br>
+  <strong>② "다음 게임부터"</strong>: 일시정지에서 바꿔도 지금 판에 반영 안 됨 → 혼란. <br>
+  <strong>③ 미리보기 부재</strong>: "사과 개수/크기"를 바꿔도 효과를 다음 판까지 못 봄. <br>
+  <strong>④ "개수"와 "크기"가 헷갈림</strong>: 개수=격자 차원, 크기=보드 전체 축소율(셀이 아니라 보드를 줄임) — 라벨만으론 모델이 안 읽힘. <br>
+  <strong>⑤ 저장 피드백 없음</strong> · 모드별 기본/프리셋 없음 · 접근성(세그먼트=라디오 그룹) 미흡.</p>
+</div>
+
+<h3>재설계 요구 <span class="tag t-redesign">재설계</span></h3>
+<ul>
+  <li><strong>카테고리화</strong>: 게임플레이(시간·개수·크기) / 대결(AI 난이도·미니화면) / 사운드·햅틱 / 접근성(모션 감소·고대비·숫자 크기) / 데이터(기본값·기록 초기화). 접근성·햅틱·모션감소는 <span class="tag t-new">신규</span> 권장.</li>
+  <li><strong>라이브 미리보기</strong>: "사과 개수/크기"에 미니 보드 프리뷰(격자·셀이 실시간 변형). "개수↔크기"의 관계를 한 컨트롤로 직관화(2D 매트릭스 또는 프리뷰 동반 슬라이더).</li>
+  <li><strong>적용 모델 정리</strong>: "즉시 적용"을 기본으로, 라운드 중 바꿀 수 없는 것은 명확히 비활성/예약 표기. "다음 게임부터" 문구 의존 줄이기.</li>
+  <li><strong>저장/리셋 피드백</strong>(토스트), 기본값 복원 확인, 모드별 추천 프리셋(예: "모바일 최적", "스피드런").</li>
+  <li>토글·세그먼트의 <strong>상태·모션·접근성</strong>(role=switch / radiogroup, 키보드, focus ring) 정식 컴포넌트화.</li>
+</ul>
+<div class="call motion"><h4><span class="tag t-motion">모션</span> 설정 인터랙션</h4><p>토글 knob 스프링 슬라이드(<span style="display:inline-block;width:34px;height:18px;border-radius:999px;background:var(--green);position:relative;vertical-align:middle"><span class="d-pop" style="position:absolute;top:2px;right:2px;width:14px;height:14px;border-radius:50%;background:#fff"></span></span>) · 세그먼트 활성 인디케이터 슬라이드(스프링) · 프리뷰 보드 셀 morph · 패널 진입 §04.1.</p></div>
+
+<!-- ===================== 07 ===================== -->
+<h2 class="sec"><span class="n">07</span><span>라운드/매치 정산(Settlement) 심화 &nbsp;<span class="tag t-pri">핵심</span></span></h2>
+<p class="sec-lead">이 의뢰의 심장. 현재 "회계"는 코드 안에서만 일어나고 <strong>플레이어 눈앞에서 일어나지 않습니다.</strong></p>
+
+<h3>점수 모델 (확정 스펙) <span class="tag t-now">현재</span></h3>
+<div class="kvs avoid">
+  <div><b>라운드 점수</b><span>제거할 때마다 가산. 콤보·증강이 곱/가산으로 개입(예: 연쇄 1.5×, 막판 스퍼트 2×, 도박사 ×3/×0.4).</span></div>
+  <div><b>매치 점수</b><span><strong>라운드 점수 누적 합산 + 라운드 승자 보너스 → 최종 누적 1위 승.</strong></span></div>
+  <div><b>라운드 정산 데이터</b><span><span class="mono">RoundResult{my, opp, winner, round}</span> + 시리즈 <span class="mono">roundWins{me,opp}</span> + 누적 <span class="mono">myTotal/oppTotal</span>(versusStore).</span></div>
+  <div><b>타이밍 상수</b><span>라운드 정산 <span class="mono">ROUND_CHECK_MS=3500</span> · 증강 자동선택 <span class="mono">AUGMENT_MS=12000</span> · (솔로엔 정산 단계 없음).</span></div>
+  <div><b>랭크 정산</b><span>매치 후 ELO 적용 → <span class="mono">mmrDelta</span>. 봇 대결은 언랭크(MMR 미반영). 7티어 산출.</span></div>
+</div>
+
+<div class="call issue avoid">
+  <h4><span class="tag t-issue">문제</span> 정산이 "보이지 않는다"</h4>
+  <p>① 라운드 점수가 <strong>어떻게 총점이 됐는지</strong>, <strong>승자 보너스가 얼마였는지</strong> 화면에 없음(정산 오버레이는 라운드 점수와 전적 텍스트만). <br>
+  ② <strong>솔로/증강</strong>은 라운드 정산 단계가 통째로 없음 → 5라운드를 쌓는 빌드의 성장이 "정산 모먼트"로 환산되지 않음. <br>
+  ③ 매치 결과의 MMR이 숫자 한 줄 → 티어/승급 서사 없음. <br>
+  ④ 정산이 전부 자동·정적 → 카타르시스 0.</p>
+</div>
+
+<h3>재설계: 정산을 "감정의 회계장부"로 <span class="tag t-redesign">재설계</span></h3>
+<div class="grid2">
+  <div class="card"><h4>라운드 정산 (모든 모드)</h4><p>① 이번 라운드 획득(콤보/증강 보너스 분해 표기 선택) → ② (대결)승자 보너스 → ③ 누적 총점 갱신 카운트업 → ④ (대결)시리즈 점등 / (솔로)개인 누적·신기록 추적 → ⑤ 다음으로(스킵 가능). 솔로는 가볍게, 대결은 경쟁 강조.</p></div>
+  <div class="card"><h4>매치 정산 (단일 컴포넌트)</h4><p>최종 점수 카운트업 → 라운드별 스트립(R1–R5 승패/점수) → (대결)MMR 바 채움+티어 변화+승급/강등 → 신기록/공유 → CTA. 부전승·무승부·언랭크 변형.</p></div>
+</div>
+<div class="call motion avoid"><h4><span class="tag t-motion">모션</span> 정밀 타임라인 (구현 기준 제안)</h4>
+  <table class="motion-tbl" style="margin:6px 0 0">
+    <thead><tr><th style="width:120px">단계</th><th style="width:80px">지속</th><th style="width:130px">이징</th><th>동작</th></tr></thead>
+    <tbody>
+      <tr><td>점수 카운트업</td><td>500–800ms</td><td>ease-out</td><td>0→최종, 마지막 자리 tick. 큰 값일수록 길게(상한 800ms).</td></tr>
+      <tr><td>보너스 칩</td><td>240ms</td><td>spring</td><td>승자 측에서 pop, 총점으로 흡수.</td></tr>
+      <tr><td>총점 갱신</td><td>400ms</td><td>var(--ease)</td><td>이전 총점 위로 새 총점 밀어 올림(롤업).</td></tr>
+      <tr><td>시리즈 점등</td><td>180ms</td><td>spring</td><td>해당 라운드 점 1칸 채움(승=내 색, 패=상대 색).</td></tr>
+      <tr><td>MMR 바</td><td>700–1000ms</td><td>ease-in-out</td><td>현재→신규. 티어 경계 통과 시 정지+승급 버스트.</td></tr>
+      <tr><td>스킵</td><td>—</td><td>—</td><td>탭/스와이프-다운 시 전 단계 즉시 종료값. reduced-motion=자동 스킵.</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ===================== 08 ===================== -->
+<h2 class="sec"><span class="n">08</span><span>보드 캔버스(Pixi) 인터랙션 &amp; 이펙트</span></h2>
+<p class="sec-lead">플레이 시간의 90%를 보는 표면. DOM이 아니라 Pixi 캔버스라 <strong>벡터 스펙/스프라이트</strong>로 납품(개발이 캔버스에 이식). 현재 동작(코드 기준):</p>
+<table class="avoid">
+  <thead><tr><th style="width:130px">요소</th><th>현재 동작</th><th style="width:90px">상태</th></tr></thead>
+  <tbody>
+    <tr><td>사과(기본)</td><td>베지어 실루엣 + 새틴 광택(상단 하이라이트·바닥 음영·글로스) + 줄기·잎. 숫자 0.48·셀, 크림색+딥레드 그림자. 별도 핸드오프(<span class="mono">apple_design_handoff</span>) 스펙 존재.</td><td><span class="tag t-now">구현</span></td></tr>
+    <tr><td>사과(특수)</td><td><span class="mono">golden</span>(점수2배)·<span class="mono">gem</span>(+15)·<span class="mono">bomb</span>(+10)·<span class="mono">wild</span>(만능) 태그별 팔레트 교체.</td><td><span class="tag t-now">구현</span></td></tr>
+    <tr><td>선택 박스(진행)</td><td>합≠10: 중립 잉크 박스(얇은 외곽 alpha .4).</td><td><span class="tag t-now">구현</span></td></tr>
+    <tr><td>선택 박스(유효=10)</td><td>합10: <strong>초록 채움+글로우 링</strong> — 가장 중요한 긍정 피드백.</td><td><span class="tag t-now">구현</span></td></tr>
+    <tr><td>제거 버스트</td><td>셀당 5–8 파티클, 중력, 380–600ms 페이드/축소. 손맛의 핵심.</td><td><span class="tag t-now">구현</span></td></tr>
+    <tr><td>점수 팝업</td><td>제거 중심에 "+N" 골드 텍스트가 750ms 위로 떠오름.</td><td><span class="tag t-now">구현</span></td></tr>
+    <tr><td>AI 미니뷰(PiP)</td><td>코너에 상대 보드 축소 미러 + 마지막 수 0.5초 플래시.</td><td><span class="tag t-now">구현</span></td></tr>
+    <tr><td>견제(sabotage) FX</td><td>셔플·암전·동결·강탈·눈속임·잡티 — 화면 전체 FX 레이어.</td><td><span class="tag t-new">예정</span></td></tr>
+  </tbody>
+</table>
+<div class="grid2">
+  <div class="card"><h4>재설계/강화 요청 <span class="tag t-redesign">재설계</span></h4><p>유효 박스의 "지금 놓으면!" 신호 강화, <strong>콤보 단계별 버스트 누적 강화</strong>(2·3·5+), 실패 드래그의 절제된 거절 피드백, 특수 사과 식별성↔가독성 균형, 빈 칸 처리. 숫자 가독성(셀 ~20–50px)은 절대 최우선.</p></div>
+  <div class="card"><h4>모션 스펙 납품 <span class="tag t-motion">모션</span></h4><p>파티클 수·속도·중력·수명, 팝업 드리프트/스케일, 박스 글로우 등을 <strong>수치 파라미터</strong>로(현재 값은 시작점). reduced-motion 대체. Pixi 포팅 메모는 <span class="mono">apple_design_handoff/README</span> 참고.</p></div>
+</div>
+<div class="call"><h4>견제 FX (예정, 미리 시스템에 반영)</h4><p>암전(화면 가림)·셔플(보드 재배치)·동결(입력 정지)·강탈(점수 흡수)·눈속임(숫자 흐림)·잡티(방해 사과). 상대를 흔드는 <strong>전체 화면 FX 레이어</strong> + 내 화면이 당했을 때/상대에게 먹였을 때의 양방향 피드백을 모션 언어에 포함.</p></div>
+
+<!-- ===================== 09 ===================== -->
+<h2 class="sec"><span class="n">09</span><span>모션 스펙 시트 (마스터 표)</span></h2>
+<p class="sec-lead">"애니메이션 구현"의 단일 참조표. 아래 데모는 브라우저에서 실제 재생됩니다(제안 레퍼런스 · reduced-motion 시 정지). 디자이너는 이 표를 <strong>최종 수치로 확정</strong>해 납품해 주세요.</p>
+<table class="motion-tbl avoid">
+  <thead><tr><th style="width:130px">모션</th><th style="width:130px">트리거</th><th style="width:150px">속성 / 데모</th><th style="width:90px">지속·이징</th><th>비고</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>점수 카운트업</td><td>제거·정산</td>
+      <td><div class="demo-cell"><span class="count d-count"></span></div></td>
+      <td>500–800ms · ease-out</td>
+      <td>tabular-nums, 마지막 자리 tick.</td>
+    </tr>
+    <tr>
+      <td>시간 바 / MMR 바</td><td>틱·정산</td>
+      <td><div class="demo-cell"><span class="bar d-bar"><i></i></span></div></td>
+      <td>linear / 700–1000ms</td>
+      <td>저시간 ≤5/≤3 단계 경고색.</td>
+    </tr>
+    <tr>
+      <td>칩 pop</td><td>콤보·보너스·신기록</td>
+      <td><div class="demo-cell"><span class="chip gold d-pop">+2</span></div></td>
+      <td>200–260ms · spring</td>
+      <td>scale .5→1.14→1.</td>
+    </tr>
+    <tr>
+      <td>유효 박스 링</td><td>합=10</td>
+      <td><div class="demo-cell"><span class="chip green d-ring">10</span></div></td>
+      <td>~1.6s loop · ease</td>
+      <td>Pixi: 초록 채움+확장 링.</td>
+    </tr>
+    <tr>
+      <td>저시간 펄스</td><td>잔여 ≤5초</td>
+      <td><div class="demo-cell"><span class="chip d-pulse" style="background:var(--rose);color:#fff">3</span></div></td>
+      <td>~1s loop · ease-in-out</td>
+      <td>숫자+바+가장자리 미세.</td>
+    </tr>
+    <tr>
+      <td>오버레이 카드 rise</td><td>오버레이 진입</td>
+      <td><div class="demo-cell"><span class="chip ind d-rise" style="min-width:54px">카드</span></div></td>
+      <td>200–260ms · ease-out</td>
+      <td>백드롭 페이드 동반.</td>
+    </tr>
+    <tr>
+      <td>상대 +N 플로팅</td><td>상대 득점</td>
+      <td><div class="demo-cell"><span class="chip apple d-float" style="min-width:0;padding:0 8px">+8</span></div></td>
+      <td>~750ms · ease-out</td>
+      <td>위로 드리프트+페이드.</td>
+    </tr>
+    <tr>
+      <td>제거 버스트</td><td>유효 제거</td>
+      <td class="muted">Pixi 파티클</td>
+      <td>380–600ms</td>
+      <td>5–8개·중력·콤보 누적 강화.</td>
+    </tr>
+    <tr>
+      <td>증강 획득 합류</td><td>증강 선택</td>
+      <td class="muted">카드→빌드 비행</td>
+      <td>320–450ms · ease</td>
+      <td>티어별 광채 차등.</td>
+    </tr>
+    <tr>
+      <td>카운트다운 3·2·1</td><td>대결 시작</td>
+      <td class="muted">숫자 스케일/페이드</td>
+      <td>각 1s</td>
+      <td>현재 "곧 시작!" 대체.</td>
+    </tr>
+    <tr>
+      <td>승급/강등</td><td>매치 정산</td>
+      <td class="muted">티어 칩 교체+버스트</td>
+      <td>500–800ms</td>
+      <td>경계 통과 시만.</td>
+    </tr>
+    <tr>
+      <td>토스트 인/아웃</td><td>복사·에러 등</td>
+      <td class="muted">슬라이드+페이드</td>
+      <td>180/auto·2.5s</td>
+      <td>세이프영역 존중.</td>
+    </tr>
+  </tbody>
+</table>
+<p class="muted" style="font-size:12px">(데모가 멈춰 보이면 OS의 "동작 줄이기"가 켜진 것 — 의도된 대체 동작입니다.)</p>
+
+<!-- ===================== 10 ===================== -->
+<h2 class="sec"><span class="n">10</span><span>반응형 · 입력 · 접근성 · 성능 예산</span></h2>
+<ul>
+  <li><strong>반응형</strong>: 320px 모바일 세로 → 데스크톱. 보드 자동 맞춤(정사각 셀), 세로 격자 스왑, 세이프에어리어(<span class="mono">viewport-fit=cover</span>).</li>
+  <li><strong>입력</strong>: 마우스 드래그 + 터치 드래그(둘 다 1급). 텍스트 선택/탭 하이라이트 off, 전체화면 토글, 가로 모드 힌트. 정산 스킵·오버레이 dismiss의 제스처 정의.</li>
+  <li><strong>접근성</strong>: <span class="mono">prefers-reduced-motion</span> 완전 대응(정산·배경·이펙트), 포커스 가시화, 모달 포커스 트랩, 색 외 신호(승/패·유효), 숫자 대비, 세그먼트=radiogroup·토글=switch.</li>
+  <li><strong>성능 예산</strong>: 드래그 미리보기·파티클 60fps. 모바일 GPU 의식(과한 blur/filter·대형 그림자 남발 자제). 정산/전환이 입력 지연 유발 금지.</li>
+  <li><strong>폰트</strong>: 한글+숫자 가독, 웹폰트 서브셋/로딩 전략(스플래시와 연계).</li>
+</ul>
+
+<!-- ===================== 11 ===================== -->
+<h2 class="sec"><span class="n">11</span><span>카피 인벤토리 (실제 한국어 문구)</span></h2>
+<p class="sec-lead">레이아웃 시 실제 텍스트 길이 가늠용. 문구 개선 제안 환영.</p>
+<table class="avoid">
+  <thead><tr><th style="width:120px">화면</th><th>문구</th></tr></thead>
+  <tbody>
+    <tr><td>홈</td><td>증강 사과게임 · 합이 <strong>10</strong>이 되도록 사과를 드래그해 담으세요 · 빠른 한 판 · 30초 / 5라운드 증강 모드 / AI와 대결 · 5라운드 / 친구와 1:1 대결 / 랭킹 보기 · 최고 점수 {N} · 데스크톱·모바일 모두 드래그로 플레이 · ⚙ 설정 / ? 도움말</td></tr>
+    <tr><td>HUD</td><td><span class="mono">R{n}/5</span> · {N}점 · {N} 콤보 · 남은 초 · (대결) 나 / {상대} · {me} : {opp}</td></tr>
+    <tr><td>증강 선택</td><td>실버 / 골드 / 프리즘 · 라운드 {N} · 증강 선택 · 하나를 골라 빌드를 쌓으세요 · 리롤 없음 · 계열: 시간/콤보/보드/룰/하이리스크/견제</td></tr>
+    <tr><td>라운드 정산</td><td>라운드 {N}/5 · 라운드 점검 · 내가 이긴 라운드! / 상대가 이긴 라운드 / 비긴 라운드 · 나 {N} vs {상대} {N} · 누적 전적 {me} : {opp}</td></tr>
+    <tr><td>결과(솔로)</td><td>최고 기록! / 게임 종료 · {N}점 · 최고 {N} · {N}라운드 · 다시 하기 / 홈으로</td></tr>
+    <tr><td>결과(대결)</td><td>승리! / 패배 / 무승부 · 나 {N} : {상대} {N} · 라운드 {me} : {opp} · 연습(언랭크) / MMR +{N} · 상대가 나갔습니다 · 부전승 · 다시 대결 / 홈으로</td></tr>
+    <tr><td>일시정지</td><td>일시정지 · 이어하기 / 설정 / 도움말 / 다시 시작 / 홈</td></tr>
+    <tr><td>설정</td><td>설정 · 사운드 / AI 미니화면 / AI 난이도(자동·쉬움·보통·어려움) / 라운드 시간(20·30·45·60초) / 사과 개수(적게·보통·많이) / 사과 크기(작게·보통·크게) · 시간·사과 개수·사과 크기·AI 난이도는 다음 게임부터 적용돼요 · 기본값 / 완료</td></tr>
+    <tr><td>도움말</td><td>플레이 방법 · 합이 10이 되도록 사과를 드래그 · 콤보 · 증강 모드 · AI 대결(미니화면) · 확인</td></tr>
+    <tr><td>온라인</td><td>친구와 1:1 대결 · 닉네임 · 저장 · 방을 만들어 링크를 공유하거나, 받은 코드로 입장하세요 · 방 만들기 · 코드 3자리 · 입장 · 방 코드 · 초대 링크 복사 · 아직 아무도 안 왔어요 · AI와 대결로 전환 · 상대가 입장하면 자동으로 시작돼요… · 연결 중… · 곧 시작!</td></tr>
+    <tr><td>리더보드</td><td>랭킹 · 상위 20 · 아직 기록이 없어요. 친구와 랭크 대결을 해보세요! · 홈으로</td></tr>
+    <tr><td>인앱 배너</td><td>더 나은 플레이를 위해 크롬·사파리 등 외부 브라우저에서 열어주세요. · 외부로 열기 / 닫기</td></tr>
+  </tbody>
+</table>
+
+<!-- ===================== 12 ===================== -->
+<h2 class="sec"><span class="n">12</span><span>요청 산출물 &amp; 핸드오프 (구현 가능 형태)</span></h2>
+<p class="sec-lead">디자이너가 "구조 재설계 + 디자인 + 모션 구현"을 맡으므로, <strong>개발이 바로 이식</strong>할 수 있는 형태를 요청합니다.</p>
+<div class="grid2">
+  <div class="card"><h4>1) 구조/IA</h4><ul class="checklist"><li>화면·상태 맵(전 모드)</li><li>플로우/내비 다이어그램</li><li>오버레이/z-레이어 규약</li><li>HUD 슬롯 시스템</li></ul></div>
+  <div class="card"><h4>2) 컴포넌트 스펙(전 상태)</h4><ul class="checklist"><li>버튼/토글/세그먼트/인풋</li><li>칩·배지(라운드/콤보/티어)</li><li>카드(증강/정산/결과)</li><li>토스트·스피너·빈/에러</li></ul></div>
+  <div class="card"><h4>3) 화면(모바일+데스크톱)</h4><ul class="checklist"><li>§05 전 화면·전 상태</li><li>설정(§06) 재구조</li><li>정산(§07) 전 변형</li><li>로딩/스플래시</li></ul></div>
+  <div class="card"><h4>4) 모션</h4><ul class="checklist"><li>§09 마스터 표 확정 수치</li><li>정산/카운트다운/MMR 시퀀스</li><li>Lottie 또는 CSS @keyframes</li><li>보드 파티클 파라미터</li></ul></div>
+  <div class="card"><h4>5) 보드 에셋(Pixi)</h4><ul class="checklist"><li>사과 normal/특수 스펙</li><li>선택 박스(진행/유효)</li><li>제거·콤보 이펙트</li><li>견제 FX(예정 반영)</li></ul></div>
+  <div class="card"><h4>6) 토큰/시스템</h4><ul class="checklist"><li>단일 토큰 소스(JSON)</li><li>CSS 변수 + theme.ts 파생</li><li>타이포/간격/반경/그림자</li><li>모션 토큰(듀레이션·이징)</li></ul></div>
+</div>
+<div class="call avoid"><h4>납품 포맷(권장)</h4><p>① <strong>Figma</strong>(오토레이아웃·컴포넌트·배리언트, 단일 진실 소스) · ② <strong>토큰 JSON</strong>(Style-Dictionary 또는 CSS 변수+theme 숫자) · ③ <strong>모션</strong>은 Lottie/짧은 영상 + 수치 스펙(§09) · ④ 아이콘/배지 <strong>SVG</strong>(+래스터 @1/2/3x) · ⑤ 레드라인/상태 스펙. React(CSS)+PixiJS로 바로 옮길 수 있으면 형식 자유.</p></div>
+
+<!-- ===================== 13 ===================== -->
+<h2 class="sec"><span class="n">13</span><span>화면 ↔ 코드 위치 (개발 협업용)</span></h2>
+<table class="avoid">
+  <thead><tr><th>화면/대상</th><th>코드 위치</th></tr></thead>
+  <tbody>
+    <tr><td>앱 셸 · 라우팅</td><td class="mono">src/ui/App.tsx · app/store.ts</td></tr>
+    <tr><td>홈</td><td class="mono">src/ui/screens/HomeScreen.tsx</td></tr>
+    <tr><td>게임 화면</td><td class="mono">src/ui/screens/GameScreen.tsx</td></tr>
+    <tr><td>HUD (솔로/대결/온라인)</td><td class="mono">components/Hud · VersusHud · OnlineHud.tsx</td></tr>
+    <tr><td>증강 선택</td><td class="mono">components/AugmentOverlay.tsx (+ OnlineScreen 인라인)</td></tr>
+    <tr><td>라운드 정산</td><td class="mono">components/RoundCheckOverlay.tsx · app/VersusController.ts</td></tr>
+    <tr><td>매치 결과</td><td class="mono">components/ResultOverlay · VersusResult.tsx · OnlineScreen.tsx</td></tr>
+    <tr><td>일시정지 / 도움말</td><td class="mono">components/PauseOverlay · HelpOverlay.tsx</td></tr>
+    <tr><td>설정</td><td class="mono">components/SettingsOverlay.tsx · app/settingsStore.ts</td></tr>
+    <tr><td>온라인 로비</td><td class="mono">screens/OnlineScreen.tsx · app/OnlineController.ts</td></tr>
+    <tr><td>리더보드</td><td class="mono">screens/LeaderboardScreen.tsx</td></tr>
+    <tr><td>보유 증강(빌드)</td><td class="mono">components/OwnedAugments.tsx</td></tr>
+    <tr><td>인앱 배너</td><td class="mono">components/InAppBanner.tsx</td></tr>
+    <tr><td>보드 렌더·사과·파티클</td><td class="mono">src/board/BoardView.ts</td></tr>
+    <tr><td>보드 토큰 / CSS 토큰</td><td class="mono">src/board/theme.ts · src/ui/styles.css</td></tr>
+    <tr><td>살아있는 하늘 배경</td><td class="mono">components/DayNightSky.tsx · skyClock.ts</td></tr>
+    <tr><td>증강 카탈로그(효과·이름)</td><td class="mono">src/augments/data/catalog.ts</td></tr>
+    <tr><td>상태 스토어</td><td class="mono">app/store.ts · versusStore.ts · onlineStore.ts · settingsStore.ts</td></tr>
+  </tbody>
+</table>
+<p class="muted" style="font-size:12.5px">정산 타이밍 상수: <span class="mono">VersusController.ts</span> 의 <span class="mono">ROUND_CHECK_MS</span>·<span class="mono">AUGMENT_MS</span>. 사과 룩 상세 핸드오프: <span class="mono">apple_design_handoff/</span>.</p>
+
+<!-- ===================== 14 ===================== -->
+<h2 class="sec"><span class="n">14</span><span>진행 순서 &amp; 협업</span></h2>
+<h4>제안 단계</h4>
+<ol>
+  <li><strong>킥오프 + 구조 합의</strong> — IA/플로우 재설계(§03)·오버레이/HUD 시스템(§04)·정산 모델(§07) 방향 확정. 비주얼 의뢰서와 토큰 정합.</li>
+  <li><strong>핵심 모먼트 먼저</strong> — 게임 보드 HUD · <strong>라운드/매치 정산</strong> · 증강 선택을 우선 디자인+모션(이 게임의 감정선).</li>
+  <li><strong>설정 + 로비 + 리더보드 + 시스템</strong> — §06 재구조, 온라인 stage 통일, 토스트/로딩/에러.</li>
+  <li><strong>모션 확정 + 핸드오프</strong> — §09 수치 확정, Lottie/keyframes, 토큰 JSON, 보드 파라미터 납품.</li>
+</ol>
+<h4>킥오프 때 정할 것</h4>
+<ul>
+  <li>정산을 어디까지 화려하게(스킵 기본값·평균 체감 시간), 솔로 정산의 무게.</li>
+  <li>온라인을 공통 매치 셸로 흡수하는 범위(구조 변경 폭).</li>
+  <li>설정 "즉시 적용" 전환 범위(라운드 중 잠금 항목).</li>
+  <li>견제 FX(예정)를 이번 모션 언어에 어디까지 미리 반영.</li>
+</ul>
+<div class="call note avoid"><h4>한 번 더: 직접 플레이</h4><p><span class="mono">npm run dev</span>로 30초 한 판을 돌려 보시면 "정산이 없어서 허전한 지점"이 정확히 어디인지 몸으로 잡힙니다. 그 지점이 이 의뢰의 핵심 작업면입니다.</p></div>
+
+<div class="end">
+  증강 사과게임 — UI 구조 · 설정 · 라운드 정산 · 모션 구현 의뢰서 · v1.0 · 2026-05-30 · 비주얼 의뢰서(<span class="mono">증강사과게임_디자인의뢰서.html</span>)와 한 벌. 질문·역제안 환영합니다.
+</div>
+
+</div>
+</body>
+</html>

@@ -333,7 +333,7 @@ export class VersusController {
   private calcLayout(): BoardLayout {
     const w = this.parent?.clientWidth || window.innerWidth;
     const h = this.parent?.clientHeight || window.innerHeight;
-    return computeLayout(this.cols, this.rows, w, h, Math.max(6, Math.round(Math.min(w, h) * 0.02)));
+    return computeLayout(this.cols, this.rows, w, h, Math.max(4, Math.round(Math.min(w, h) * 0.014)));
   }
 
   private calcMiniLayout(): BoardLayout {

@@ -249,9 +249,9 @@ export class BoardView {
           fill: theme.color.text,
           dropShadow: {
             color: theme.color.numShadow,
-            alpha: 0.32,
+            alpha: 0.5,
             blur: 0,
-            distance: 1,
+            distance: 2,
             angle: Math.PI / 2,
           },
         },

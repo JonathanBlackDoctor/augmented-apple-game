@@ -56,6 +56,43 @@ describe('OnlineMatch — 2-client in-memory full match', () => {
   });
 });
 
+describe('OnlineMatch — board aspect sync', () => {
+  it('guest adopts the host-chosen cols/rows so both play the same board', async () => {
+    const backend = new InMemoryNetBackend();
+    const sa = new BackendNetSession(backend);
+    const sb = new BackendNetSession(backend);
+    await sa.join('ROOMTL', A);
+    await sb.join('ROOMTL', B);
+    // Host fixes a tall (portrait) board; guest starts with the default wide one.
+    const host = new OnlineMatch({ session: sa, role: 'host', self: A, roomId: 'ROOMTL', cols: 10, rows: 17, ...FAST });
+    const guest = new OnlineMatch({ session: sb, role: 'guest', self: B, roomId: 'ROOMTL', ...FAST });
+    await host.start();
+    await guest.start();
+    expect(guest.dims()).toEqual({ cols: 17, rows: 10 }); // default before the host announces
+    // Run through the lobby + countdown so the host broadcasts its dims.
+    let now = 0;
+    for (let i = 0; i < 30 && guest.snapshot().phase === 'lobby'; i++) {
+      host.tick(now);
+      guest.tick(now);
+      now += 50;
+    }
+    // Tick once more so the guest processes the countdown phase event.
+    host.tick(now);
+    guest.tick(now);
+    expect(guest.dims()).toEqual({ cols: 10, rows: 17 });
+    expect(host.dims()).toEqual({ cols: 10, rows: 17 });
+    // Drive to the first round and confirm both boards share the same shape.
+    for (let i = 0; i < 60 && guest.snapshot().phase !== 'round'; i++) {
+      host.tick(now);
+      guest.tick(now);
+      now += 50;
+    }
+    expect(guest.myBoard().cols).toBe(host.myBoard().cols);
+    expect(guest.myBoard().rows).toBe(host.myBoard().rows);
+    expect(guest.myBoard().cols).toBe(10);
+  });
+});
+
 describe('OnlineMatch — robustness', () => {
   it('host wins by forfeit when the opponent stops responding', async () => {
     const backend = new InMemoryNetBackend();

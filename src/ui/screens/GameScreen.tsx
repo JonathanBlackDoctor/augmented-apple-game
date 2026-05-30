@@ -6,6 +6,7 @@ import { MatchController, type MatchPlan } from '../../app/MatchController';
 import { VersusController, AUGMENT_MS } from '../../app/VersusController';
 import { useVersusStore } from '../../app/versusStore';
 import { buildHookBusFor, rollOffer, tierForRound } from '../../augments';
+import { pickGridDims } from '../../board/orientation';
 import { Hud } from '../components/Hud';
 import { VersusHud } from '../components/VersusHud';
 import { AugmentOverlay } from '../components/AugmentOverlay';
@@ -20,10 +21,13 @@ import { PauseOverlay } from '../components/PauseOverlay';
 function buildPlan(mode: 'solo' | 'augment'): MatchPlan {
   const seedBase = `${mode}:${Date.now()}`;
   const s = getSettings();
+  // Honor the board-size setting, then swap to a tall grid on portrait screens so
+  // cells aren't squeezed by the narrow width (bigger, tappable apples on mobile).
+  const { cols, rows } = pickGridDims({ cols: s.boardCols, rows: s.boardRows });
   const base = {
     seedBase,
-    cols: s.boardCols,
-    rows: s.boardRows,
+    cols,
+    rows,
     durationMs: s.roundDurationMs,
     targetSum: 10,
     modeId: 'separate',

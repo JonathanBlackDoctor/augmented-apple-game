@@ -9,6 +9,7 @@ import { pickGridDims } from '../board/orientation';
 import { InputController, type DragHandlers } from '../input/InputController';
 import { createMonotonicClock } from './clock';
 import { sfx } from './sound';
+import { playActivation, playClear, updateAmbient } from './augmentFx';
 import { useOnlineStore } from './onlineStore';
 import { getSettings } from './settingsStore';
 import { OnlineMatch, type OnlineSnapshot, type Role } from './OnlineMatch';
@@ -41,6 +42,8 @@ export class OnlineController {
   private started = false;
   private lastRound = -1;
   private lastPhase = '';
+  private pendingActivation: string | null = null;
+  private activationTimer = 0;
 
   async mount(parent: HTMLElement): Promise<void> {
     this.parent = parent;
@@ -164,10 +167,22 @@ export class OnlineController {
       // adopted the host's dims during countdown).
       this.layout = this.calc();
       this.board.setLayout(this.layout);
+      this.board.resetFx();
       this.board.setBoard(this.match.myBoard());
       this.board.showSelection(null, false);
       this.comboStreak = 0;
+      const activate = this.pendingActivation;
+      this.pendingActivation = null;
+      clearTimeout(this.activationTimer);
+      if (activate) {
+        this.activationTimer = window.setTimeout(() => {
+          if (useOnlineStore.getState().phase === 'round') playActivation(this.board, activate);
+        }, 140);
+      }
+    } else if (s.phase !== 'round' && this.lastPhase === 'round') {
+      this.board.resetFx();
     }
+    if (s.phase === 'round') updateAmbient(this.board, s.myOwned, s.remainingMs, DURATION);
     this.lastRound = s.round;
     this.lastPhase = s.phase;
     st.set({
@@ -194,6 +209,7 @@ export class OnlineController {
 
   pick(id: string): void {
     this.match?.pickAugment(id);
+    this.pendingActivation = id; // activation FX plays when the next round opens
     sfx.pick();
   }
 
@@ -224,22 +240,31 @@ export class OnlineController {
   private handlers: DragHandlers = {
     onStart: () => {
       this.match?.setDragging(true);
-      if (this.match?.snapshot().myOwned.includes('time.lord')) this.board.setLabelsHidden(true);
+      if (this.match?.snapshot().myOwned.includes('time.lord')) {
+        this.board.setLabelsHidden(true);
+        this.board.effects?.desat(true);
+      }
     },
     onMove: (rect: Rect | null) => {
       if (!this.match || !rect) {
         this.board.showSelection(null, false);
         return;
       }
-      this.board.showSelection(rect, this.match.evaluate(rect));
+      const ev = this.match.evalDetail(rect);
+      this.board.showSelection(rect, ev.valid, ev.sum);
     },
     onEnd: (rect: Rect | null) => {
       const m = this.match;
       if (!m) return;
       m.setDragging(false);
-      if (m.snapshot().myOwned.includes('time.lord')) this.board.setLabelsHidden(false);
+      if (m.snapshot().myOwned.includes('time.lord')) {
+        this.board.setLabelsHidden(false);
+        this.board.effects?.desat(false);
+      }
       this.board.showSelection(null, false);
       if (!rect) return;
+      const evalBefore = m.evalDetail(rect);
+      const preTags = m.myBoard().tags?.slice() ?? [];
       const res = m.myCommit(rect);
       if (!res || 'rejected' in res) {
         this.comboStreak = 0;
@@ -250,11 +275,25 @@ export class OnlineController {
       this.board.burst(res.cells);
       this.board.setBoard(m.myBoard());
       sfx.clear(this.comboStreak);
+      const snap = m.snapshot();
+      playClear(this.board, snap.myOwned, {
+        cells: res.cells,
+        tags: res.cells.map((i) => preTags[i] ?? 'normal'),
+        count: res.count,
+        comboStreak: this.comboStreak,
+        sum: evalBefore.sum,
+        baseScore: res.baseScore,
+        finalScore: res.finalScore,
+        comboMultiplier: res.comboMultiplier,
+        remainingMs: snap.remainingMs,
+        durationMs: DURATION,
+      });
     },
   };
 
   destroy(): void {
     cancelAnimationFrame(this.raf);
+    clearTimeout(this.activationTimer);
     window.removeEventListener('resize', this.onResize);
     this.input?.detach();
     this.board.destroy();

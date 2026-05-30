@@ -5,6 +5,7 @@ import type { Board, Rect, CellTag } from '../contracts';
 import { theme } from './theme';
 import type { BoardLayout } from './layout';
 import { cellRect, cellCenter } from './layout';
+import { BoardFx } from './BoardFx';
 
 interface Particle {
   g: Graphics;
@@ -34,6 +35,7 @@ export class BoardView {
   private cells: Container[] = [];
   private bodies: Graphics[] = [];
   private labels: Text[] = [];
+  private badges: (Text | null)[] = [];
   private particles: Particle[] = [];
   private popups: Popup[] = [];
 
@@ -41,8 +43,19 @@ export class BoardView {
   private board: Board | null = null;
   private mounted = false;
 
-  constructor() {
+  // DOM effect overlay (augment activation / clear FX, running-sum bubble).
+  // Disabled for the tiny AI mini-view (`new BoardView({ fx: false })`).
+  private fx: BoardFx | null = null;
+  private readonly fxEnabled: boolean;
+
+  constructor(opts?: { fx?: boolean }) {
     this.app = new Application();
+    this.fxEnabled = opts?.fx !== false;
+  }
+
+  /** The DOM FX overlay, or null on the FX-disabled mini-view. */
+  get effects(): BoardFx | null {
+    return this.fx;
   }
 
   async mount(parent: HTMLElement, layout: BoardLayout): Promise<void> {
@@ -60,6 +73,10 @@ export class BoardView {
     this.app.stage.addChild(this.gridLayer, this.selLayer, this.fxLayer);
     this.app.ticker.add(this.onTick);
     this.mounted = true;
+    if (this.fxEnabled) {
+      this.fx = new BoardFx();
+      this.fx.mount(parent, this.app.canvas);
+    }
     if (this.board) this.rebuild();
   }
 
@@ -68,6 +85,7 @@ export class BoardView {
     if (!this.mounted) return;
     this.app.renderer.resize(layout.width, layout.height);
     this.rebuild();
+    this.fx?.sync();
   }
 
   setBoard(board: Board): void {
@@ -79,10 +97,25 @@ export class BoardView {
     else this.refresh();
   }
 
-  /** Draw the in-progress / valid selection box over the grid. */
-  showSelection(rect: Rect | null, valid: boolean): void {
+  /** Draw the in-progress / valid selection box over the grid. When `sum` is
+   *  given, also float a running-sum bubble above the selection (honey while
+   *  in progress, green when it's a valid clear). */
+  showSelection(rect: Rect | null, valid: boolean, sum?: number): void {
     const g = this.selLayer;
     g.clear();
+    if (this.fx) {
+      if (rect && this.layout && sum != null) {
+        const l = this.layout;
+        const x0 = Math.min(rect.x0, rect.x1);
+        const x1 = Math.max(rect.x0, rect.x1);
+        const y0 = Math.min(rect.y0, rect.y1);
+        const cx = l.originX + ((x0 + x1 + 1) / 2) * l.cell;
+        const topY = l.originY + y0 * l.cell;
+        this.fx.sumBubble(cx, topY, String(sum), valid);
+      } else {
+        this.fx.hideSum();
+      }
+    }
     if (!rect || !this.layout) return;
     const l = this.layout;
     const a = cellRect(l, Math.min(rect.x0, rect.x1), Math.min(rect.y0, rect.y1));
@@ -175,12 +208,63 @@ export class BoardView {
 
   destroy(): void {
     this.mounted = false;
+    this.fx?.destroy();
+    this.fx = null;
     try {
       this.app.ticker.remove(this.onTick);
       this.app.destroy(true, { children: true });
     } catch {
       /* already torn down */
     }
+  }
+
+  // ---- FX overlay geometry (cell index -> canvas px, for the conductor) ------
+
+  /** Pixel center of a cell within the canvas/overlay box. */
+  cellCenterPx(idx: number): { x: number; y: number } | null {
+    if (!this.layout || !this.board) return null;
+    const col = idx % this.board.cols;
+    const row = Math.floor(idx / this.board.cols);
+    const { cx, cy } = cellCenter(this.layout, col, row);
+    return { x: cx, y: cy };
+  }
+
+  /** Pixel centroid of a set of cells (e.g. a clear). */
+  centroidPx(indices: number[]): { x: number; y: number } | null {
+    let sx = 0;
+    let sy = 0;
+    let n = 0;
+    for (const i of indices) {
+      const p = this.cellCenterPx(i);
+      if (p) {
+        sx += p.x;
+        sy += p.y;
+        n++;
+      }
+    }
+    return n ? { x: sx / n, y: sy / n } : null;
+  }
+
+  /** Pixel center of the whole grid (anchor for activation flourishes). */
+  boardCenterPx(): { x: number; y: number } | null {
+    const l = this.layout;
+    if (!l) return null;
+    return { x: l.originX + (l.cols * l.cell) / 2, y: l.originY + (l.rows * l.cell) / 2 };
+  }
+
+  /** Live cell indices currently carrying `tag` (for round-start spawn FX). */
+  cellsWithTag(tag: CellTag): number[] {
+    const tags = this.board?.tags;
+    const b = this.board;
+    if (!tags || !b) return [];
+    const out: number[] = [];
+    for (let i = 0; i < tags.length; i++) if (tags[i] === tag && (b.cells[i] || 0) > 0) out.push(i);
+    return out;
+  }
+
+  /** Clear transient FX + state classes (between rounds / on reset). */
+  resetFx(): void {
+    this.fx?.reset();
   }
 
   // ---- internals ------------------------------------------------------------
@@ -229,6 +313,7 @@ export class BoardView {
     this.cells = [];
     this.bodies = [];
     this.labels = [];
+    this.badges = [];
     if (!this.board || !this.layout) return;
     const l = this.layout;
     const b = this.board;
@@ -238,10 +323,11 @@ export class BoardView {
       const { cx, cy } = cellCenter(l, col, row);
       const cont = new Container();
       cont.position.set(cx, cy);
+      const tag = b.tags?.[i] ?? 'normal';
 
       const body = new Graphics();
       const label = new Text({
-        text: String(b.cells[i] || ''),
+        text: this.labelFor(b.cells[i], tag),
         style: {
           fontFamily: theme.font,
           fontSize: Math.round(l.cell * theme.ratio.fontSize),
@@ -258,14 +344,17 @@ export class BoardView {
       });
       label.anchor.set(0.5);
       label.position.set(0, l.cell * 0.02);
-      this.drawApple(body, l.cell, b.tags?.[i] ?? 'normal');
+      this.drawApple(body, l.cell, tag);
 
       cont.addChild(body, label);
+      const badge = this.makeBadge(tag, l.cell);
+      if (badge) cont.addChild(badge);
       cont.visible = b.cells[i] > 0;
       this.gridLayer.addChild(cont);
       this.cells.push(cont);
       this.bodies.push(body);
       this.labels.push(label);
+      this.badges.push(badge);
     }
   }
 
@@ -283,16 +372,71 @@ export class BoardView {
       const v = b.cells[i];
       c.visible = v > 0;
       if (v <= 0) continue;
+      const tag = b.tags?.[i] ?? 'normal';
       const label = this.labels[i];
-      if (label) label.text = String(v);
+      if (label) label.text = this.labelFor(v, tag);
       const body = this.bodies[i];
-      if (body) this.drawApple(body, cell, b.tags?.[i] ?? 'normal');
+      if (body) this.drawApple(body, cell, tag);
+      this.reconcileBadge(i, tag, cell);
     }
   }
 
   /** Hide/show the numeric labels (time.lord: numbers vanish while dragging). */
   setLabelsHidden(hidden: boolean): void {
     for (const label of this.labels) label.visible = !hidden;
+  }
+
+  // ---- special-apple readability (showcase board refinements) ---------------
+
+  /** Wild apples read as ★ (matches any value); others show their number. */
+  private labelFor(value: number, tag: CellTag): string {
+    if (value <= 0) return '';
+    return tag === 'wild' ? '★' : String(value);
+  }
+
+  private badgeSpec(tag: CellTag): { text: string; color: number } | null {
+    if (tag === 'golden') return { text: '×2', color: theme.color.goldenEdge };
+    if (tag === 'gem') return { text: '+15', color: theme.color.gemEdge };
+    return null;
+  }
+
+  // A small corner badge on score apples (×2 / +15). Skipped on dense boards
+  // (tiny cells) where colour already distinguishes them and text would clutter.
+  private makeBadge(tag: CellTag, cell: number): Text | null {
+    if (cell < 30) return null;
+    const spec = this.badgeSpec(tag);
+    if (!spec) return null;
+    const t = new Text({
+      text: spec.text,
+      style: {
+        fontFamily: theme.font,
+        fontSize: Math.max(8, Math.round(cell * 0.26)),
+        fontWeight: '800',
+        fill: 0xffffff,
+        stroke: { color: spec.color, width: Math.max(2, cell * 0.05) },
+      },
+    });
+    t.anchor.set(0.5);
+    t.position.set(cell * 0.27, cell * 0.3);
+    return t;
+  }
+
+  private reconcileBadge(i: number, tag: CellTag, cell: number): void {
+    const want = cell >= 30 ? this.badgeSpec(tag) : null;
+    const cur = this.badges[i];
+    if (want) {
+      if (cur) cur.text = want.text;
+      else {
+        const nb = this.makeBadge(tag, cell);
+        if (nb) {
+          this.cells[i]?.addChild(nb);
+          this.badges[i] = nb;
+        }
+      }
+    } else if (cur) {
+      cur.destroy();
+      this.badges[i] = null;
+    }
   }
 
   // Plump apple silhouette from the design 시안 (viewBox 0..100), centered at

@@ -128,7 +128,7 @@ export const CATALOG: Augment[] = [
   {
     id: 'combo.frenzy',
     name: '폭주',
-    desc: '점수 ×(1 + 한 번에 제거한 사과 수×5%) — 크게 제거할수록 가속',
+    desc: '한 번에 많이 제거할수록 점수 가속 (사과 1개당 +5%)',
     tier: 'gold',
     family: 'combo',
     hooks: {
@@ -187,7 +187,7 @@ export const CATALOG: Augment[] = [
   {
     id: 'board.golden',
     name: '황금 사과',
-    desc: '라운드당 황금 사과 5개 (점수 2배)',
+    desc: '황금 사과 5개 — 황금 사과는 점수 2배(개당 +1점)',
     tier: 'gold',
     family: 'board',
     hooks: {

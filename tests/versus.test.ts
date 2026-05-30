@@ -15,8 +15,11 @@ function playFullMatch(seedBase: string): VersusMatch {
         if (moves.length > 0) m.myCommit(moves[0].rect, now);
       }
       now += 50;
+    } else if (snap.phase === 'roundCheck') {
+      // mid-round review is timer-driven: just advance the clock past it
+      now += 50;
     } else if (snap.phase === 'augment') {
-      m.pickAugment(snap.offers[0]);
+      m.pickAugment(snap.offers[0], now);
       now += 50;
     }
   }
@@ -41,5 +44,36 @@ describe('VersusMatch — you vs AI, full headless match', () => {
     expect(a.botTotal).toBe(b.botTotal);
     expect(a.winner).toBe(b.winner);
     expect(a.roundWins).toEqual(b.roundWins);
+  });
+
+  it('enters a mid-round review (roundCheck) once a round ends', () => {
+    const m = new VersusMatch({ seedBase: 'check:1', difficulty: 'normal', durationMs: 1000 });
+    let now = 0;
+    while (m.snapshot().phase === 'round' && now < 5000) now = (m.tick(now), now + 50);
+    const snap = m.snapshot();
+    expect(snap.phase).toBe('roundCheck');
+    expect(snap.lastRound).not.toBeNull();
+    expect(['me', 'bot', 'draw']).toContain(snap.lastRound!.winner);
+    expect(snap.phaseRemainingMs).toBeGreaterThan(0);
+  });
+
+  it('auto-picks the first offer when the augment timer elapses', () => {
+    const m = new VersusMatch({
+      seedBase: 'auto:1',
+      difficulty: 'normal',
+      durationMs: 1000,
+      roundCheckMs: 200,
+      augmentMs: 2000,
+    });
+    let now = 0;
+    // advance until the augment window opens
+    while (m.snapshot().phase !== 'augment' && now < 10000) now = (m.tick(now), now + 50);
+    expect(m.snapshot().phase).toBe('augment');
+    const expected = m.snapshot().offers[0];
+    // never call pickAugment: let the timer fire
+    while (m.snapshot().phase === 'augment' && now < 20000) now = (m.tick(now), now + 50);
+    const snap = m.snapshot();
+    expect(snap.phase).toBe('round'); // advanced into round 2
+    expect(snap.myOwned).toContain(expected);
   });
 });

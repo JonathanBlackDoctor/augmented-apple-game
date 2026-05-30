@@ -584,3 +584,71 @@ body {
 @keyframes aag-spin { to { transform: rotate(360deg); } }
 .overlay.light { background: rgba(0, 0, 0, 0.25); }
 .countdown { font-size: 42px; font-weight: 800; color: #fff; }
+
+/* ---- in-app banner + nickname ---- */
+.inapp-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  background: #2a211b;
+  color: #f0e6dd;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 12px;
+  font-size: 13px;
+  border-bottom: 1px solid #3a2f27;
+}
+.inapp-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.btn-mini {
+  background: var(--apple, #e7564f);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.btn-mini.ghost { background: transparent; color: #b8a89c; }
+.nick-row { display: flex; align-items: center; gap: 6px; }
+.nick-label { font-size: 13px; opacity: 0.7; }
+.nick-input {
+  flex: 1;
+  background: #000;
+  border: 1px solid #443;
+  border-radius: 10px;
+  color: #fff;
+  padding: 8px;
+  font-size: 14px;
+}
+
+/* ---- leaderboard ---- */
+.btn.rank { background: #2a2320; color: #e9dccf; border: 1px solid #3a2f27; }
+.lb-card { width: min(420px, 90vw); }
+.title.sm { font-size: 22px; }
+.lb-list {
+  list-style: none;
+  margin: 8px 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+}
+.lb-row {
+  display: grid;
+  grid-template-columns: 28px 28px 1fr auto auto;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: #15110e;
+  border-radius: 10px;
+}
+.lb-rank { font-weight: 800; color: var(--apple, #e7564f); text-align: center; }
+.lb-av { font-size: 18px; }
+.lb-nick { text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lb-tier { font-size: 12px; opacity: 0.7; }
+.lb-mmr { font-weight: 700; font-variant-numeric: tabular-nums; }

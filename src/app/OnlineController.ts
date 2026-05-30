@@ -1,7 +1,7 @@
 // app/OnlineController.ts — runtime conductor for online 1v1. Wires OnlineMatch
 // to the Pixi board, input, clock, SFX, the Firebase backend + anonymous profile,
-// and the onlineStore. Handles room create/join + deep-link auto-join.
-import type { Rect, Profile, PublicProfile } from '../contracts';
+// and the onlineStore. Handles room create/join, deep-link auto-join, nickname.
+import type { Rect, Profile, ProfileService, PublicProfile, RankingService } from '../contracts';
 import { makeRng } from '../core';
 import { BoardView } from '../board/BoardView';
 import { computeLayout, type BoardLayout } from '../board/layout';
@@ -33,8 +33,9 @@ export class OnlineController {
   private comboStreak = 0;
   private match: OnlineMatch | null = null;
   private backend: NetBackend | null = null;
-  private readonly ranking = new StandardRankingService(new InMemoryRankingStore());
+  private ranking: RankingService = new StandardRankingService(new InMemoryRankingStore());
   private profile: Profile | null = null;
+  private profileSvc: ProfileService | null = null;
   private persistProfile: () => Promise<void> = async () => {};
   private resolved = false;
   private started = false;
@@ -50,6 +51,10 @@ export class OnlineController {
     window.addEventListener('resize', this.onResize);
     this.backend = await this.makeBackend();
     this.profile = await this.signIn();
+    if (FIREBASE_CONFIGURED) {
+      const { FirebaseRankingStore } = await import('../ranking/firebaseStore');
+      this.ranking = new StandardRankingService(new FirebaseRankingStore());
+    }
     useOnlineStore.getState().set({ myName: this.profile.nickname });
     const dl = parseDeepLink(window.location.search);
     if (dl.room && isValidRoomCode(dl.room.toUpperCase())) await this.join(dl.room);
@@ -68,12 +73,21 @@ export class OnlineController {
     if (FIREBASE_CONFIGURED) {
       const { FirebaseProfileService } = await import('../profile/firebase');
       const svc = new FirebaseProfileService();
+      this.profileSvc = svc;
       this.persistProfile = () => svc.save();
       return svc.signInAnon();
     }
     const svc = new LocalProfileService(browserKV());
+    this.profileSvc = svc;
     this.persistProfile = async () => svc.persist();
     return svc.signInAnon();
+  }
+
+  async setNickname(n: string): Promise<void> {
+    if (!this.profileSvc) return;
+    await this.profileSvc.setNickname(n);
+    this.profile = this.profileSvc.get();
+    useOnlineStore.getState().set({ myName: this.profile.nickname });
   }
 
   private pub(): PublicProfile {
@@ -153,6 +167,9 @@ export class OnlineController {
       offerTier: s.offerTier,
       oppName: s.oppName,
       oppPresent: s.oppPresent,
+      oppConnected: s.oppConnected,
+      oppLeft: s.oppLeft,
+      noOpponent: s.noOpponent,
       combo: this.comboStreak,
     });
   }
@@ -178,7 +195,7 @@ export class OnlineController {
         mmr: this.profile.mmr,
       };
       const result = winner === 'me' ? 'win' : winner === 'opp' ? 'loss' : 'draw';
-      const r = await this.ranking.applyResult(this.profile, opp, result, true); // human = ranked
+      const r = await this.ranking.applyResult(this.profile, opp, result, true);
       mmrDelta = r.mmrDelta;
       await this.persistProfile();
     }

@@ -12,6 +12,7 @@ export function OnlineScreen() {
   const ctrlRef = useRef<OnlineController | null>(null);
   const s = useOnlineStore();
   const [code, setCode] = useState('');
+  const [nick, setNick] = useState('');
 
   useEffect(() => {
     let disposed = false;
@@ -31,6 +32,10 @@ export function OnlineScreen() {
     };
   }, []);
 
+  useEffect(() => {
+    if (s.myName && !nick) setNick(s.myName);
+  }, [s.myName, nick]);
+
   const copyLink = (): void => {
     void navigator.clipboard?.writeText(s.link);
   };
@@ -38,6 +43,11 @@ export function OnlineScreen() {
     useOnlineStore.getState().reset();
     useGameStore.setState({ mode: 'solo' });
     useGameStore.getState().goHome();
+  };
+  const switchToAI = (): void => {
+    useOnlineStore.getState().reset();
+    useGameStore.setState({ mode: 'versus' });
+    useGameStore.getState().startVersus(5, 30_000);
   };
 
   const cls = s.winner === 'me' ? 'win' : s.winner === 'opp' ? 'loss' : 'draw';
@@ -51,6 +61,18 @@ export function OnlineScreen() {
         <div className="overlay">
           <div className="lobby-card">
             <h2>친구와 1:1 대결</h2>
+            <div className="nick-row">
+              <span className="nick-label">닉네임</span>
+              <input
+                className="nick-input"
+                value={nick}
+                maxLength={16}
+                onChange={(e) => setNick(e.target.value)}
+              />
+              <button className="btn-mini" onClick={() => void ctrlRef.current?.setNickname(nick)}>
+                저장
+              </button>
+            </div>
             <p className="aug-sub">방을 만들어 링크를 공유하거나, 받은 코드로 입장하세요</p>
             <button className="btn primary" onClick={() => void ctrlRef.current?.create()}>
               방 만들기
@@ -83,8 +105,19 @@ export function OnlineScreen() {
             <button className="btn primary" onClick={copyLink}>
               초대 링크 복사
             </button>
-            <p className="aug-sub">상대가 입장하면 자동으로 시작돼요…</p>
-            <div className="spinner" />
+            {s.noOpponent ? (
+              <>
+                <p className="aug-sub">아직 아무도 안 왔어요.</p>
+                <button className="btn versus" onClick={switchToAI}>
+                  AI와 대결로 전환
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="aug-sub">상대가 입장하면 자동으로 시작돼요…</p>
+                <div className="spinner" />
+              </>
+            )}
             <button className="btn ghost" onClick={goHome}>
               취소
             </button>
@@ -141,6 +174,7 @@ export function OnlineScreen() {
             <h2 className="result-title">
               {s.winner === 'me' ? '승리!' : s.winner === 'opp' ? '패배' : '무승부'}
             </h2>
+            {s.oppLeft && <p className="aug-sub">상대가 나갔습니다 · 부전승</p>}
             <div className="vs-final">
               <div className="vs-final-side">
                 <span className="vs-label">{s.myName}</span>

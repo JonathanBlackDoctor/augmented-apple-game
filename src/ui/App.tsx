@@ -4,6 +4,8 @@ import { parseDeepLink } from '../matchmaking';
 import { HomeScreen } from './screens/HomeScreen';
 import { GameScreen } from './screens/GameScreen';
 import { OnlineScreen } from './screens/OnlineScreen';
+import { LeaderboardScreen } from './screens/LeaderboardScreen';
+import { InAppBanner } from './components/InAppBanner';
 
 export function App() {
   const phase = useGameStore((s) => s.phase);
@@ -14,12 +16,20 @@ export function App() {
     if (dl.room) useGameStore.getState().startOnline();
   }, []);
 
-  if (mode === 'online') {
-    return (
-      <div className="app">
-        <OnlineScreen />
-      </div>
+  const content =
+    mode === 'online' ? (
+      <OnlineScreen />
+    ) : mode === 'leaderboard' ? (
+      <LeaderboardScreen />
+    ) : phase === 'home' ? (
+      <HomeScreen />
+    ) : (
+      <GameScreen />
     );
-  }
-  return <div className="app">{phase === 'home' ? <HomeScreen /> : <GameScreen />}</div>;
+  return (
+    <div className="app">
+      <InAppBanner />
+      {content}
+    </div>
+  );
 }

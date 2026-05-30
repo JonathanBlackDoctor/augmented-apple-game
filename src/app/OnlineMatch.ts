@@ -1,10 +1,10 @@
 // app/OnlineMatch.ts — real-time 1v1 over a NetSession (plan §9/§10). "Separate
-// boards" mode: both players play the same shared-seed boards locally and see
-// each other's live score via `clear` events. The schedule (countdown → 5×[round
-// + augment]) is time-driven from a shared match start, so no per-transition
-// handshakes are needed — only the host announces the start. Deterministic given
-// the same room seed + the same local inputs; exercised with a 2-client in-memory
-// simulation in tests.
+// boards": both players play the same shared-seed boards locally and see each
+// other's live score via `clear` events. The schedule (countdown → 5×[round +
+// augment]) is time-driven from a shared match start. Robustness: heartbeats +
+// opponent-disconnect forfeit, a no-opponent lobby timeout, and a 2-player
+// capacity lock (events from any third party are ignored). Exercised with a
+// 2-client in-memory simulation in tests.
 import { createEngine, makeRng } from '../core';
 import type {
   AugmentHookBus,
@@ -26,7 +26,7 @@ export interface OnlineOptions {
   session: NetSession;
   role: Role;
   self: PublicProfile;
-  roomId: string; // shared seed base — both clients derive identical boards
+  roomId: string;
   oppName?: string;
   rounds?: number;
   cols?: number;
@@ -36,6 +36,9 @@ export interface OnlineOptions {
   winnerBonus?: number;
   countdownMs?: number;
   augmentMs?: number;
+  hbIntervalMs?: number;
+  disconnectMs?: number;
+  lobbyTimeoutMs?: number;
 }
 
 export interface OnlineSnapshot {
@@ -54,6 +57,9 @@ export interface OnlineSnapshot {
   winner: 'me' | 'opp' | 'draw' | null;
   oppName: string;
   oppPresent: boolean;
+  oppConnected: boolean;
+  oppLeft: boolean;
+  noOpponent: boolean;
 }
 
 interface Seg {
@@ -76,6 +82,9 @@ export class OnlineMatch {
   private readonly winnerBonus: number;
   private readonly countdownMs: number;
   private readonly augmentMs: number;
+  private readonly hbIntervalMs: number;
+  private readonly disconnectMs: number;
+  private readonly lobbyTimeoutMs: number;
 
   private readonly engine: CoreEngine = createEngine();
   private readonly schedule: Seg[];
@@ -85,8 +94,11 @@ export class OnlineMatch {
   private phase: OnlinePhase = 'lobby';
   private appliedKey = '';
   private matchStart: number | null = null;
+  private lobbyStart: number | null = null;
   private nowMs = 0;
   private mySeq = 0;
+  private lastHbSent = 0;
+  private lastOppSeen: number | null = null;
 
   private round = 0;
   private remainingMs = 0;
@@ -103,8 +115,11 @@ export class OnlineMatch {
   private offerTier: AugTier | null = null;
   private myPicked = false;
 
+  private oppUid: string | null = null;
   private oppReadyLobby = false;
   private oppPresent = false;
+  private oppLeft = false;
+  private noOpponent = false;
   private oppName: string;
   private winner: 'me' | 'opp' | 'draw' | null = null;
 
@@ -122,6 +137,9 @@ export class OnlineMatch {
     this.winnerBonus = o.winnerBonus ?? 50;
     this.countdownMs = o.countdownMs ?? 3000;
     this.augmentMs = o.augmentMs ?? 12_000;
+    this.hbIntervalMs = o.hbIntervalMs ?? 2000;
+    this.disconnectMs = o.disconnectMs ?? 8000;
+    this.lobbyTimeoutMs = o.lobbyTimeoutMs ?? 15_000;
     this.schedule = this.buildSchedule();
     this.totalMs = this.schedule.reduce((a, s) => Math.max(a, s.start + s.dur), 0);
   }
@@ -147,39 +165,40 @@ export class OnlineMatch {
     return buildHookBusFor(owned);
   }
 
-  /** Subscribe + announce readiness. The caller must have joined the room first. */
   async start(): Promise<void> {
     this.unsub = this.session.on((e) => this.onEvent(e));
     await this.session.send({ t: 'ready', player: this.uid, phase: 'lobby' });
   }
 
   private onEvent(e: NetEvent): void {
-    if ('player' in e && e.player === this.uid) return; // ignore self echoes
+    if (e.t === 'phase') {
+      if (this.role === 'guest') {
+        this.lastOppSeen = this.nowMs;
+        this.oppPresent = true;
+        if (e.phase === 'countdown' && this.matchStart === null) this.matchStart = this.nowMs;
+      }
+      return;
+    }
+    if (!('player' in e)) return; // excludes the player-less 'sabotage' event
+    if (e.player === this.uid) return;
+    if (this.oppUid === null) this.oppUid = e.player;
+    else if (e.player !== this.oppUid) return; // 2-player capacity: ignore a 3rd party
+    this.lastOppSeen = this.nowMs;
+    this.oppPresent = true;
     switch (e.t) {
       case 'ready':
         this.oppReadyLobby = true;
-        this.oppPresent = true;
-        break;
-      case 'phase':
-        if (e.phase === 'countdown' && this.matchStart === null) {
-          this.matchStart = this.nowMs; // adopt host's start (countdown hides skew)
-          this.oppPresent = true;
-        }
         break;
       case 'clear':
         this.oppRound = e.score;
-        this.oppPresent = true;
         break;
       case 'round-result':
         this.oppRound = e.score;
-        this.oppPresent = true;
         break;
       case 'augment-pick':
         this.oppOwned.push(e.augId);
-        this.oppPresent = true;
         break;
       case 'heartbeat':
-        this.oppPresent = true;
         break;
       default:
         break;
@@ -195,16 +214,30 @@ export class OnlineMatch {
     return cur;
   }
 
-  /** Advance to monotonic `nowMs`. Drives timers + phase transitions. */
   tick(nowMs: number): OnlineSnapshot {
     this.nowMs = nowMs;
     if (this.matchStart === null) {
+      if (this.lobbyStart === null) this.lobbyStart = nowMs;
       if (this.role === 'host' && this.oppReadyLobby) {
         this.matchStart = nowMs;
         void this.session.send({ t: 'phase', phase: 'countdown', round: 0, startAtServerTs: nowMs });
       } else {
+        if (this.role === 'host' && !this.oppReadyLobby && nowMs - this.lobbyStart > this.lobbyTimeoutMs) {
+          this.noOpponent = true;
+        }
         return this.snapshot();
       }
+    }
+    if (nowMs - this.lastHbSent > this.hbIntervalMs) {
+      this.lastHbSent = nowMs;
+      void this.session.send({ t: 'heartbeat', player: this.uid, ts: nowMs });
+    }
+    if (this.phase !== 'matchResult' && this.lastOppSeen !== null && nowMs - this.lastOppSeen > this.disconnectMs) {
+      this.oppLeft = true;
+      this.winner = 'me';
+      this.phase = 'matchResult';
+      this.appliedKey = 'matchResult:forfeit';
+      return this.snapshot();
     }
     const elapsed = nowMs - this.matchStart;
     if (elapsed >= this.totalMs) {
@@ -224,7 +257,6 @@ export class OnlineMatch {
   private enterPhase(seg: Seg): void {
     const prevPhase = this.phase;
     const prevRound = this.round;
-    // Finalize the round we are leaving.
     if (prevPhase === 'round') this.finalizeRound(prevRound);
 
     this.appliedKey = `${seg.phase}:${seg.round}`;
@@ -232,7 +264,6 @@ export class OnlineMatch {
     this.round = seg.round;
 
     if (seg.phase === 'round') {
-      // Auto-pick if the player skipped the augment window.
       if (prevPhase === 'augment' && !this.myPicked && this.offers.length > 0) this.pickAugment(this.offers[0]);
       this.beginRound(seg.round);
     } else if (seg.phase === 'augment') {
@@ -256,7 +287,7 @@ export class OnlineMatch {
       augmentIds: [...this.myOwned],
     };
     this.engine.init(cfg, makeRng(cfg.seed), this.hookBus(this.myOwned));
-    this.engine.tick(this.nowMs); // anchor the timer
+    this.engine.tick(this.nowMs);
     this.remainingMs = this.durationMs;
     this.mySeq = 0;
     this.myRound = 0;
@@ -289,7 +320,6 @@ export class OnlineMatch {
     this.engine.setDragging(d);
   }
 
-  /** Apply a local removal during the round phase, broadcasting the new score. */
   myCommit(rect: Rect): CommitResult | null {
     if (this.phase !== 'round') return null;
     const res = this.engine.commit({ seq: ++this.mySeq, rect, tMs: this.nowMs - (this.matchStart ?? this.nowMs) });
@@ -306,7 +336,6 @@ export class OnlineMatch {
     return res;
   }
 
-  /** Pick an augment during the augment phase (broadcast for the opponent). */
   pickAugment(id: string): void {
     if (this.myPicked) return;
     this.myPicked = true;
@@ -315,6 +344,8 @@ export class OnlineMatch {
   }
 
   snapshot(): OnlineSnapshot {
+    const oppConnected =
+      this.lastOppSeen !== null && this.nowMs - this.lastOppSeen < this.disconnectMs;
     return {
       phase: this.phase,
       round: this.round,
@@ -331,6 +362,9 @@ export class OnlineMatch {
       winner: this.winner,
       oppName: this.oppName,
       oppPresent: this.oppPresent,
+      oppConnected,
+      oppLeft: this.oppLeft,
+      noOpponent: this.noOpponent,
     };
   }
 

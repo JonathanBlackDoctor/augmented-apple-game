@@ -27,6 +27,9 @@ export interface OnlineStore {
   mmrDelta: number | null;
   oppName: string;
   oppPresent: boolean;
+  oppConnected: boolean;
+  oppLeft: boolean;
+  noOpponent: boolean;
   myName: string;
   set: (p: Partial<OnlineStore>) => void;
   reset: () => void;
@@ -54,6 +57,9 @@ const INIT = {
   mmrDelta: null as number | null,
   oppName: '상대',
   oppPresent: false,
+  oppConnected: false,
+  oppLeft: false,
+  noOpponent: false,
   myName: '나',
 };
 

@@ -269,13 +269,24 @@ export class BoardView {
     }
   }
 
+  // Reconcile every cell to the current board: visibility, number and apple
+  // style. Works for both in-round clears (cells -> empty) and a brand-new
+  // board of the same size (e.g. the next round, or the AI's mirrored board),
+  // where cells must be re-shown and their numbers refreshed.
   private refresh(): void {
-    if (!this.board) return;
+    if (!this.board || !this.layout) return;
+    const b = this.board;
+    const cell = this.layout.cell;
     for (let i = 0; i < this.cells.length; i++) {
-      const v = this.board.cells[i];
       const c = this.cells[i];
       if (!c) continue;
-      if (v <= 0) c.visible = false;
+      const v = b.cells[i];
+      c.visible = v > 0;
+      if (v <= 0) continue;
+      const label = this.labels[i];
+      if (label) label.text = String(v);
+      const body = this.bodies[i];
+      if (body) this.drawApple(body, cell, b.tags?.[i] ?? 'normal');
     }
   }
 

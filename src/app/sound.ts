@@ -1,6 +1,7 @@
 // app/sound.ts — tiny WebAudio SFX for tactile feedback (plan pillar #1).
 // Lazily created on first use (after a user gesture). Best-effort; never throws.
 let ctx: AudioContext | null = null;
+let enabled = true; // toggled by the settings store (sfx.setEnabled)
 
 function ac(): AudioContext | null {
   try {
@@ -16,6 +17,7 @@ function ac(): AudioContext | null {
 }
 
 function blip(freq: number, durMs: number, gain = 0.06, type: OscillatorType = 'sine'): void {
+  if (!enabled) return;
   const c = ac();
   if (!c) return;
   const o = c.createOscillator();
@@ -32,6 +34,10 @@ function blip(freq: number, durMs: number, gain = 0.06, type: OscillatorType = '
 }
 
 export const sfx = {
+  /** Mute/unmute all SFX (wired to the settings store). */
+  setEnabled(v: boolean): void {
+    enabled = v;
+  },
   clear(combo: number): void {
     const base = 520 + Math.min(combo, 8) * 60;
     blip(base, 120, 0.07, 'triangle');

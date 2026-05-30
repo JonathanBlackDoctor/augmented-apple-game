@@ -7,7 +7,7 @@ interface Pop {
   amount: number;
 }
 
-export function VersusHud() {
+export function VersusHud({ onPause }: { onPause?: () => void }) {
   const s = useGameStore();
   const v = useVersusStore();
   const myTotal = s.totalScore + s.roundScore;
@@ -40,6 +40,11 @@ export function VersusHud() {
           <span className="vs-wins">
             {v.roundWins.me} : {v.roundWins.opp}
           </span>
+          {onPause && (
+            <button className="icon-btn hud-pause" onClick={onPause} aria-label="일시정지">
+              ⏸
+            </button>
+          )}
         </div>
         <div className={`time-bar${low ? ' low' : ''}`}>
           <div className="time-fill" style={{ width: `${pct * 100}%` }} />

@@ -57,6 +57,13 @@ export class InputController {
     if (this.down) return;
     this.down = true;
     this.pointerId = e.pointerId;
+    // Capture the pointer so the drag keeps tracking even if it leaves the
+    // canvas (window listeners still fire; capture just makes it robust).
+    try {
+      this.canvas.setPointerCapture(e.pointerId);
+    } catch {
+      /* capture unsupported — window pointermove/up still track the drag */
+    }
     const p = this.toLocal(e.clientX, e.clientY);
     this.ax = p.x;
     this.ay = p.y;
@@ -74,6 +81,11 @@ export class InputController {
     if (!this.down || e.pointerId !== this.pointerId) return;
     this.down = false;
     this.pointerId = -1;
+    try {
+      this.canvas.releasePointerCapture(e.pointerId);
+    } catch {
+      /* already released / never captured */
+    }
     this.handlers.onEnd(this.rect(e.clientX, e.clientY));
   };
 }

@@ -1,6 +1,7 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { makeRng } from '../../core';
 import { useGameStore } from '../../app/store';
+import { getSettings } from '../../app/settingsStore';
 import { MatchController, type MatchPlan } from '../../app/MatchController';
 import { VersusController, AUGMENT_MS } from '../../app/VersusController';
 import { useVersusStore } from '../../app/versusStore';
@@ -12,10 +13,21 @@ import { RoundCheckOverlay } from '../components/RoundCheckOverlay';
 import { OwnedAugments } from '../components/OwnedAugments';
 import { ResultOverlay } from '../components/ResultOverlay';
 import { VersusResult } from '../components/VersusResult';
+import { SettingsOverlay } from '../components/SettingsOverlay';
+import { HelpOverlay } from '../components/HelpOverlay';
+import { PauseOverlay } from '../components/PauseOverlay';
 
 function buildPlan(mode: 'solo' | 'augment'): MatchPlan {
   const seedBase = `${mode}:${Date.now()}`;
-  const base = { seedBase, cols: 17, rows: 10, durationMs: 30_000, targetSum: 10, modeId: 'separate' };
+  const s = getSettings();
+  const base = {
+    seedBase,
+    cols: s.boardCols,
+    rows: s.boardRows,
+    durationMs: s.roundDurationMs,
+    targetSum: 10,
+    modeId: 'separate',
+  };
   if (mode === 'solo') return { rounds: 1, ...base };
   return {
     rounds: 5,
@@ -36,6 +48,8 @@ export function GameScreen() {
   const mode = useGameStore((s) => s.mode);
   const overlayRemainingMs = useVersusStore((s) => s.overlayRemainingMs);
   const isVersus = mode === 'versus';
+  const [paused, setPaused] = useState(false);
+  const [overlay, setOverlay] = useState<'settings' | 'help' | null>(null);
 
   useEffect(() => {
     let disposed = false;
@@ -87,9 +101,33 @@ export function GameScreen() {
   };
   const onHome = (): void => useGameStore.getState().goHome();
 
+  const activeCtrl = (): MatchController | VersusController | null =>
+    isVersus ? versusRef.current : soloRef.current;
+  const onPause = (): void => {
+    activeCtrl()?.pause();
+    setPaused(true);
+  };
+  const onResume = (): void => {
+    activeCtrl()?.resume();
+    setPaused(false);
+  };
+  const onRestart = (): void => {
+    setOverlay(null);
+    setPaused(false);
+    onReplay();
+  };
+  const onHomeFromPause = (): void => {
+    setPaused(false);
+    setOverlay(null);
+    onHome();
+  };
+
+  // Pause is only meaningful during an active round.
+  const pauseHandler = phase === 'round' ? onPause : undefined;
+
   return (
     <div className="screen game">
-      {isVersus ? <VersusHud /> : <Hud />}
+      {isVersus ? <VersusHud onPause={pauseHandler} /> : <Hud onPause={pauseHandler} />}
       <div className="board-host" ref={hostRef} />
       {isVersus && <OwnedAugments />}
       {phase === 'roundCheck' && isVersus && <RoundCheckOverlay />}
@@ -105,6 +143,17 @@ export function GameScreen() {
         ) : (
           <ResultOverlay onReplay={onReplay} onHome={onHome} />
         ))}
+      {paused && (
+        <PauseOverlay
+          onResume={onResume}
+          onRestart={onRestart}
+          onHome={onHomeFromPause}
+          onSettings={() => setOverlay('settings')}
+          onHelp={() => setOverlay('help')}
+        />
+      )}
+      {overlay === 'settings' && <SettingsOverlay onClose={() => setOverlay(null)} />}
+      {overlay === 'help' && <HelpOverlay onClose={() => setOverlay(null)} />}
     </div>
   );
 }

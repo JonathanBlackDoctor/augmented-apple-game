@@ -78,6 +78,7 @@ export class VersusMatch {
   private botSeq = 0;
   private botNextAt = 0;
   private botActive = true;
+  private botLastRect: Rect | null = null;
 
   private myTotal = 0;
   private botTotal = 0;
@@ -133,6 +134,7 @@ export class VersusMatch {
     this.botSeq = 0;
     this.botNextAt = 500 + this.botRng.int(600); // first "think" before acting
     this.botActive = true;
+    this.botLastRect = null;
     this.phase = 'round';
     this.phaseEndsAt = null;
     this.phaseRemainingMs = 0;
@@ -140,6 +142,17 @@ export class VersusMatch {
 
   myBoard(): Readonly<Board> {
     return this.myEngine.getBoard();
+  }
+
+  /** The bot's live board — same infrastructure as myBoard(), for the mini-view. */
+  botBoard(): Readonly<Board> {
+    return this.botEngine.getBoard();
+  }
+
+  /** The bot's most recent committed move + a move id, so the UI can briefly
+   *  highlight it and detect when a *new* move happened. Null until the first. */
+  botLastMove(): { rect: Rect; seq: number } | null {
+    return this.botLastRect ? { rect: this.botLastRect, seq: this.botSeq } : null;
   }
 
   /** Preview validity for drag highlighting (UI only). */
@@ -192,6 +205,7 @@ export class VersusMatch {
         break;
       }
       this.botEngine.commit({ seq: ++this.botSeq, rect: d.rect, tMs: elapsed });
+      this.botLastRect = d.rect;
       this.botNextAt += d.delayMs;
     }
   }

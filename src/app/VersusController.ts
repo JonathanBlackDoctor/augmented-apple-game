@@ -102,7 +102,7 @@ export class VersusController {
     const mmr = this.profile?.mmr ?? 1000;
     const diff: Difficulty = s.aiDifficulty === 'auto' ? difficultyForMmr(mmr) : s.aiDifficulty;
     const tierLabel = diff === 'hard' ? 'Gold' : diff === 'normal' ? 'Silver' : 'Bronze';
-    // Settings (board size) may have changed since mount → re-fit the boards.
+    // Settings (apple count/size) may have changed since mount → re-fit the boards.
     this.layout = this.calcLayout();
     this.board.setLayout(this.layout);
     this.match = new VersusMatch({
@@ -333,7 +333,8 @@ export class VersusController {
   private calcLayout(): BoardLayout {
     const w = this.parent?.clientWidth || window.innerWidth;
     const h = this.parent?.clientHeight || window.innerHeight;
-    return computeLayout(this.cols, this.rows, w, h, Math.max(4, Math.round(Math.min(w, h) * 0.014)));
+    const scale = getSettings().appleScale;
+    return computeLayout(this.cols, this.rows, w, h, Math.max(4, Math.round(Math.min(w, h) * 0.014)), scale);
   }
 
   private calcMiniLayout(): BoardLayout {

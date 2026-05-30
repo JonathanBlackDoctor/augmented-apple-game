@@ -12,17 +12,22 @@ export interface BoardLayout {
   height: number;
 }
 
-/** Fit a cols×rows grid of square cells into an available area, centered. */
+/** Fit a cols×rows grid of square cells into an available area, centered.
+ *  `scale` (0–1) shrinks the fitted cell so the whole grid occupies less of the
+ *  area — apples stay packed together, but more background shows around the board.
+ *  The canvas (width/height) shrinks with the grid so the flex host can center it. */
 export function computeLayout(
   cols: number,
   rows: number,
   availW: number,
   availH: number,
   pad = 8,
+  scale = 1,
 ): BoardLayout {
   const innerW = Math.max(0, availW - pad * 2);
   const innerH = Math.max(0, availH - pad * 2);
-  const cell = Math.max(1, Math.floor(Math.min(innerW / cols, innerH / rows)));
+  const fitted = Math.min(innerW / cols, innerH / rows);
+  const cell = Math.max(1, Math.floor(fitted * Math.max(0.2, Math.min(1, scale))));
   const gridW = cell * cols;
   const gridH = cell * rows;
   const width = gridW + pad * 2;

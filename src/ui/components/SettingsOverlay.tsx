@@ -5,6 +5,7 @@ import {
   useSettingsStore,
   DURATION_OPTIONS,
   BOARD_PRESETS,
+  APPLE_SIZE_PRESETS,
   type AiDifficultyPref,
 } from '../../app/settingsStore';
 
@@ -83,7 +84,7 @@ export function SettingsOverlay({ onClose }: { onClose: () => void }) {
             />
           </div>
           <div className="set-row">
-            <span className="set-label">보드 크기</span>
+            <span className="set-label">사과 개수</span>
             <Segmented
               value={boardValue}
               options={BOARD_PRESETS.map((p) => ({ value: `${p.cols}x${p.rows}`, label: p.label }))}
@@ -93,8 +94,16 @@ export function SettingsOverlay({ onClose }: { onClose: () => void }) {
               }}
             />
           </div>
+          <div className="set-row">
+            <span className="set-label">사과 크기</span>
+            <Segmented
+              value={s.appleScale}
+              options={APPLE_SIZE_PRESETS.map((p) => ({ value: p.scale, label: p.label }))}
+              onChange={(v) => s.setAppleScale(v)}
+            />
+          </div>
         </div>
-        <p className="set-note">시간·보드 크기·AI 난이도는 다음 게임부터 적용돼요.</p>
+        <p className="set-note">시간·사과 개수·사과 크기·AI 난이도는 다음 게임부터 적용돼요.</p>
         <div className="btn-row">
           <button className="btn ghost" onClick={() => s.reset()}>
             기본값

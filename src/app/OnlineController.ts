@@ -10,6 +10,7 @@ import { InputController, type DragHandlers } from '../input/InputController';
 import { createMonotonicClock } from './clock';
 import { sfx } from './sound';
 import { useOnlineStore } from './onlineStore';
+import { getSettings } from './settingsStore';
 import { OnlineMatch, type OnlineSnapshot, type Role } from './OnlineMatch';
 import { InMemoryNetBackend } from '../net/memoryBackend';
 import { BackendNetSession } from '../net/session';
@@ -266,7 +267,8 @@ export class OnlineController {
     const h = this.parent?.clientHeight || window.innerHeight;
     // Follow the match's agreed board aspect (host-chosen, guest-adopted).
     const d = this.match?.dims() ?? pickGridDims();
-    return computeLayout(d.cols, d.rows, w, h, Math.max(4, Math.round(Math.min(w, h) * 0.014)));
+    const scale = getSettings().appleScale;
+    return computeLayout(d.cols, d.rows, w, h, Math.max(4, Math.round(Math.min(w, h) * 0.014)), scale);
   }
   private onResize = (): void => {
     this.layout = this.calc();

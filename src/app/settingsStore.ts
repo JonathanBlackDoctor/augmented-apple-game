@@ -13,17 +13,28 @@ export interface Settings {
   roundDurationMs: number;
   boardCols: number;
   boardRows: number;
+  /** Grid scale (0–1): shrinks the whole board so apples stay packed but more
+   *  background shows around the edges. Smaller = smaller apples + more margin. */
+  appleScale: number;
   showAiMiniboard: boolean;
 }
 
 /** Selectable round lengths (ms) surfaced in the settings UI. */
 export const DURATION_OPTIONS = [20_000, 30_000, 45_000, 60_000] as const;
 
-/** Selectable board sizes surfaced in the settings UI. */
+/** Selectable apple counts surfaced in the settings UI (grid dimensions). */
 export const BOARD_PRESETS: { label: string; cols: number; rows: number }[] = [
-  { label: '작게', cols: 11, rows: 7 },
+  { label: '적게', cols: 11, rows: 7 },
   { label: '보통', cols: 17, rows: 10 },
-  { label: '크게', cols: 21, rows: 12 },
+  { label: '많이', cols: 21, rows: 12 },
+];
+
+/** Selectable apple sizes (board scale). Smaller shrinks the whole board, keeping
+ *  apples packed while leaving more background margin around it. */
+export const APPLE_SIZE_PRESETS: { label: string; scale: number }[] = [
+  { label: '작게', scale: 0.6 },
+  { label: '보통', scale: 0.8 },
+  { label: '크게', scale: 1 },
 ];
 
 const DEFAULTS: Settings = {
@@ -32,6 +43,7 @@ const DEFAULTS: Settings = {
   roundDurationMs: 30_000,
   boardCols: 17,
   boardRows: 10,
+  appleScale: 0.8,
   showAiMiniboard: true,
 };
 
@@ -44,6 +56,7 @@ function pick(s: Settings): Settings {
     roundDurationMs: s.roundDurationMs,
     boardCols: s.boardCols,
     boardRows: s.boardRows,
+    appleScale: s.appleScale,
     showAiMiniboard: s.showAiMiniboard,
   };
 }
@@ -71,6 +84,7 @@ export interface SettingsStore extends Settings {
   setAiDifficulty(v: AiDifficultyPref): void;
   setRoundDurationMs(v: number): void;
   setBoardSize(cols: number, rows: number): void;
+  setAppleScale(v: number): void;
   setShowAiMiniboard(v: boolean): void;
   reset(): void;
 }
@@ -93,6 +107,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => {
     setAiDifficulty: (aiDifficulty) => commit({ aiDifficulty }),
     setRoundDurationMs: (roundDurationMs) => commit({ roundDurationMs }),
     setBoardSize: (boardCols, boardRows) => commit({ boardCols, boardRows }),
+    setAppleScale: (appleScale) => commit({ appleScale }),
     setShowAiMiniboard: (showAiMiniboard) => commit({ showAiMiniboard }),
     reset: () => {
       sfx.setEnabled(DEFAULTS.soundEnabled);

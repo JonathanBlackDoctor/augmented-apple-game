@@ -106,6 +106,39 @@ describe('OnlineMatch — robustness', () => {
     expect(host.snapshot().phase).not.toBe('matchResult');
   });
 
+  it('a reused room with stale events does not corrupt a fresh match (host resets)', async () => {
+    const backend = new InMemoryNetBackend();
+    // Leftover events from a previous match on the same (reusable) code.
+    const old = new BackendNetSession(backend);
+    await old.join('123', { ...A, uid: 'OLDHOST' });
+    await old.send({ t: 'ready', player: 'OLDGUEST', phase: 'lobby' });
+    await old.send({ t: 'phase', phase: 'countdown', round: 0 });
+    await old.send({ t: 'round-result', player: 'OLDGUEST', round: 0, score: 99 });
+
+    // Host re-creates the room (reset), guest joins after a delay; both run.
+    const sa = new BackendNetSession(backend);
+    await sa.join('123', A, { reset: true });
+    const host = new OnlineMatch({ session: sa, role: 'host', self: A, roomId: '123', ...FAST });
+    await host.start(1000);
+    let h = 1000;
+    for (let i = 0; i < 10; i++) { host.tick(h); h += 50; }
+
+    const sb = new BackendNetSession(backend);
+    await sb.join('123', B);
+    const guest = new OnlineMatch({ session: sb, role: 'guest', self: B, roomId: '123', ...FAST });
+    await guest.start(7000);
+    let g = 7000;
+    for (let i = 0; i < 400; i++) {
+      host.tick(h); guest.tick(g); h += 50; g += 50;
+      if (host.snapshot().phase === 'matchResult' && guest.snapshot().phase === 'matchResult') break;
+    }
+    // Both reach a clean result, oppLeft false, and the stale score never leaks in.
+    expect(guest.snapshot().phase).toBe('matchResult');
+    expect(host.snapshot().phase).toBe('matchResult');
+    expect(guest.snapshot().oppLeft).toBe(false);
+    expect(host.snapshot().oppLeft).toBe(false);
+  });
+
   it('flags no-opponent after the lobby timeout', async () => {
     const backend = new InMemoryNetBackend();
     const sa = new BackendNetSession(backend);

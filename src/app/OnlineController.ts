@@ -116,7 +116,9 @@ export class OnlineController {
   private async enter(code: string, role: Role): Promise<void> {
     if (!this.backend) return;
     const session = new BackendNetSession(this.backend);
-    await session.join(code, this.pub());
+    // The host (re)creates the room, so wipe any leftover events from a previous
+    // match that reused this code; the guest joins into that clean room.
+    await session.join(code, this.pub(), { reset: role === 'host' });
     this.match = new OnlineMatch({ session, role, self: this.pub(), roomId: code, durationMs: DURATION });
     this.resolved = false;
     this.started = false;

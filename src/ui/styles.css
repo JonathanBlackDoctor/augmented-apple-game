@@ -756,6 +756,232 @@ body {
   line-height: 1.45;
 }
 
+/* ============================================================
+   AUGMENT EMBLEMS — per-augment glossy SVG crests, ported from the
+   "증강 쇼케이스" catalog. Rendered by <AugmentEmblem/> on the pick cards
+   (art box) and the owned-build sidebar (small chip). Idle micro-motions
+   are scoped under .emblem so the generic class names can't leak out.
+   ============================================================ */
+.emblem {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.emblem.silver {
+  filter: drop-shadow(0 7px 9px rgba(40, 60, 90, 0.18));
+}
+.emblem.gold {
+  filter: drop-shadow(0 7px 11px rgba(150, 95, 12, 0.26))
+    drop-shadow(0 0 14px rgba(255, 200, 90, 0.28));
+}
+.emblem.prism {
+  filter: drop-shadow(0 7px 12px rgba(110, 80, 180, 0.24))
+    drop-shadow(0 0 16px rgba(140, 120, 255, 0.22));
+}
+.emblem .anim {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.emblem .twinkle {
+  animation: aag-em-twinkle 2.6s ease-in-out infinite;
+}
+.emblem .spin-slow {
+  animation: aag-em-spin 14s linear infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.emblem .spin-med {
+  animation: aag-em-spin 9s linear infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.emblem .beat {
+  animation: aag-em-beat 2.4s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.emblem .bob {
+  animation: aag-em-bob 4s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.emblem .freeze-pulse {
+  animation: aag-em-fpulse 3.4s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.emblem .sheen-rect {
+  animation: aag-em-sheen 5.2s ease-in-out infinite;
+}
+.emblem .spin-arrows {
+  animation: aag-em-fadepulse 3s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.emblem .sway {
+  animation: aag-em-sway 3.6s ease-in-out infinite;
+  transform-box: fill-box;
+}
+.emblem .dice-tumble {
+  animation: aag-em-dice 4.4s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+@keyframes aag-em-twinkle {
+  0%,
+  100% {
+    opacity: 0.4;
+    transform: scale(0.82);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+}
+@keyframes aag-em-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes aag-em-beat {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  14% {
+    transform: scale(1.07);
+  }
+  28% {
+    transform: scale(1);
+  }
+  42% {
+    transform: scale(1.04);
+  }
+}
+@keyframes aag-em-bob {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0);
+  }
+  50% {
+    transform: translateY(-2.5px) rotate(-1.5deg);
+  }
+}
+@keyframes aag-em-fpulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+@keyframes aag-em-sheen {
+  0% {
+    transform: translateX(-46px);
+  }
+  36% {
+    transform: translateX(150px);
+  }
+  100% {
+    transform: translateX(150px);
+  }
+}
+@keyframes aag-em-fadepulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+@keyframes aag-em-sway {
+  0%,
+  100% {
+    transform: rotate(-3.5deg);
+  }
+  50% {
+    transform: rotate(3.5deg);
+  }
+}
+@keyframes aag-em-dice {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0);
+  }
+  50% {
+    transform: translateY(-2px) rotate(3deg);
+  }
+}
+
+/* pick-card art box — tier-tinted stage holding the crest, with a slow sheen */
+.aug-art {
+  position: relative;
+  width: 100%;
+  height: 96px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  box-shadow:
+    inset 0 1px 2px rgba(255, 255, 255, 0.6),
+    inset 0 -8px 20px -10px rgba(40, 40, 60, 0.12);
+}
+.aug-card.silver .aug-art {
+  background: radial-gradient(120% 100% at 50% 32%, #f7fafd 0%, #e3eaf2 55%, #d3dde9 100%);
+}
+.aug-card.gold .aug-art {
+  background: radial-gradient(120% 100% at 50% 30%, #fef4d6 0%, #f8dd9a 55%, #f0cd76 100%);
+}
+.aug-card.prismatic .aug-art {
+  background: radial-gradient(120% 100% at 50% 30%, #f6f1ff 0%, #eaf2fb 55%, #dbf0fb 100%);
+}
+.aug-art .emblem-host {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 80px;
+  height: 80px;
+}
+.aug-art::after {
+  content: '';
+  position: absolute;
+  inset: -20%;
+  z-index: 2;
+  pointer-events: none;
+  background: linear-gradient(
+    112deg,
+    transparent 38%,
+    rgba(255, 255, 255, 0.55) 50%,
+    transparent 62%
+  );
+  transform: translateX(-130%);
+  animation: aag-art-sweep 6s ease-in-out infinite;
+}
+@keyframes aag-art-sweep {
+  0% {
+    transform: translateX(-130%);
+  }
+  22% {
+    transform: translateX(130%);
+  }
+  100% {
+    transform: translateX(130%);
+  }
+}
+.aug-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+  text-align: left;
+  width: 100%;
+  min-width: 0;
+}
+
 /* ---------- Motion ---------- */
 @keyframes rise {
   from {
@@ -974,9 +1200,17 @@ body {
     linear-gradient(var(--paper-2), var(--paper-2)) padding-box,
     linear-gradient(125deg, #8a7dff, #6ad7d0, #ffd97a) border-box;
 }
-.owned-aug-icon {
-  font-size: 14px;
+.owned-aug-emblem {
+  display: block;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 auto;
+  font-size: 14px; /* fallback emoji size for crest-less families */
   line-height: 1;
+}
+/* Crisp at chip scale: drop the per-tier glow the full-size crest uses. */
+.owned-aug-emblem .emblem {
+  filter: drop-shadow(0 1px 1px rgba(80, 60, 30, 0.18));
 }
 .owned-aug-name {
   font-size: 11px;
@@ -1351,3 +1585,42 @@ body {
 .lb-nick { text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lb-tier { font-size: 12px; color: var(--ink-2); }
 .lb-mmr { font-weight: 700; font-variant-numeric: tabular-nums; color: var(--ink); }
+
+/* On phones the 1-up pick cards become compact rows (crest left, text right)
+   so three augments still fit a short viewport without scrolling. */
+@media (max-width: 560px) {
+  .aug-card {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    padding: 14px;
+  }
+  .aug-art {
+    width: 66px;
+    height: 66px;
+    flex: 0 0 auto;
+    border-radius: 13px;
+  }
+  .aug-art .emblem-host {
+    width: 54px;
+    height: 54px;
+  }
+}
+
+/* Honor reduced-motion: hold the crests and sheens still. */
+@media (prefers-reduced-motion: reduce) {
+  .emblem .anim,
+  .emblem .twinkle,
+  .emblem .spin-slow,
+  .emblem .spin-med,
+  .emblem .beat,
+  .emblem .bob,
+  .emblem .freeze-pulse,
+  .emblem .sheen-rect,
+  .emblem .spin-arrows,
+  .emblem .sway,
+  .emblem .dice-tumble,
+  .aug-art::after {
+    animation: none !important;
+  }
+}

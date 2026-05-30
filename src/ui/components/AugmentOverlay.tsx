@@ -1,6 +1,7 @@
 import { useGameStore } from '../../app/store';
 import { byId } from '../../augments';
 import { FAMILY_ICON } from './augmentIcons';
+import { AugmentEmblem } from './AugmentEmblem';
 
 const TIER_LABEL: Record<string, string> = { silver: '실버', gold: '골드', prismatic: '프리즘' };
 const FAMILY_LABEL: Record<string, string> = {
@@ -48,12 +49,17 @@ export function AugmentOverlay({ onPick, remainingMs, totalMs }: AugmentOverlayP
             if (!a) return null;
             return (
               <button key={id} className={`aug-card ${a.tier}`} onClick={() => onPick(id)}>
-                <span className="aug-fam">
-                  <span className="aug-fam-icon">{FAMILY_ICON[a.family]}</span>
-                  {FAMILY_LABEL[a.family] ?? a.family}
-                </span>
-                <span className="aug-name">{a.name}</span>
-                <span className="aug-desc">{a.desc}</span>
+                <div className="aug-art">
+                  <AugmentEmblem aug={a} className="emblem-host" />
+                </div>
+                <div className="aug-meta">
+                  <span className="aug-fam">
+                    <span className="aug-fam-icon">{FAMILY_ICON[a.family]}</span>
+                    {FAMILY_LABEL[a.family] ?? a.family}
+                  </span>
+                  <span className="aug-name">{a.name}</span>
+                  <span className="aug-desc">{a.desc}</span>
+                </div>
               </button>
             );
           })}

@@ -3,7 +3,7 @@
 // shared `owned` list (kept in sync by the active controller).
 import { useGameStore } from '../../app/store';
 import { byId } from '../../augments';
-import { FAMILY_ICON } from './augmentIcons';
+import { AugmentEmblem } from './AugmentEmblem';
 
 export function OwnedAugments() {
   const owned = useGameStore((s) => s.owned);
@@ -15,7 +15,7 @@ export function OwnedAugments() {
         if (!a) return null;
         return (
           <div key={`${id}:${i}`} className={`owned-aug-chip ${a.tier}`} title={`${a.name} · ${a.desc}`}>
-            <span className="owned-aug-icon">{FAMILY_ICON[a.family]}</span>
+            <AugmentEmblem aug={a} className="owned-aug-emblem" />
             <span className="owned-aug-name">{a.name}</span>
           </div>
         );

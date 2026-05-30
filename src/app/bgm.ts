@@ -1,21 +1,29 @@
-// app/bgm.ts — looping background music with a day↔night crossfade.
+// app/bgm.ts — looping, gapless background music with a day↔night crossfade.
 //
-// Two tracks (a bright daytime loop and a calm night loop) play in parallel and
-// are mixed by the live day-night phase p∈[0,1] coming from skyClock, so the
-// music breathes with the same cycle as the DayNightSky backdrop: full day
-// during 아침/낮, full night through 밤, smoothly crossfading at 해질녘/동틀녘.
-// The mix is equal-power (sqrt) so the combined loudness stays roughly constant
-// through the crossfade instead of dipping in the middle.
+// Two short ambient loops (a calm daytime track and an even softer night track)
+// play in parallel through the shared WebAudio context and are mixed by the live
+// day-night phase p∈[0,1] from skyClock, so the music breathes with the same
+// cycle as the DayNightSky backdrop: full day during 아침/낮, full night through
+// 밤, smoothly crossfading at 해질녘/동틀녘. The blend is equal-power (sqrt) so
+// the combined loudness stays steady through the crossfade instead of dipping.
 //
-// Browser autoplay policy blocks audio until a user gesture, so playback is
-// armed lazily on the first pointer/key/touch (see arm()). Everything is
-// best-effort: missing files, blocked autoplay or no Audio support never throw —
-// the game just runs silently.
+// WebAudio (decode → AudioBufferSourceNode with loop=true) is used on purpose
+// instead of <audio loop>: looping is sample-accurate and GAPLESS, which matters
+// for the short (~30s) clips a generator like Gemini produces — there is no
+// silent hiccup at the loop seam every cycle. And because the tracks are beatless
+// ambient pads, the two loops drifting out of phase — and the seam of a clip
+// whose start ≠ end — is inaudible: there is no downbeat to clash against.
+//
+// Autoplay policy blocks audio until a user gesture, so playback is armed lazily
+// on the first pointer/key/touch (arm()). Everything is best-effort: missing
+// files, blocked autoplay or no WebAudio never throw — the game runs silently.
+import { getAudioContext } from './audioContext';
 
 // Drop the generated files here (see public/audio/README.md):
 const DAY_SRC = '/audio/bgm-day.mp3';
 const NIGHT_SRC = '/audio/bgm-night.mp3';
 const MASTER = 0.5; // ceiling volume for the active track
+const SMOOTH = 0.12; // gain follow time-constant (s) — no zipper noise, gentle mute fade
 
 const clamp = (v: number, a: number, b: number): number => Math.max(a, Math.min(b, v));
 const smooth = (e0: number, e1: number, x: number): number => {
@@ -31,69 +39,78 @@ function dayMix(p: number): number {
   return clamp(1 - smooth(0.42, 0.62, p) + smooth(0.88, 0.98, p), 0, 1);
 }
 
-let day: HTMLAudioElement | null = null;
-let night: HTMLAudioElement | null = null;
+let ctx: AudioContext | null = null;
+let dayGain: GainNode | null = null;
+let nightGain: GainNode | null = null;
 let armed = false; // playback has been kicked off by a user gesture
 let muted = false;
 let phase = 0; // latest day-night phase from the render loop
 
-function make(src: string): HTMLAudioElement | null {
+async function load(c: AudioContext, src: string): Promise<AudioBuffer | null> {
   try {
-    const a = new Audio(src);
-    a.loop = true;
-    a.preload = 'auto';
-    a.volume = 0;
-    return a;
+    const res = await fetch(src);
+    if (!res.ok) return null; // file not dropped in yet → stay silent
+    return await c.decodeAudioData(await res.arrayBuffer());
   } catch {
     return null;
   }
 }
 
-function applyVolumes(): void {
-  if (muted) {
-    if (day) day.volume = 0;
-    if (night) night.volume = 0;
-    return;
-  }
+function startLoop(c: AudioContext, buffer: AudioBuffer | null, gain: GainNode | null): void {
+  if (!buffer || !gain) return;
+  const src = c.createBufferSource();
+  src.buffer = buffer;
+  src.loop = true; // sample-accurate, gapless
+  src.connect(gain);
+  src.start();
+}
+
+function applyGains(): void {
+  const c = ctx;
+  if (!c || !dayGain || !nightGain) return;
+  const on = muted ? 0 : 1;
   const m = dayMix(phase);
-  // Equal-power crossfade keeps perceived loudness steady through the blend.
-  if (day) day.volume = MASTER * Math.sqrt(m);
-  if (night) night.volume = MASTER * Math.sqrt(1 - m);
+  const t = c.currentTime;
+  // setTargetAtTime smooths per-frame writes (no clicks) and gives mute a soft
+  // fade; called every frame the target simply tracks the moving phase.
+  dayGain.gain.setTargetAtTime(on * MASTER * Math.sqrt(m), t, SMOOTH);
+  nightGain.gain.setTargetAtTime(on * MASTER * Math.sqrt(1 - m), t, SMOOTH);
+}
+
+async function boot(c: AudioContext): Promise<void> {
+  const [d, n] = await Promise.all([load(c, DAY_SRC), load(c, NIGHT_SRC)]);
+  startLoop(c, d, dayGain);
+  startLoop(c, n, nightGain);
+  applyGains();
 }
 
 export const bgm = {
   // Called every frame from the DayNightSky render loop with the live phase.
   setPhase(p: number): void {
     phase = p;
-    applyVolumes();
+    applyGains();
   },
 
-  // Begin playback. Safe to call repeatedly; only the first armed call after a
-  // real user gesture actually starts the loops (autoplay policy).
+  // Begin playback. Safe to call repeatedly; only the first call after a real
+  // user gesture creates the graph and starts the loops (autoplay policy).
   arm(): void {
     if (armed) return;
     armed = true;
-    day = make(DAY_SRC);
-    night = make(NIGHT_SRC);
-    applyVolumes();
-    // play() returns a promise that rejects if autoplay is still blocked or the
-    // file is missing — swallow it so we degrade to silence rather than throw.
-    void day?.play().catch(() => {});
-    void night?.play().catch(() => {});
+    const c = getAudioContext();
+    if (!c) return;
+    ctx = c;
+    dayGain = c.createGain();
+    dayGain.gain.value = 0;
+    dayGain.connect(c.destination);
+    nightGain = c.createGain();
+    nightGain.gain.value = 0;
+    nightGain.connect(c.destination);
+    void boot(c);
   },
 
   setMuted(next: boolean): void {
     muted = next;
-    applyVolumes();
-    // Pause the elements while muted so we are not decoding audio for nothing,
-    // and resume from where the cycle is once unmuted.
-    if (muted) {
-      day?.pause();
-      night?.pause();
-    } else if (armed) {
-      void day?.play().catch(() => {});
-      void night?.play().catch(() => {});
-    }
+    applyGains();
   },
 
   isMuted(): boolean {

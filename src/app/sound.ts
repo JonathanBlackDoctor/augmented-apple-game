@@ -1,22 +1,10 @@
 // app/sound.ts — tiny WebAudio SFX for tactile feedback (plan pillar #1).
-// Lazily created on first use (after a user gesture). Best-effort; never throws.
-let ctx: AudioContext | null = null;
-
-function ac(): AudioContext | null {
-  try {
-    if (!ctx) {
-      const Ctor = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-      ctx = new Ctor();
-    }
-    if (ctx.state === 'suspended') void ctx.resume();
-    return ctx;
-  } catch {
-    return null;
-  }
-}
+// Shares the one AudioContext with the BGM player (see audioContext.ts), lazily
+// resumed on first use after a user gesture. Best-effort; never throws.
+import { getAudioContext } from './audioContext';
 
 function blip(freq: number, durMs: number, gain = 0.06, type: OscillatorType = 'sine'): void {
-  const c = ac();
+  const c = getAudioContext();
   if (!c) return;
   const o = c.createOscillator();
   const g = c.createGain();

@@ -268,7 +268,7 @@ export const CATALOG: Augment[] = [
     id: 'rule.eleven',
     name: '소수의 길',
     desc: '합이 10 이상의 소수면 인정 (11·13·17·19·23…)',
-    tier: 'gold',
+    tier: 'prismatic',
     family: 'rule',
     conflictsWith: ['rule.kindness', 'rule.alchemy'],
     hooks: {

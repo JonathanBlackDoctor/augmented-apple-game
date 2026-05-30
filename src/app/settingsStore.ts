@@ -13,7 +13,8 @@ export interface Settings {
   roundDurationMs: number;
   boardCols: number;
   boardRows: number;
-  /** Fraction of each grid cell the apple fills (0–1). Smaller = more spacing. */
+  /** Grid scale (0–1): shrinks the whole board so apples stay packed but more
+   *  background shows around the edges. Smaller = smaller apples + more margin. */
   appleScale: number;
   showAiMiniboard: boolean;
 }
@@ -28,7 +29,8 @@ export const BOARD_PRESETS: { label: string; cols: number; rows: number }[] = [
   { label: '많이', cols: 21, rows: 12 },
 ];
 
-/** Selectable apple sizes (cell fill fraction). Smaller leaves more whitespace. */
+/** Selectable apple sizes (board scale). Smaller shrinks the whole board, keeping
+ *  apples packed while leaving more background margin around it. */
 export const APPLE_SIZE_PRESETS: { label: string; scale: number }[] = [
   { label: '작게', scale: 0.6 },
   { label: '보통', scale: 0.8 },

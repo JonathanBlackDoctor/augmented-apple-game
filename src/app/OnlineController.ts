@@ -45,7 +45,6 @@ export class OnlineController {
   async mount(parent: HTMLElement): Promise<void> {
     this.parent = parent;
     this.layout = this.calc();
-    this.board.setAppleScale(getSettings().appleScale);
     await this.board.mount(parent, this.layout);
     this.input = new InputController(this.board.app.canvas, () => this.layout, this.handlers);
     this.input.attach();

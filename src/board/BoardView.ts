@@ -40,9 +40,6 @@ export class BoardView {
   private layout: BoardLayout | null = null;
   private board: Board | null = null;
   private mounted = false;
-  // Fraction of each cell the apple visually fills (0–1). Cells (and tap targets)
-  // keep their full size; a smaller apple just leaves more whitespace between them.
-  private appleScale = 1;
 
   constructor() {
     this.app = new Application();
@@ -64,14 +61,6 @@ export class BoardView {
     this.app.ticker.add(this.onTick);
     this.mounted = true;
     if (this.board) this.rebuild();
-  }
-
-  /** Set the apple fill fraction (0–1). Smaller apples = more spacing/whitespace. */
-  setAppleScale(scale: number): void {
-    const next = Math.max(0.2, Math.min(1, scale));
-    if (next === this.appleScale) return;
-    this.appleScale = next;
-    if (this.mounted) this.rebuild();
   }
 
   setLayout(layout: BoardLayout): void {
@@ -250,13 +239,12 @@ export class BoardView {
       const cont = new Container();
       cont.position.set(cx, cy);
 
-      const drawCell = l.cell * this.appleScale;
       const body = new Graphics();
       const label = new Text({
         text: String(b.cells[i] || ''),
         style: {
           fontFamily: theme.font,
-          fontSize: Math.round(drawCell * theme.ratio.fontSize),
+          fontSize: Math.round(l.cell * theme.ratio.fontSize),
           fontWeight: '800',
           fill: theme.color.text,
           dropShadow: {
@@ -269,8 +257,8 @@ export class BoardView {
         },
       });
       label.anchor.set(0.5);
-      label.position.set(0, drawCell * 0.02);
-      this.drawApple(body, drawCell, b.tags?.[i] ?? 'normal');
+      label.position.set(0, l.cell * 0.02);
+      this.drawApple(body, l.cell, b.tags?.[i] ?? 'normal');
 
       cont.addChild(body, label);
       cont.visible = b.cells[i] > 0;
@@ -288,7 +276,7 @@ export class BoardView {
   private refresh(): void {
     if (!this.board || !this.layout) return;
     const b = this.board;
-    const cell = this.layout.cell * this.appleScale;
+    const cell = this.layout.cell;
     for (let i = 0; i < this.cells.length; i++) {
       const c = this.cells[i];
       if (!c) continue;

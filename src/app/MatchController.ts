@@ -63,7 +63,6 @@ export class MatchController {
     this.plan = plan;
     // Board size can come from settings → re-fit the layout before the round.
     this.layout = this.calcLayout();
-    this.board.setAppleScale(getSettings().appleScale);
     this.board.setLayout(this.layout);
     this.owned = [];
     this.roundIndex = 0;
@@ -234,7 +233,8 @@ export class MatchController {
     const h = this.parent?.clientHeight || window.innerHeight;
     const cols = this.plan?.cols ?? 17;
     const rows = this.plan?.rows ?? 10;
-    return computeLayout(cols, rows, w, h, Math.max(4, Math.round(Math.min(w, h) * 0.014)));
+    const scale = getSettings().appleScale;
+    return computeLayout(cols, rows, w, h, Math.max(4, Math.round(Math.min(w, h) * 0.014)), scale);
   }
 
   private onResize = (): void => {

@@ -81,9 +81,10 @@ export function OnlineScreen() {
               <input
                 className="code-input"
                 value={code}
-                maxLength={6}
-                placeholder="코드 6자리"
-                onChange={(e) => setCode(e.target.value.toUpperCase())}
+                maxLength={3}
+                inputMode="numeric"
+                placeholder="코드 3자리"
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
               />
               <button className="btn gold" onClick={() => void ctrlRef.current?.join(code)}>
                 입장

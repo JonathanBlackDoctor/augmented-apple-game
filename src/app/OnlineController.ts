@@ -106,7 +106,7 @@ export class OnlineController {
   async join(code: string): Promise<void> {
     const c = code.toUpperCase();
     if (!isValidRoomCode(c)) {
-      useOnlineStore.getState().set({ error: '코드 형식이 올바르지 않아요 (6자리)' });
+      useOnlineStore.getState().set({ error: '코드 형식이 올바르지 않아요 (3자리)' });
       return;
     }
     useOnlineStore.getState().set({ stage: 'connecting', roomCode: c, error: null });
@@ -123,7 +123,7 @@ export class OnlineController {
     this.comboStreak = 0;
     this.lastRound = -1;
     this.lastPhase = '';
-    await this.match.start();
+    await this.match.start(this.clock.now());
     this.loop();
   }
 

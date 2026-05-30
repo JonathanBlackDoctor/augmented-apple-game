@@ -1,10 +1,15 @@
 // DayNightSky — living "햇살 과수원" backdrop that cycles dawn→day→dusk→night.
-// Ported from the design 시안 (배경 - 낮밤 순환.html). In a multi-round match
-// each round maps to a time of day (R1 아침 … R5 밤); on the home screen it
-// gently auto-cycles. Purely decorative: sits behind all content (aria-hidden),
-// and never changes UI text colour — game surfaces carry their own contrast.
+// Ported from the design 시안 (배경 - 낮밤 순환.html). During a match the sun and
+// moon advance WITH the round clock: each round sweeps from its own time of day
+// (R1 아침 … R5 밤) toward the next, reaching deepest night when the match ends.
+// The phase is read from the live game clock every frame (see skyClock), so it
+// slows when a time augment slows time and freezes during augment-pick / the
+// pause between rounds; on the home screen it gently auto-cycles. Purely
+// decorative: sits behind all content (aria-hidden), and never changes UI text
+// colour — game surfaces carry their own contrast.
 import { useEffect, useMemo, useRef } from 'react';
 import { useGameStore } from '../../app/store';
+import { roundTarget } from './skyClock';
 
 interface Keyframe {
   p: number;
@@ -25,8 +30,7 @@ const KF: Keyframe[] = [
   { p: 0.9, top: '#3C3A72', mid: '#7A5A86', hor: '#E8895E', gFar: '#3f5560', gNear: '#2a4150', tree: '#22323a', cloud: '#caa8c0' },
   { p: 1.0, top: '#10173A', mid: '#1E2A52', hor: '#34375F', gFar: '#26414f', gNear: '#1a2f3c', tree: '#16242b', cloud: '#3a4a6a' },
 ];
-const ROUND_P = [0.06, 0.3, 0.52, 0.74, 0.95];
-const CYCLE = 60; // seconds for a full auto day
+const CYCLE = 60; // seconds for a full auto day on the home screen
 
 const clamp = (v: number, a: number, b: number): number => Math.max(a, Math.min(b, v));
 const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;
@@ -66,12 +70,9 @@ const rnd = (s: number): number => {
 };
 
 export function DayNightSky() {
-  const roundIndex = useGameStore((s) => s.roundIndex);
-  const totalRounds = useGameStore((s) => s.totalRounds);
-  const phase = useGameStore((s) => s.phase);
-
-  const targetRef = useRef(ROUND_P[0]);
-  const autoRef = useRef(true);
+  // Match state is read from the store inside the render loop (per frame) rather
+  // than via subscriptions: the phase is a continuous function of the live clock,
+  // so there is nothing to re-render — the refs below carry every visual change.
 
   // Static decorative elements — positions fixed once (CSS drives their motion).
   const stars = useMemo(
@@ -169,23 +170,11 @@ export function DayNightSky() {
   const petalsRef = useRef<HTMLDivElement>(null);
   const fliesRef = useRef<HTMLDivElement>(null);
 
-  // Decide the target phase whenever the round/match state changes.
-  useEffect(() => {
-    if (phase === 'home') {
-      autoRef.current = true;
-    } else if (totalRounds > 1) {
-      autoRef.current = false;
-      targetRef.current = ROUND_P[clamp(roundIndex, 0, ROUND_P.length - 1)];
-    } else {
-      autoRef.current = false;
-      targetRef.current = ROUND_P[0];
-    }
-  }, [roundIndex, totalRounds, phase]);
-
   // Render loop.
   useEffect(() => {
     let raf = 0;
-    let cur = targetRef.current;
+    let cur = 0; // currently displayed phase
+    let autoP = 0; // home-screen auto-cycle accumulator
     let last = performance.now();
 
     const render = (p: number): void => {
@@ -249,13 +238,17 @@ export function DayNightSky() {
     const frame = (now: number): void => {
       const dt = Math.min(0.05, (now - last) / 1000);
       last = now;
-      const target = targetRef.current;
-      if (autoRef.current) {
-        targetRef.current = (target + dt / CYCLE) % 1;
-        cur = targetRef.current;
+      const st = useGameStore.getState();
+      if (st.phase === 'home') {
+        // Ambient day: advance continuously (no easing avoids a 1→0 wrap jolt).
+        autoP = (autoP + dt / CYCLE) % 1;
+        cur = autoP;
       } else {
+        // Follow the live round clock; easing only softens the home→round handoff.
+        const target = roundTarget(st.roundIndex, st.totalRounds, st.remainingMs, st.durationMs);
         cur += (target - cur) * 0.08;
         if (Math.abs(target - cur) < 0.0005) cur = target;
+        autoP = cur; // keep the ambient cycle in sync for a smooth return home
       }
       render(cur);
       raf = requestAnimationFrame(frame);

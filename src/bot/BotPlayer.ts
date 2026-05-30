@@ -16,7 +16,9 @@ export interface BotTuning {
 // Tuned down so the bot is beatable: slower "thinking", more blunders, and even
 // 'hard' samples among the top moves instead of playing perfectly.
 export const TUNING: Record<Difficulty, BotTuning> = {
-  easy: { minDelayMs: 2200, maxDelayMs: 3800, pickTop: 1, blunderChance: 0.5 },
+  // easy always plays a *random* valid move (see decide), so its only real knob
+  // is the think delay — longer delay = fewer moves = lower score.
+  easy: { minDelayMs: 3400, maxDelayMs: 5600, pickTop: 1, blunderChance: 0.5 },
   normal: { minDelayMs: 1400, maxDelayMs: 2400, pickTop: 6, blunderChance: 0.25 },
   hard: { minDelayMs: 800, maxDelayMs: 1600, pickTop: 3, blunderChance: 0.1 },
 };

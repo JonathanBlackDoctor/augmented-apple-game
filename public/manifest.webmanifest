@@ -1,0 +1,13 @@
+{
+  "name": "증강 사과게임",
+  "short_name": "사과게임",
+  "description": "합이 10이 되는 사과를 담고 증강을 쌓아 실시간으로 겨루는 웹 게임",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#1a1614",
+  "theme_color": "#1a1614",
+  "orientation": "any",
+  "icons": [
+    { "src": "./favicon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}

@@ -1,0 +1,40 @@
+import { useGameStore } from '../../app/store';
+import { useVersusStore } from '../../app/versusStore';
+
+export function VersusHud() {
+  const s = useGameStore();
+  const v = useVersusStore();
+  const myTotal = s.totalScore + s.roundScore;
+  const oppTotal = v.oppTotal + v.oppRoundScore;
+  const pct = Math.max(0, Math.min(1, s.durationMs ? s.remainingMs / s.durationMs : 0));
+  const secs = Math.max(0, Math.ceil(s.remainingMs / 1000));
+  const low = secs <= 5;
+  return (
+    <div className="hud versus-hud">
+      <div className="vs-side me">
+        <span className="vs-label">나</span>
+        <span className="vs-score">{myTotal}</span>
+        {s.combo > 1 && <span className="combo-chip">{s.combo}콤보</span>}
+      </div>
+      <div className="hud-center">
+        <div className="vs-meta">
+          <span className="round-chip">
+            R{s.roundIndex + 1}
+            <span className="of">/{s.totalRounds}</span>
+          </span>
+          <span className="vs-wins">
+            {v.roundWins.me} : {v.roundWins.opp}
+          </span>
+        </div>
+        <div className={`time-bar${low ? ' low' : ''}`}>
+          <div className="time-fill" style={{ width: `${pct * 100}%` }} />
+        </div>
+        <span className={`time-num${low ? ' low' : ''}`}>{secs}</span>
+      </div>
+      <div className="vs-side opp">
+        <span className="vs-label">{v.oppName}</span>
+        <span className="vs-score">{oppTotal}</span>
+      </div>
+    </div>
+  );
+}

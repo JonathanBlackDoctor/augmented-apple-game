@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <title>증강 사과게임</title>
+    <script>
+      // GitHub Pages SPA fallback: redirect to index.html preserving the query
+      // string so ?room=...&inv=... deep links survive a hard refresh.
+      sessionStorage.setItem('spa-redirect', location.href);
+      var base = location.pathname.split('/').slice(0, 2).join('/') || '';
+      location.replace(base + '/' + location.search + location.hash);
+    </script>
+  </head>
+  <body></body>
+</html>

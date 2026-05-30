@@ -1,12 +1,15 @@
-// DayNightSky — living "햇살 과수원" backdrop that cycles dawn→day→dusk→night.
-// Ported from the design 시안 (배경 - 낮밤 순환.html). During a match the sun and
-// moon advance WITH the round clock: each round sweeps from its own time of day
-// (R1 아침 … R5 밤) toward the next, reaching deepest night when the match ends.
-// The phase is read from the live game clock every frame (see skyClock), so it
-// slows when a time augment slows time and freezes during augment-pick / the
-// pause between rounds; on the home screen it gently auto-cycles. Purely
-// decorative: sits behind all content (aria-hidden), and never changes UI text
-// colour — game surfaces carry their own contrast.
+// DayNightSky — living "햇살 과수원" backdrop that cycles as ONE seamless day:
+// 아침/낮 → 오후 → 해질녘 → 밤 → 황혼(동틀녘) → back to 아침/낮. The phase p∈[0,1]
+// is a true loop (the p=1 keyframe equals the p=0 one) so the sky never jumps
+// when R5 hands back to R1 or when the home auto-cycle wraps. The sun and moon
+// ride opposite ends of that loop: the sun arcs across the daytime half and the
+// moon across the night half, so when one is setting low on the west the other
+// is rising low on the east — they're never crowded together. During a match
+// the phase advances WITH the round clock (see skyClock): each round sweeps
+// from its own time of day toward the next and the match breaks into dawn, so
+// it inherits time augments for free and freezes during augment-pick / between
+// rounds; on the home screen it gently auto-cycles. Purely decorative: sits
+// behind all content (aria-hidden) and never changes UI text colour.
 import { useEffect, useMemo, useRef } from 'react';
 import { useGameStore } from '../../app/store';
 import { roundTarget } from './skyClock';
@@ -22,13 +25,17 @@ interface Keyframe {
   cloud: string;
 }
 
+// One looping day. p=0 and p=1 are the SAME morning so the wrap is seamless;
+// 오후(0.20) → 해질녘(0.42) → 밤(0.70) → 황혼/동틀녘(0.93) brighten back to dawn.
 const KF: Keyframe[] = [
-  { p: 0.0, top: '#A9C8E4', mid: '#FCE6CB', hor: '#F8CF9E', gFar: '#A6C77E', gNear: '#6E9F52', tree: '#4d7a44', cloud: '#ffffff' },
-  { p: 0.26, top: '#8FBFE9', mid: '#EAF3F7', hor: '#FCF4DE', gFar: '#A9C97F', gNear: '#73A655', tree: '#52803f', cloud: '#ffffff' },
-  { p: 0.52, top: '#A6BFDC', mid: '#FFE7B8', hor: '#FFD295', gFar: '#A0BD72', gNear: '#6C9A4D', tree: '#4f7a3e', cloud: '#fff3df' },
-  { p: 0.76, top: '#7E6CA6', mid: '#FF9C76', hor: '#FFC062', gFar: '#7C875A', gNear: '#54693F', tree: '#3e5436', cloud: '#ffd9c0' },
-  { p: 0.9, top: '#3C3A72', mid: '#7A5A86', hor: '#E8895E', gFar: '#3f5560', gNear: '#2a4150', tree: '#22323a', cloud: '#caa8c0' },
-  { p: 1.0, top: '#10173A', mid: '#1E2A52', hor: '#34375F', gFar: '#26414f', gNear: '#1a2f3c', tree: '#16242b', cloud: '#3a4a6a' },
+  { p: 0.0, top: '#9CC2E8', mid: '#E9F1F2', hor: '#FBF1DA', gFar: '#A6C77E', gNear: '#6E9F52', tree: '#4d7a44', cloud: '#ffffff' },
+  { p: 0.2, top: '#A6C0DD', mid: '#FFE7BE', hor: '#FFD597', gFar: '#A0BD72', gNear: '#6C9A4D', tree: '#4f7a3e', cloud: '#fff3df' },
+  { p: 0.42, top: '#7E6CA6', mid: '#FF9C76', hor: '#FFB860', gFar: '#7C875A', gNear: '#54693F', tree: '#3e5436', cloud: '#ffd9c0' },
+  { p: 0.58, top: '#3C3A72', mid: '#6B4F88', hor: '#D87E5C', gFar: '#46505f', gNear: '#30414f', tree: '#2a363f', cloud: '#b89ac0' },
+  { p: 0.7, top: '#10173A', mid: '#1E2A52', hor: '#34375F', gFar: '#26414f', gNear: '#1a2f3c', tree: '#16242b', cloud: '#3a4a6a' },
+  { p: 0.85, top: '#161E40', mid: '#272E58', hor: '#473A66', gFar: '#283a4a', gNear: '#1c2f3a', tree: '#182830', cloud: '#414a6a' },
+  { p: 0.93, top: '#4C4B82', mid: '#956F98', hor: '#F0A877', gFar: '#5a6560', gNear: '#3f5040', tree: '#33433a', cloud: '#c7a0b8' },
+  { p: 1.0, top: '#9CC2E8', mid: '#E9F1F2', hor: '#FBF1DA', gFar: '#A6C77E', gNear: '#6E9F52', tree: '#4d7a44', cloud: '#ffffff' },
 ];
 const CYCLE = 60; // seconds for a full auto day on the home screen
 
@@ -116,7 +123,7 @@ export function DayNightSky() {
   );
   const motes = useMemo(
     () =>
-      Array.from({ length: 9 }, (_, i) => {
+      Array.from({ length: 16 }, (_, i) => {
         const s = 5 + rnd(i + 1) * 10;
         return {
           width: s,
@@ -131,7 +138,7 @@ export function DayNightSky() {
   );
   const petals = useMemo(
     () =>
-      Array.from({ length: 6 }, (_, i) => {
+      Array.from({ length: 12 }, (_, i) => {
         const s = 8 + rnd(i + 21) * 7;
         return {
           width: s,
@@ -146,7 +153,7 @@ export function DayNightSky() {
   );
   const fireflies = useMemo(
     () =>
-      Array.from({ length: 16 }, (_, i) => ({
+      Array.from({ length: 24 }, (_, i) => ({
         left: `${rnd(i + 1) * 96}%`,
         top: `${52 + rnd(i + 2) * 42}%`,
         animationDuration: `${5 + rnd(i + 3) * 5}s`,
@@ -182,14 +189,19 @@ export function DayNightSky() {
       if (skyRef.current) {
         skyRef.current.style.background = `linear-gradient(180deg, ${s.top} 0%, ${s.mid} 46%, ${s.hor} 70%)`;
       }
-      // sun arc
-      const ts = clamp(p / 0.84, 0, 1);
-      const sunX = 6 + ts * 88;
-      const sunY = 62 - Math.sin(ts * Math.PI) * 52;
-      const sunOp = smooth(0.0, 0.04, p) * (1 - smooth(0.78, 0.88, p));
-      const sunScale = 1 + smooth(0.55, 0.82, p) * 0.55;
+      // Sun rides the daytime half: it rises low on the east (left), climbs to
+      // noon, and sets low on the west (right) at 해질녘. Its arc is phase-shifted
+      // so the daylight window is contiguous across the p=1→0 wrap (dawn ≈ 0.92,
+      // sunset ≈ 0.50). Opacity stays full through the day, fades out at sunset,
+      // and fades back in at sunrise — continuous across the wrap (op(1)=op(0)=1).
+      const sd = (p + 0.08) % 1; // shifted so sunrise sits at sd=0
+      const ts = clamp(sd / 0.58, 0, 1);
+      const sunX = 12 + ts * 76;
+      const sunY = 60 - Math.sin(ts * Math.PI) * 52;
+      const sunOp = clamp(1 - smooth(0.44, 0.52, p) + smooth(0.9, 1.0, p), 0, 1);
+      const sunScale = 1 + (smooth(0.3, 0.46, p) - smooth(0.92, 1.0, p)) * 0.55;
       const sunCol =
-        p < 0.6 ? mix('#FFF0C2', '#FFD587', smooth(0.2, 0.6, p)) : mix('#FFD587', '#FF7E4E', smooth(0.6, 0.82, p));
+        p < 0.3 ? mix('#FFF0C2', '#FFD587', smooth(0.05, 0.3, p)) : mix('#FFD587', '#FF7E4E', smooth(0.3, 0.48, p));
       if (sunRef.current) {
         sunRef.current.style.left = `${sunX}%`;
         sunRef.current.style.top = `${sunY}%`;
@@ -200,38 +212,43 @@ export function DayNightSky() {
         sunDiscRef.current.style.background = `radial-gradient(circle, #fffdf2 8%, ${sunCol} 42%, transparent 70%)`;
         sunDiscRef.current.style.boxShadow = `0 0 60px 24px ${sunCol.replace('rgb(', 'rgba(').replace(')', ',0.45)')}`;
       }
-      // moon arc
-      const tm = clamp((p - 0.6) / 0.4, 0, 1);
-      const moonX = 12 + tm * 70;
-      const moonY = 64 - Math.sin(tm * 0.92 * Math.PI + 0.1) * 50;
+      // Moon rides the night half — the opposite end of the same loop. It rises
+      // low on the east (left) just as the sun sets on the west, crosses the sky
+      // through deepest night, and sets low on the west by 황혼 as the sun rises
+      // on the east: the two are always on opposite horizons, never crowded.
+      const tm = clamp((p - 0.46) / 0.5, 0, 1);
+      const moonX = 12 + tm * 76;
+      const moonY = 60 - Math.sin(tm * Math.PI) * 52;
       if (moonRef.current) {
         moonRef.current.style.left = `${moonX}%`;
         moonRef.current.style.top = `${moonY}%`;
-        moonRef.current.style.opacity = String(smooth(0.64, 0.84, p));
+        moonRef.current.style.opacity = String(clamp(smooth(0.48, 0.56, p) - smooth(0.9, 0.96, p), 0, 1));
       }
-      // stars
-      if (starsRef.current) starsRef.current.style.opacity = String(clamp(smooth(0.72, 0.96, p), 0, 1));
-      // ground
+      // stars — out through the night, gone by daybreak
+      if (starsRef.current)
+        starsRef.current.style.opacity = String(clamp(smooth(0.55, 0.7, p) * (1 - smooth(0.9, 1.0, p)), 0, 1));
+      // ground (all three hills follow the live phase — no static layer)
       if (hFarRef.current)
         hFarRef.current.style.background = `radial-gradient(120% 100% at 38% 100%, ${s.gFar}, transparent 74%)`;
       if (hMidRef.current)
         hMidRef.current.style.background = `radial-gradient(120% 100% at 66% 100%, ${mix(
-          KF[0].gFar,
-          KF[0].gNear,
+          s.gFar,
+          s.gNear,
           0.5,
         )}, transparent 76%)`;
       if (hNearRef.current)
         hNearRef.current.style.background = `radial-gradient(120% 100% at 34% 100%, ${s.gNear}, transparent 80%)`;
       if (treesRef.current) treesRef.current.style.setProperty('--tree', s.tree);
-      // particles
-      const day = 1 - smooth(0.62, 0.86, p);
+      // particles — daylight sun-motes, 오후~해질녘 blossom petals, night fireflies
+      const day = clamp(1 - smooth(0.4, 0.55, p) + smooth(0.9, 1.0, p), 0, 1);
       if (motesRef.current) motesRef.current.style.opacity = String(day * 0.9);
       if (petalsRef.current)
-        petalsRef.current.style.opacity = String(clamp(smooth(0.3, 0.5, p) - smooth(0.74, 0.9, p), 0, 1) * 0.9);
-      if (fliesRef.current) fliesRef.current.style.opacity = String(smooth(0.72, 0.94, p));
+        petalsRef.current.style.opacity = String(clamp(smooth(0.12, 0.28, p) - smooth(0.46, 0.58, p), 0, 1) * 0.95);
+      if (fliesRef.current)
+        fliesRef.current.style.opacity = String(clamp(smooth(0.52, 0.66, p) * (1 - smooth(0.9, 1.0, p)), 0, 1));
       if (cloudsRef.current) {
         cloudsRef.current.style.setProperty('--cloud', s.cloud);
-        cloudsRef.current.style.opacity = String(1 - smooth(0.74, 1, p) * 0.85);
+        cloudsRef.current.style.opacity = String(1 - smooth(0.5, 0.66, p) * (1 - smooth(0.9, 1.0, p)) * 0.85);
       }
     };
 

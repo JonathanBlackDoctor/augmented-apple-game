@@ -4,22 +4,12 @@ import { useGameStore } from '../../app/store';
 import { MatchController, type MatchPlan } from '../../app/MatchController';
 import { VersusController } from '../../app/VersusController';
 import { buildHookBusFor, rollOffer, tierForRound } from '../../augments';
+import { pickGridDims } from '../../board/orientation';
 import { Hud } from '../components/Hud';
 import { VersusHud } from '../components/VersusHud';
 import { AugmentOverlay } from '../components/AugmentOverlay';
 import { ResultOverlay } from '../components/ResultOverlay';
 import { VersusResult } from '../components/VersusResult';
-
-// Pick a board orientation that maximizes apple size for the current viewport.
-// The grid keeps the same 170 cells, but on a portrait phone we use the tall
-// 10×17 layout so cells aren't squeezed by the narrow width (≈22px → ≈37px).
-// Solo/augment only — versus/online keep a fixed shape so both players match.
-function pickGridDims(): { cols: number; rows: number } {
-  const portrait =
-    typeof window !== 'undefined' &&
-    window.innerHeight > window.innerWidth;
-  return portrait ? { cols: 10, rows: 17 } : { cols: 17, rows: 10 };
-}
 
 function buildPlan(mode: 'solo' | 'augment'): MatchPlan {
   const seedBase = `${mode}:${Date.now()}`;

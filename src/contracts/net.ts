@@ -27,7 +27,9 @@ export type NetEvent =
   | { t: 'sabotage'; ev: SabotageEvent }
   | { t: 'augment-pick'; player: PlayerId; round: number; augId: string }
   | { t: 'round-result'; player: PlayerId; round: number; score: number }
-  | { t: 'phase'; phase: MatchPhase; round: number; startAtServerTs?: number }
+  // Host announces the match start; cols/rows carry the host-chosen board aspect
+  // so both clients render the same shared-seed board (portrait host → tall grid).
+  | { t: 'phase'; phase: MatchPhase; round: number; startAtServerTs?: number; cols?: number; rows?: number }
   | { t: 'ready'; player: PlayerId; phase: MatchPhase }
   | { t: 'heartbeat'; player: PlayerId; ts: number };
 

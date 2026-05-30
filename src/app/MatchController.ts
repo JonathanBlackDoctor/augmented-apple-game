@@ -204,7 +204,7 @@ export class MatchController {
     const h = this.parent?.clientHeight || window.innerHeight;
     const cols = this.plan?.cols ?? 17;
     const rows = this.plan?.rows ?? 10;
-    return computeLayout(cols, rows, w, h, Math.max(6, Math.round(Math.min(w, h) * 0.02)));
+    return computeLayout(cols, rows, w, h, Math.max(4, Math.round(Math.min(w, h) * 0.014)));
   }
 
   private onResize = (): void => {

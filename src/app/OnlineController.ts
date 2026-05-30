@@ -5,6 +5,7 @@ import type { Rect, Profile, ProfileService, PublicProfile, RankingService } fro
 import { makeRng } from '../core';
 import { BoardView } from '../board/BoardView';
 import { computeLayout, type BoardLayout } from '../board/layout';
+import { pickGridDims } from '../board/orientation';
 import { InputController, type DragHandlers } from '../input/InputController';
 import { createMonotonicClock } from './clock';
 import { sfx } from './sound';
@@ -18,8 +19,6 @@ import { makeRoomCode, isValidRoomCode, buildRoomLink, parseDeepLink } from '../
 import { StandardRankingService, InMemoryRankingStore } from '../ranking';
 import { LocalProfileService, browserKV } from '../profile';
 
-const COLS = 17;
-const ROWS = 10;
 const DURATION = 30_000;
 
 export class OnlineController {
@@ -119,7 +118,18 @@ export class OnlineController {
     // The host (re)creates the room, so wipe any leftover events from a previous
     // match that reused this code; the guest joins into that clean room.
     await session.join(code, this.pub(), { reset: role === 'host' });
-    this.match = new OnlineMatch({ session, role, self: this.pub(), roomId: code, durationMs: DURATION });
+    // The host fixes the board aspect from its own viewport (portrait → tall) and
+    // broadcasts it on countdown; the guest joins with defaults and then adopts it.
+    const dims = role === 'host' ? pickGridDims() : undefined;
+    this.match = new OnlineMatch({
+      session,
+      role,
+      self: this.pub(),
+      roomId: code,
+      durationMs: DURATION,
+      cols: dims?.cols,
+      rows: dims?.rows,
+    });
     this.resolved = false;
     this.started = false;
     this.comboStreak = 0;
@@ -148,6 +158,10 @@ export class OnlineController {
       st.set({ stage: 'playing' });
     }
     if (s.phase === 'round' && this.match && (s.round !== this.lastRound || this.lastPhase !== 'round')) {
+      // Re-fit the layout to the agreed board aspect (the guest may have just
+      // adopted the host's dims during countdown).
+      this.layout = this.calc();
+      this.board.setLayout(this.layout);
       this.board.setBoard(this.match.myBoard());
       this.board.showSelection(null, false);
       this.comboStreak = 0;
@@ -245,7 +259,9 @@ export class OnlineController {
   private calc(): BoardLayout {
     const w = this.parent?.clientWidth || window.innerWidth;
     const h = this.parent?.clientHeight || window.innerHeight;
-    return computeLayout(COLS, ROWS, w, h, Math.max(6, Math.round(Math.min(w, h) * 0.02)));
+    // Follow the match's agreed board aspect (host-chosen, guest-adopted).
+    const d = this.match?.dims() ?? pickGridDims();
+    return computeLayout(d.cols, d.rows, w, h, Math.max(4, Math.round(Math.min(w, h) * 0.014)));
   }
   private onResize = (): void => {
     this.layout = this.calc();

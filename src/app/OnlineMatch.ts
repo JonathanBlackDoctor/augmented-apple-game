@@ -75,8 +75,11 @@ export class OnlineMatch {
   private readonly uid: string;
   private readonly seedBase: string;
   private readonly rounds: number;
-  private readonly cols: number;
-  private readonly rows: number;
+  // Board aspect. The host fixes this from its viewport and broadcasts it on the
+  // countdown `phase` event; the guest adopts it before round 0 so both clients
+  // play the identical shared-seed board.
+  private cols: number;
+  private rows: number;
   private readonly durationMs: number;
   private readonly targetSum: number;
   private readonly winnerBonus: number;
@@ -181,6 +184,11 @@ export class OnlineMatch {
       if (this.role === 'guest') {
         this.lastOppSeen = this.nowMs;
         this.oppPresent = true;
+        // Adopt the host's board aspect before the first round is built.
+        if (typeof e.cols === 'number' && typeof e.rows === 'number') {
+          this.cols = e.cols;
+          this.rows = e.rows;
+        }
         if (e.phase === 'countdown' && this.matchStart === null) this.matchStart = this.nowMs;
       }
       return;
@@ -226,7 +234,14 @@ export class OnlineMatch {
       if (this.lobbyStart === null) this.lobbyStart = nowMs;
       if (this.role === 'host' && this.oppReadyLobby) {
         this.matchStart = nowMs;
-        void this.session.send({ t: 'phase', phase: 'countdown', round: 0, startAtServerTs: nowMs });
+        void this.session.send({
+          t: 'phase',
+          phase: 'countdown',
+          round: 0,
+          startAtServerTs: nowMs,
+          cols: this.cols,
+          rows: this.rows,
+        });
       } else {
         if (this.role === 'host' && !this.oppReadyLobby && nowMs - this.lobbyStart > this.lobbyTimeoutMs) {
           this.noOpponent = true;
@@ -318,6 +333,10 @@ export class OnlineMatch {
 
   myBoard(): Readonly<Board> {
     return this.engine.getBoard();
+  }
+  /** Current board aspect (guest reflects the host's choice once adopted). */
+  dims(): { cols: number; rows: number } {
+    return { cols: this.cols, rows: this.rows };
   }
   evaluate(rect: Rect): boolean {
     return this.engine.evaluate(rect).valid;

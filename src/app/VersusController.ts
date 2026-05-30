@@ -4,6 +4,7 @@
 import type { Rect, Profile, PublicProfile } from '../contracts';
 import { BoardView } from '../board/BoardView';
 import { computeLayout, type BoardLayout } from '../board/layout';
+import { pickGridDims } from '../board/orientation';
 import { InputController, type DragHandlers } from '../input/InputController';
 import { createMonotonicClock } from './clock';
 import { sfx } from './sound';
@@ -14,8 +15,6 @@ import { LocalProfileService, browserKV } from '../profile';
 import { StandardRankingService, InMemoryRankingStore } from '../ranking';
 import { difficultyForMmr, type Difficulty } from '../bot';
 
-const COLS = 17;
-const ROWS = 10;
 const DURATION = 30_000;
 const TARGET = 10;
 const ROUNDS = 5;
@@ -31,6 +30,10 @@ export class VersusController {
   private comboStreak = 0;
   private match: VersusMatch | null = null;
   private resolved = false;
+  // Board aspect chosen for this device's viewport (portrait → tall). Local
+  // mode: player and bot share these dims, so no cross-device sync is needed.
+  private cols = 17;
+  private rows = 10;
 
   private readonly profileSvc = new LocalProfileService(browserKV());
   private readonly ranking = new StandardRankingService(new InMemoryRankingStore());
@@ -50,12 +53,15 @@ export class VersusController {
     const mmr = this.profile?.mmr ?? 1000;
     const diff = difficultyForMmr(mmr);
     const tierLabel = diff === 'hard' ? 'Gold' : diff === 'normal' ? 'Silver' : 'Bronze';
+    const dims = pickGridDims();
+    this.cols = dims.cols;
+    this.rows = dims.rows;
     this.match = new VersusMatch({
       seedBase: `versus:${Date.now()}`,
       difficulty: diff,
       rounds: ROUNDS,
-      cols: COLS,
-      rows: ROWS,
+      cols: this.cols,
+      rows: this.rows,
       durationMs: DURATION,
       targetSum: TARGET,
     });
@@ -63,6 +69,8 @@ export class VersusController {
     this.resolved = false;
     useGameStore.getState().startVersus(ROUNDS, DURATION);
     useVersusStore.getState().setOpponent(`AI 봇 · ${this.diffLabel(diff)}`, '🤖', tierLabel, false);
+    this.layout = this.calcLayout();
+    this.board.setLayout(this.layout);
     this.board.setBoard(this.match.myBoard());
     this.board.showSelection(null, false);
     this.loop();
@@ -183,7 +191,7 @@ export class VersusController {
   private calcLayout(): BoardLayout {
     const w = this.parent?.clientWidth || window.innerWidth;
     const h = this.parent?.clientHeight || window.innerHeight;
-    return computeLayout(COLS, ROWS, w, h, Math.max(6, Math.round(Math.min(w, h) * 0.02)));
+    return computeLayout(this.cols, this.rows, w, h, Math.max(4, Math.round(Math.min(w, h) * 0.014)));
   }
 
   private onResize = (): void => {

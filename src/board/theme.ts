@@ -29,7 +29,7 @@ export const theme = {
     appleRadius: 0.42, // of cell (plump silhouette half-extent)
     highlightRadius: 0.16,
     selectionRadius: 0.16, // rounded corner of selection box (× cell)
-    fontSize: 0.44, // of cell
+    fontSize: 0.48, // of cell — bumped for legibility on small (mobile) cells
   },
   font: '"Pretendard Variable", "Pretendard", ui-rounded, "Segoe UI", system-ui, sans-serif',
 } as const;

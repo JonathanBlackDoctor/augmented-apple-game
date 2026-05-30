@@ -11,6 +11,11 @@ export interface RoomChannel {
   subscribe(cb: (e: NetEvent) => void): () => void;
   /** Atomically claim cells for `uid` (shared-board mode). All-or-nothing. */
   claim(uid: PlayerId, cells: number[], seq: number): Promise<ClaimResolution>;
+  /** Wipe all persisted room state (event log + shared claims). The host calls
+   *  this when (re)creating a room so a new match never replays a previous
+   *  match's events — critical for the small 3-digit code space where rooms are
+   *  reused frequently. */
+  reset(): Promise<void>;
   close(): void;
 }
 

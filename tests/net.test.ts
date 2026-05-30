@@ -34,6 +34,24 @@ describe('in-memory net — 2-client simulation', () => {
     expect(seen.some((e) => e.t === 'ready' && e.player === 'A')).toBe(true);
   });
 
+  it('host join with reset wipes a reused room so stale events are not replayed', async () => {
+    const backend = new InMemoryNetBackend();
+    // A previous match left ready + phase events under this (reusable) code.
+    const old = new BackendNetSession(backend);
+    await old.join('123', { ...pubA, uid: 'OLD' });
+    await old.send({ t: 'phase', phase: 'countdown', round: 0 });
+    await old.send({ t: 'round-result', player: 'OLD', round: 0, score: 99 });
+    // Host (re)creates the room — reset clears the stale log before its ready.
+    const host = new BackendNetSession(backend);
+    await host.join('123', pubA, { reset: true });
+    // A fresh subscriber replays only post-reset history.
+    const seen: NetEvent[] = [];
+    backend.open('123').subscribe((e) => seen.push(e));
+    expect(seen.some((e) => e.t === 'phase')).toBe(false); // stale countdown gone
+    expect(seen.some((e) => e.t === 'round-result')).toBe(false);
+    expect(seen.some((e) => e.t === 'ready' && e.player === 'A')).toBe(true);
+  });
+
   it('shared-board claim is atomic: first wins, overlap loses, disjoint ok', async () => {
     const backend = new InMemoryNetBackend();
     const a = new BackendNetSession(backend);

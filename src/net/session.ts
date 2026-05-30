@@ -9,9 +9,10 @@ export class BackendNetSession implements NetSession {
 
   constructor(private readonly backend: NetBackend) {}
 
-  async join(roomId: string, profile: PublicProfile): Promise<void> {
+  async join(roomId: string, profile: PublicProfile, opts?: { reset?: boolean }): Promise<void> {
     this.uid = profile.uid;
     this.channel = this.backend.open(roomId);
+    if (opts?.reset) await this.channel.reset(); // host clears stale room state first
     await this.channel.send({ t: 'ready', player: this.uid, phase: 'lobby' });
   }
 

@@ -1,7 +1,7 @@
 // net/firebaseBackend.ts — NetBackend over Firebase RTDB (plan §10). Drop-in
 // replacement for the in-memory backend: events via push/onChildAdded, shared
 // cell claims via an atomic transaction.
-import { ref, push, onChildAdded, runTransaction } from 'firebase/database';
+import { ref, push, onChildAdded, runTransaction, remove } from 'firebase/database';
 import type { Database } from 'firebase/database';
 import type { NetEvent, ClaimResolution, PlayerId } from '../contracts';
 import type { NetBackend, RoomChannel } from './backend';
@@ -14,6 +14,7 @@ export class FirebaseNetBackend implements NetBackend {
   }
 
   open(roomId: string): RoomChannel {
+    const matchRef = ref(this.db, `rooms/${roomId}/match`);
     const eventsRef = ref(this.db, `rooms/${roomId}/match/events`);
     const ownedRef = ref(this.db, `rooms/${roomId}/match/shared/owned`);
     const unsubs: Array<() => void> = [];
@@ -45,6 +46,12 @@ export class FirebaseNetBackend implements NetBackend {
           return owned;
         });
         return ok ? { ok: true, cells } : { ok: false, reason: 'claimed' };
+      },
+      reset: async () => {
+        // Remove the whole match node so a reused room code starts clean (RTDB
+        // persists children forever; onChildAdded would otherwise replay the
+        // previous match's ready/phase/clear events into the new match).
+        await remove(matchRef);
       },
       close: () => {
         for (const u of unsubs) u();

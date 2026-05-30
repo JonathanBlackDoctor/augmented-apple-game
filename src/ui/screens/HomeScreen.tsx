@@ -1,4 +1,7 @@
+import { useState } from 'react';
 import { useGameStore } from '../../app/store';
+import { SettingsOverlay } from '../components/SettingsOverlay';
+import { HelpOverlay } from '../components/HelpOverlay';
 
 export function HomeScreen() {
   const best = useGameStore((s) => s.bestTotal);
@@ -7,6 +10,7 @@ export function HomeScreen() {
   const startVersus = useGameStore((s) => s.startVersus);
   const startOnline = useGameStore((s) => s.startOnline);
   const startLeaderboard = useGameStore((s) => s.startLeaderboard);
+  const [overlay, setOverlay] = useState<'settings' | 'help' | null>(null);
   return (
     <div className="screen home">
       <div className="home-card">
@@ -45,7 +49,17 @@ export function HomeScreen() {
         </div>
         {best > 0 && <p className="best">최고 점수 {best}</p>}
         <p className="hint">데스크톱·모바일 모두 드래그로 플레이</p>
+        <div className="home-tools">
+          <button className="btn ghost small" onClick={() => setOverlay('settings')}>
+            ⚙ 설정
+          </button>
+          <button className="btn ghost small" onClick={() => setOverlay('help')}>
+            ? 도움말
+          </button>
+        </div>
       </div>
+      {overlay === 'settings' && <SettingsOverlay onClose={() => setOverlay(null)} />}
+      {overlay === 'help' && <HelpOverlay onClose={() => setOverlay(null)} />}
     </div>
   );
 }

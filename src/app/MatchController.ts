@@ -33,6 +33,7 @@ export class MatchController {
   private input: InputController | null = null;
   private layout: BoardLayout | null = null;
   private parent: HTMLElement | null = null;
+  private ro: ResizeObserver | null = null;
 
   private raf = 0;
   private seq = 0;
@@ -50,10 +51,18 @@ export class MatchController {
     this.input = new InputController(this.board.app.canvas, () => this.layout, this.handlers);
     this.input.attach();
     window.addEventListener('resize', this.onResize);
+    // Re-fit when the host element resizes (not just the window) — guards against
+    // "clicks land on the wrong cell" after the container size shifts.
+    this.ro = new ResizeObserver(() => this.onResize());
+    this.ro.observe(parent);
   }
 
   startMatch(plan: MatchPlan): void {
+    this.clock.resume(); // in case a restart was triggered from a paused state
     this.plan = plan;
+    // Board size can come from settings → re-fit the layout before the round.
+    this.layout = this.calcLayout();
+    this.board.setLayout(this.layout);
     this.owned = [];
     this.roundIndex = 0;
     useGameStore.getState().startMatch(plan.rounds, plan.durationMs);
@@ -72,10 +81,24 @@ export class MatchController {
     this.beginRound();
   }
 
+  pause(): void {
+    if (this.clock.paused) return;
+    this.clock.pause();
+    cancelAnimationFrame(this.raf);
+  }
+
+  resume(): void {
+    if (!this.clock.paused) return;
+    this.clock.resume();
+    if (this.roundActive) this.loop();
+  }
+
   destroy(): void {
     this.roundActive = false;
     cancelAnimationFrame(this.raf);
     window.removeEventListener('resize', this.onResize);
+    this.ro?.disconnect();
+    this.ro = null;
     this.input?.detach();
     this.board.destroy();
   }
@@ -163,6 +186,7 @@ export class MatchController {
   private handlers: DragHandlers = {
     onStart: () => {
       this.engine.setDragging(true);
+      if (this.owned.includes('time.lord')) this.board.setLabelsHidden(true);
     },
     onMove: (rect: Rect | null) => {
       if (!this.roundActive || !rect) {
@@ -174,8 +198,12 @@ export class MatchController {
     },
     onEnd: (rect: Rect | null) => {
       this.engine.setDragging(false);
+      if (this.owned.includes('time.lord')) this.board.setLabelsHidden(false);
       this.board.showSelection(null, false);
       if (!this.roundActive || !rect) return;
+      // A single-cell selection can't sum to the target (apples are 1–9), so a
+      // stray tap is a no-op — don't punish the combo or buzz a "fail".
+      if (rect.x0 === rect.x1 && rect.y0 === rect.y1 && !this.engine.evaluate(rect).valid) return;
       const res = this.engine.commit({
         seq: ++this.seq,
         rect,
@@ -208,7 +236,9 @@ export class MatchController {
   }
 
   private onResize = (): void => {
-    this.layout = this.calcLayout();
+    const next = this.calcLayout();
+    if (this.layout && next.width === this.layout.width && next.height === this.layout.height) return;
+    this.layout = next;
     this.board.setLayout(this.layout);
   };
 }

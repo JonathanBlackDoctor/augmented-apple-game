@@ -157,7 +157,10 @@ class Engine implements CoreEngine {
     };
     const next = (this.bus.run('onTick', state0, ctx) as TickState | undefined) ?? state0;
 
-    this.remainingMs = Math.max(0, next.remainingMs);
+    // Cap banked time at 2x the effective round duration so time-family augments
+    // (e.g. countdown's +0.5s/clear) can't accumulate unbounded.
+    const maxMs = this.cfg.durationMs * 2;
+    this.remainingMs = Math.min(maxMs, Math.max(0, next.remainingMs));
     if (this.remainingMs <= 0) this.ended = true;
     return { remainingMs: this.remainingMs, ended: this.ended };
   }

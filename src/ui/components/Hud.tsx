@@ -1,6 +1,6 @@
 import { useGameStore } from '../../app/store';
 
-export function Hud() {
+export function Hud({ onPause }: { onPause?: () => void }) {
   const s = useGameStore();
   const total = s.totalScore + s.roundScore;
   const pct = Math.max(0, Math.min(1, s.durationMs ? s.remainingMs / s.durationMs : 0));
@@ -26,6 +26,11 @@ export function Hud() {
       </div>
       <div className="hud-side right">
         {s.combo > 1 && <span className="combo-chip">{s.combo} 콤보</span>}
+        {onPause && (
+          <button className="icon-btn hud-pause" onClick={onPause} aria-label="일시정지">
+            ⏸
+          </button>
+        )}
       </div>
     </div>
   );

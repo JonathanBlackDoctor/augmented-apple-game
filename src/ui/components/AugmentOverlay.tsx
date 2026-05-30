@@ -1,5 +1,6 @@
 import { useGameStore } from '../../app/store';
 import { byId } from '../../augments';
+import { FAMILY_ICON } from './augmentIcons';
 
 const TIER_LABEL: Record<string, string> = { silver: '실버', gold: '골드', prismatic: '프리즘' };
 const FAMILY_LABEL: Record<string, string> = {
@@ -11,10 +12,20 @@ const FAMILY_LABEL: Record<string, string> = {
   disrupt: '견제',
 };
 
-export function AugmentOverlay({ onPick }: { onPick: (id: string) => void }) {
+interface AugmentOverlayProps {
+  onPick: (id: string) => void;
+  // When provided (versus mode), render a pick-countdown that auto-selects on 0.
+  remainingMs?: number;
+  totalMs?: number;
+}
+
+export function AugmentOverlay({ onPick, remainingMs, totalMs }: AugmentOverlayProps) {
   const offers = useGameStore((s) => s.offers);
   const tier = useGameStore((s) => s.offerTier);
   const roundIndex = useGameStore((s) => s.roundIndex);
+  const timed = remainingMs !== undefined && totalMs !== undefined && totalMs > 0;
+  const pct = timed ? Math.max(0, Math.min(1, remainingMs / totalMs)) : 0;
+  const secs = timed ? Math.max(0, Math.ceil(remainingMs / 1000)) : 0;
   return (
     <div className="overlay">
       <div className="augment-panel">
@@ -22,6 +33,14 @@ export function AugmentOverlay({ onPick }: { onPick: (id: string) => void }) {
           {tier && <span className={`tier-badge ${tier}`}>{TIER_LABEL[tier]}</span>}
           <h2>라운드 {roundIndex + 1} · 증강 선택</h2>
           <p className="aug-sub">하나를 골라 빌드를 쌓으세요 · 리롤 없음</p>
+          {timed && (
+            <div className="aug-timer">
+              <div className={`time-bar${secs <= 3 ? ' low' : ''}`}>
+                <div className="time-fill" style={{ width: `${pct * 100}%` }} />
+              </div>
+              <span className={`time-num${secs <= 3 ? ' low' : ''}`}>{secs}</span>
+            </div>
+          )}
         </div>
         <div className="aug-grid">
           {offers.map((id) => {
@@ -29,7 +48,10 @@ export function AugmentOverlay({ onPick }: { onPick: (id: string) => void }) {
             if (!a) return null;
             return (
               <button key={id} className={`aug-card ${a.tier}`} onClick={() => onPick(id)}>
-                <span className="aug-fam">{FAMILY_LABEL[a.family] ?? a.family}</span>
+                <span className="aug-fam">
+                  <span className="aug-fam-icon">{FAMILY_ICON[a.family]}</span>
+                  {FAMILY_LABEL[a.family] ?? a.family}
+                </span>
                 <span className="aug-name">{a.name}</span>
                 <span className="aug-desc">{a.desc}</span>
               </button>

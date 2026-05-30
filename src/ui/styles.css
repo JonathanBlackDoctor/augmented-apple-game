@@ -491,13 +491,14 @@ body {
   gap: 8px;
 }
 .board-host {
+  position: relative; /* anchor for the AI mini-view PiP */
   flex: 1;
   min-height: 0;
   display: flex;
   align-items: center;
   justify-content: center;
 }
-.board-host canvas {
+.board-host > canvas {
   display: block;
   border-radius: var(--radius);
 }
@@ -839,6 +840,7 @@ body {
   flex-direction: column;
   gap: 2px;
   min-width: 80px;
+  position: relative; /* anchor for floating "+N" score popups */
 }
 .versus-hud .vs-side.me { align-items: flex-start; }
 .versus-hud .vs-side.opp { align-items: flex-end; }
@@ -861,6 +863,158 @@ body {
   font-variant-numeric: tabular-nums;
   opacity: 0.85;
 }
+
+/* floating "+N" score popup (opponent gains, anchored by .vs-side) */
+.score-pop {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  font-size: 18px;
+  font-weight: 900;
+  color: var(--apple);
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.7);
+  pointer-events: none;
+  animation: score-float 0.85s var(--ease) both;
+}
+@keyframes score-float {
+  0% {
+    transform: translateY(0) scale(0.7);
+    opacity: 0;
+  }
+  25% {
+    transform: translateY(-8px) scale(1.05);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-30px) scale(1);
+    opacity: 0;
+  }
+}
+
+/* augment-pick countdown (versus) */
+.aug-timer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 320px;
+  margin: 12px auto 0;
+}
+.aug-timer .time-bar {
+  flex: 1;
+}
+.aug-fam-icon {
+  margin-right: 5px;
+  font-size: 13px;
+}
+
+/* mid-round review (versus) */
+.round-check-panel {
+  max-width: 460px;
+  text-align: center;
+}
+.rc-scores {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  margin: 8px 0 14px;
+}
+.rc-side {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 18px;
+  border-radius: var(--radius);
+  background: var(--paper-2);
+  border: 1.5px solid var(--line);
+  min-width: 110px;
+}
+.rc-side.won {
+  border-color: var(--gold);
+  background: linear-gradient(180deg, var(--gold-bg), var(--paper-2) 70%);
+}
+.rc-label {
+  font-size: 12px;
+  color: var(--ink-2);
+}
+.rc-score {
+  font-size: 30px;
+  font-weight: 800;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.rc-vs {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-2);
+}
+.rc-series {
+  font-size: 14px;
+  color: var(--ink-2);
+  margin-bottom: 12px;
+}
+.rc-series strong {
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+/* owned-augment build sidebar (during play) */
+.owned-augments {
+  position: absolute;
+  top: 50%;
+  left: 10px;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 4;
+  pointer-events: none;
+  max-width: 132px;
+}
+.owned-aug-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: var(--paper-2);
+  border: 1.5px solid var(--line);
+  box-shadow: var(--shadow-sm);
+  animation: pop 0.25s var(--ease) both;
+}
+.owned-aug-chip.gold {
+  border-color: var(--gold);
+  background: linear-gradient(180deg, var(--gold-bg), var(--paper-2) 70%);
+}
+.owned-aug-chip.prismatic {
+  border-color: transparent;
+  background:
+    linear-gradient(var(--paper-2), var(--paper-2)) padding-box,
+    linear-gradient(125deg, #8a7dff, #6ad7d0, #ffd97a) border-box;
+}
+.owned-aug-icon {
+  font-size: 14px;
+  line-height: 1;
+}
+.owned-aug-name {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+@media (max-width: 560px) {
+  .owned-aug-name {
+    display: none;
+  }
+  .owned-augments {
+    left: 4px;
+  }
+}
 .result-card.versus .vs-final {
   display: flex;
   align-items: center;
@@ -878,6 +1032,215 @@ body {
 .result-card.versus.win .result-title { color: var(--apple); }
 .result-card.versus.loss .result-title { color: var(--ink-2); }
 .mmr-line { font-weight: 700; margin-top: 4px; color: var(--valid); }
+
+/* ---- AI mini-view (picture-in-picture of the bot's board) ---- */
+.ai-mini {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 3;
+  pointer-events: none; /* never intercept the player's drag */
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--edge-strong);
+  box-shadow: var(--shadow-sm);
+  background: var(--panel);
+}
+.ai-mini > canvas {
+  display: block;
+}
+.ai-mini-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 800;
+  background: var(--gold-bg);
+  border-bottom: 1px solid var(--line);
+}
+.ai-mini-name {
+  color: var(--gold-2);
+  letter-spacing: 1px;
+}
+.ai-mini-score {
+  color: var(--apple);
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 560px) {
+  .ai-mini {
+    top: 8px;
+    right: 8px;
+  }
+}
+
+/* ---- icon buttons (in-HUD pause) ---- */
+.icon-btn {
+  appearance: none;
+  border: 1px solid var(--edge-strong);
+  background: var(--panel);
+  color: var(--text);
+  border-radius: 10px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font);
+  transition:
+    background 0.15s var(--ease),
+    transform 0.12s var(--ease);
+}
+.icon-btn:hover {
+  background: var(--panel-2);
+}
+.icon-btn:active {
+  transform: scale(0.96);
+}
+.hud-pause {
+  width: 30px;
+  height: 30px;
+  font-size: 13px;
+  flex: none;
+  align-self: center;
+}
+
+/* ---- home tools (settings / help) ---- */
+.home-tools {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  margin-top: 6px;
+}
+.btn.small {
+  flex: 1;
+  padding: 9px 14px;
+  font-size: 13px;
+}
+
+/* ---- settings modal ---- */
+.settings-card {
+  max-width: 400px;
+  width: 100%;
+  text-align: left;
+}
+.settings-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 18px 0 14px;
+}
+.set-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.set-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+.set-note {
+  color: var(--muted-2);
+  font-size: 12px;
+  margin: 0 0 16px;
+}
+
+/* toggle switch */
+.toggle {
+  position: relative;
+  width: 46px;
+  height: 26px;
+  flex: none;
+  border-radius: 999px;
+  background: var(--track);
+  border: 1px solid var(--edge-strong);
+  cursor: pointer;
+  transition: background 0.18s var(--ease);
+}
+.toggle.on {
+  background: linear-gradient(180deg, var(--green-soft), var(--green));
+  border-color: transparent;
+}
+.toggle .knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.18s var(--ease);
+}
+.toggle.on .knob {
+  transform: translateX(20px);
+}
+
+/* segmented control */
+.seg {
+  display: inline-flex;
+  background: var(--track);
+  border: 1px solid var(--edge);
+  border-radius: 10px;
+  padding: 2px;
+  gap: 2px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.seg button {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition:
+    background 0.15s var(--ease),
+    color 0.15s var(--ease);
+}
+.seg button.active {
+  background: var(--panel-2);
+  color: var(--text);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ---- help modal ---- */
+.help-card {
+  max-width: 400px;
+  width: 100%;
+  text-align: left;
+}
+.help-list {
+  margin: 14px 0 20px;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.55;
+}
+.help-list b {
+  color: var(--green-soft);
+}
+
+/* ---- pause menu ---- */
+.pause-card {
+  max-width: 300px;
+  width: 100%;
+}
+.pause-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+}
 
 /* ---- online lobby ---- */
 .lobby-card {

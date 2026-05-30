@@ -119,7 +119,8 @@ export class OnlineController {
     // match that reused this code; the guest joins into that clean room.
     await session.join(code, this.pub(), { reset: role === 'host' });
     // The host fixes the board aspect from its own viewport (portrait → tall) and
-    // broadcasts it on countdown; the guest joins with defaults and then adopts it.
+    // broadcasts it on countdown; the guest joins with defaults and then adopts it,
+    // so both clients render the same shared-seed board.
     const dims = role === 'host' ? pickGridDims() : undefined;
     this.match = new OnlineMatch({
       session,
@@ -220,7 +221,10 @@ export class OnlineController {
   }
 
   private handlers: DragHandlers = {
-    onStart: () => this.match?.setDragging(true),
+    onStart: () => {
+      this.match?.setDragging(true);
+      if (this.match?.snapshot().myOwned.includes('time.lord')) this.board.setLabelsHidden(true);
+    },
     onMove: (rect: Rect | null) => {
       if (!this.match || !rect) {
         this.board.showSelection(null, false);
@@ -232,6 +236,7 @@ export class OnlineController {
       const m = this.match;
       if (!m) return;
       m.setDragging(false);
+      if (m.snapshot().myOwned.includes('time.lord')) this.board.setLabelsHidden(false);
       this.board.showSelection(null, false);
       if (!rect) return;
       const res = m.myCommit(rect);

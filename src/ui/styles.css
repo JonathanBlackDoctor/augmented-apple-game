@@ -1009,3 +1009,36 @@ body {
 .lb-nick { text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lb-tier { font-size: 12px; color: var(--ink-2); }
 .lb-mmr { font-weight: 700; font-variant-numeric: tabular-nums; color: var(--ink); }
+
+/* ---------- Music toggle (floating) ---------- */
+.music-toggle {
+  position: fixed;
+  top: max(12px, env(safe-area-inset-top));
+  right: max(12px, env(safe-area-inset-right));
+  z-index: 5; /* above content + sky */
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--chip-bg);
+  color: var(--ink);
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(58, 42, 30, 0.16);
+  transition:
+    transform 0.12s var(--ease),
+    filter 0.18s var(--ease),
+    color 0.18s var(--ease);
+}
+.music-toggle:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.03);
+}
+.music-toggle:active {
+  transform: scale(0.94);
+}
+.music-toggle[aria-pressed='true'] {
+  color: var(--ink-2);
+  opacity: 0.85;
+}

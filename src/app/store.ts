@@ -21,6 +21,22 @@ function saveBest(n: number): void {
   }
 }
 
+const MUSIC_KEY = 'aag.musicMuted.v1';
+function loadMusicMuted(): boolean {
+  try {
+    return localStorage.getItem(MUSIC_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+function saveMusicMuted(v: boolean): void {
+  try {
+    localStorage.setItem(MUSIC_KEY, v ? '1' : '0');
+  } catch {
+    /* private mode / disabled storage — ignore */
+  }
+}
+
 export interface GameStore {
   phase: Phase;
   mode: Mode;
@@ -36,6 +52,7 @@ export interface GameStore {
   offers: string[];
   offerTier: AugTier | null;
   owned: string[];
+  musicMuted: boolean;
 
   startSolo(): void;
   startAugment(): void;
@@ -54,6 +71,7 @@ export interface GameStore {
   addOwned(id: string): void;
   finishMatch(): void;
   goHome(): void;
+  toggleMusic(): void;
 }
 
 function resetRound(totalRounds: number, durationMs: number) {
@@ -87,6 +105,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   offers: [],
   offerTier: null,
   owned: [],
+  musicMuted: loadMusicMuted(),
 
   startSolo: () => set({ mode: 'solo', phase: 'round' }),
   startAugment: () => set({ mode: 'augment', phase: 'round' }),
@@ -113,4 +132,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set({ bestTotal: best });
   },
   goHome: () => set({ phase: 'home' }),
+  toggleMusic: () => {
+    const next = !get().musicMuted;
+    saveMusicMuted(next);
+    set({ musicMuted: next });
+  },
 }));

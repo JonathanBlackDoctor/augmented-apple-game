@@ -7,6 +7,7 @@ import { OnlineScreen } from './screens/OnlineScreen';
 import { LeaderboardScreen } from './screens/LeaderboardScreen';
 import { InAppBanner } from './components/InAppBanner';
 import { DayNightSky } from './components/DayNightSky';
+import { MusicToggle } from './components/MusicToggle';
 
 export function App() {
   const phase = useGameStore((s) => s.phase);
@@ -31,6 +32,7 @@ export function App() {
     <div className="app">
       <DayNightSky />
       <InAppBanner />
+      <MusicToggle />
       {content}
     </div>
   );

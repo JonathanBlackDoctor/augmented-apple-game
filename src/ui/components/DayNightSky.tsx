@@ -12,6 +12,7 @@
 // behind all content (aria-hidden) and never changes UI text colour.
 import { useEffect, useMemo, useRef } from 'react';
 import { useGameStore } from '../../app/store';
+import { bgm } from '../../app/bgm';
 import { roundTarget } from './skyClock';
 
 interface Keyframe {
@@ -268,6 +269,8 @@ export function DayNightSky() {
         autoP = cur; // keep the ambient cycle in sync for a smooth return home
       }
       render(cur);
+      // Drive the music crossfade from the same live phase as the sky.
+      bgm.setPhase(cur);
       raf = requestAnimationFrame(frame);
     };
     raf = requestAnimationFrame(frame);

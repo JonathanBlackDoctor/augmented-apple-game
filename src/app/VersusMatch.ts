@@ -319,7 +319,7 @@ export class VersusMatch {
   snapshot(): VersusSnapshot {
     return {
       phase: this.phase,
-      round: this.round,
+      round: this.phase === 'augment' ? this.offerRound : this.round,
       rounds: this.opts.rounds,
       remainingMs: this.remainingMs,
       phaseRemainingMs: this.phaseRemainingMs,

@@ -408,11 +408,11 @@ export class BoardView {
 
   private badgeSpec(tag: CellTag): { text: string; color: number } | null {
     if (tag === 'golden') return { text: '×2', color: theme.color.goldenEdge };
-    if (tag === 'gem') return { text: '+15', color: theme.color.gemEdge };
+    if (tag === 'gem') return { text: '+20', color: theme.color.gemEdge };
     return null;
   }
 
-  // A small corner badge on score apples (×2 / +15). Skipped on dense boards
+  // A small corner badge on score apples (×2 / +20). Skipped on dense boards
   // (tiny cells) where colour already distinguishes them and text would clutter.
   private makeBadge(tag: CellTag, cell: number): Text | null {
     if (cell < 30) return null;

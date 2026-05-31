@@ -92,6 +92,7 @@ export class BoardView {
     if (this.fxEnabled) {
       this.fx = new BoardFx();
       this.fx.mount(parent, this.app.canvas);
+      this.fx.setCell(layout.cell);
     }
     if (this.board) this.rebuild();
   }
@@ -102,6 +103,7 @@ export class BoardView {
     this.app.renderer.resize(layout.width, layout.height);
     this.rebuild();
     this.fx?.sync();
+    this.fx?.setCell(layout.cell);
   }
 
   setBoard(board: Board): void {

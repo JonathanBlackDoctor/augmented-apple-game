@@ -328,6 +328,9 @@ export class OnlineController {
       this.board.showSelection(null, false);
       if (!rect) return;
       const evalBefore = m.evalDetail(rect);
+      // Stray single-cell tap can't be a valid move — silent no-op (keep combo),
+      // mirroring VersusController so a mistap never breaks the streak or fails.
+      if (rect.x0 === rect.x1 && rect.y0 === rect.y1 && !evalBefore.valid) return;
       const preTags = m.myBoard().tags?.slice() ?? [];
       const res = m.myCommit(rect);
       if (!res || 'rejected' in res) {

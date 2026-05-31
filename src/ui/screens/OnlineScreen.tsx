@@ -161,8 +161,20 @@ export function OnlineScreen() {
       {s.stage === 'connecting' && (
         <div className="overlay">
           <div className="lobby-card">
-            <h2>연결 중…</h2>
-            <div className="spinner" />
+            {s.noOpponent ? (
+              <>
+                <h2>상대를 찾을 수 없어요</h2>
+                <p className="aug-sub">방 코드를 확인하거나 다시 시도해 주세요.</p>
+              </>
+            ) : (
+              <>
+                <h2>연결 중…</h2>
+                <div className="spinner" />
+              </>
+            )}
+            <button className="btn ghost" onClick={goHome}>
+              {s.noOpponent ? '돌아가기' : '취소'}
+            </button>
           </div>
         </div>
       )}

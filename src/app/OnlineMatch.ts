@@ -255,7 +255,13 @@ export class OnlineMatch {
           rows: this.rows,
         });
       } else {
-        if (this.role === 'host' && !this.oppReadyLobby && nowMs - this.lobbyStart > this.lobbyTimeoutMs) {
+        // Give up waiting after the lobby timeout. Host: nobody ever readied.
+        // Guest: never heard from the host at all (dead / mistyped room code) —
+        // without this the guest spins on "connecting" forever with no escape.
+        const idleTooLong = nowMs - this.lobbyStart > this.lobbyTimeoutMs;
+        const hostStuck = this.role === 'host' && !this.oppReadyLobby;
+        const guestStuck = this.role === 'guest' && this.lastOppSeen === null;
+        if (idleTooLong && (hostStuck || guestStuck)) {
           this.noOpponent = true;
         }
         return this.snapshot();

@@ -229,6 +229,30 @@ describe('OnlineMatch — robustness', () => {
     expect(host.snapshot().phase).toBe('lobby');
   });
 
+  it('flags no-opponent for a guest who never hears from the host', async () => {
+    // Guest joins a dead/mistyped room: no host events ever arrive. Without a
+    // guest-side timeout the guest would spin on "connecting" forever.
+    const backend = new InMemoryNetBackend();
+    const sb = new BackendNetSession(backend);
+    const guest = new OnlineMatch({
+      session: sb,
+      role: 'guest',
+      self: B,
+      roomId: 'ROOMGO',
+      lobbyTimeoutMs: 1000,
+    });
+    await sb.join('ROOMGO', B);
+    await guest.start();
+    let now = 0;
+    for (let i = 0; i < 40; i++) {
+      guest.tick(now);
+      now += 50;
+    }
+    expect(guest.snapshot().noOpponent).toBe(true);
+    expect(guest.snapshot().phase).toBe('lobby');
+    expect(guest.snapshot().oppLeft).toBe(false); // never a forfeit "win"
+  });
+
   it('ignores a third party joining the room (2-player cap)', async () => {
     const backend = new InMemoryNetBackend();
     const sa = new BackendNetSession(backend);

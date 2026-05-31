@@ -12,9 +12,10 @@
       "$uid": { ".write": "auth != null && auth.uid === $uid" }
     },
     "queue": {
+      ".read": "auth != null",
       "$uid": {
-        ".read": "auth != null",
-        ".write": "auth != null && auth.uid === $uid"
+        ".write": "auth != null && auth.uid === $uid",
+        ".validate": "newData.hasChildren(['code'])"
       }
     },
     "rooms": {

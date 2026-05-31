@@ -1714,9 +1714,11 @@ body {
 }
 .lobby-card h2 { margin: 0; font-family: var(--display); font-weight: 600; color: var(--ink); }
 .lobby-card .btn { width: 100%; }
-.join-row { display: flex; gap: 8px; }
+.join-row { display: flex; gap: 8px; align-items: stretch; }
+.join-row .btn { width: auto; flex: 0 0 auto; white-space: nowrap; }
 .code-input {
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 0; /* let the input shrink inside the flex row instead of overflowing the card on narrow phones */
   background: var(--paper);
   border: 1px solid var(--line);
   border-radius: 12px;
@@ -1726,6 +1728,22 @@ body {
   text-align: center;
   padding: 10px;
   text-transform: uppercase;
+}
+/* Divider between the public ("quick match") and private (code) options. */
+.lobby-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--ink-2);
+  font-size: 12px;
+  margin: 2px 0;
+}
+.lobby-divider::before,
+.lobby-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--line);
 }
 .room-code {
   font-size: 40px;
@@ -1790,15 +1808,18 @@ body {
 }
 .btn-mini.ghost { background: transparent; color: rgba(255, 253, 247, 0.7); }
 .nick-row { display: flex; align-items: center; gap: 6px; }
-.nick-label { font-size: 13px; color: var(--ink-2); }
+.nick-row .btn-mini { flex: 0 0 auto; white-space: nowrap; }
+.nick-label { font-size: 13px; color: var(--ink-2); flex: 0 0 auto; }
 .nick-input {
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 0; /* shrink within the row so the label + 저장 button never push it off-card */
   background: var(--paper);
   border: 1px solid var(--line);
   border-radius: 10px;
   color: var(--ink);
   padding: 8px;
-  font-size: 14px;
+  /* 16px keeps iOS Safari from auto-zooming (and reflowing the layout) on focus. */
+  font-size: 16px;
 }
 
 /* ---- leaderboard ---- */

@@ -46,7 +46,14 @@ export interface VersusSnapshot {
   myTotal: number;
   botTotal: number;
   roundWins: { me: number; bot: number };
-  lastRound: { myScore: number; botScore: number; winner: 'me' | 'bot' | 'draw' } | null;
+  lastRound: {
+    myScore: number;
+    botScore: number;
+    winner: 'me' | 'bot' | 'draw';
+    bonus: number;
+  } | null;
+  // every finished round so far (oldest→newest), for the round-check pip strip
+  roundHistory: { my: number; bot: number; winner: 'me' | 'bot' | 'draw' }[];
   offers: string[];
   offerTier: AugTier | null;
   rerollsLeft: number;
@@ -79,8 +86,13 @@ export class VersusMatch {
   private remainingMs = 0;
   private phaseEndsAt: number | null = null; // deadline for timed overlay phases
   private phaseRemainingMs = 0;
-  private lastRound: { myScore: number; botScore: number; winner: 'me' | 'bot' | 'draw' } | null =
-    null;
+  private lastRound: {
+    myScore: number;
+    botScore: number;
+    winner: 'me' | 'bot' | 'draw';
+    bonus: number;
+  } | null = null;
+  private roundHistory: { my: number; bot: number; winner: 'me' | 'bot' | 'draw' }[] = [];
   private mySeq = 0;
   private botSeq = 0;
   private botNextAt = 0;
@@ -251,7 +263,8 @@ export class VersusMatch {
       this.botTotal += bonus;
       this.roundWins.bot++;
     }
-    this.lastRound = { myScore: my, botScore: bot, winner };
+    this.lastRound = { myScore: my, botScore: bot, winner, bonus };
+    this.roundHistory.push({ my, bot, winner });
     this.phase = 'roundCheck';
     this.phaseEndsAt = nowMs + this.opts.roundCheckMs;
     this.phaseRemainingMs = this.opts.roundCheckMs;
@@ -329,6 +342,7 @@ export class VersusMatch {
       botTotal: this.botTotal,
       roundWins: { ...this.roundWins },
       lastRound: this.lastRound ? { ...this.lastRound } : null,
+      roundHistory: this.roundHistory.map((h) => ({ ...h })),
       offers: [...this.offers],
       offerTier: this.offerTier,
       rerollsLeft: this.rerollsLeft,

@@ -7,6 +7,11 @@ export interface RoundResult {
   opp: number;
   winner: 'me' | 'opp' | 'draw';
   round: number; // 0-based round that just finished
+  bonus: number; // winner bonus awarded this round
+  myTotal: number; // cumulative total AFTER this round (incl. bonus)
+  oppTotal: number;
+  // every finished round so far (oldest→newest), for the pip strip
+  history: { my: number; opp: number; winner: 'me' | 'opp' | 'draw' }[];
 }
 
 export interface VersusState {
@@ -17,7 +22,10 @@ export interface VersusState {
   oppRoundScore: number;
   oppOwned: string[];
   roundWins: { me: number; opp: number };
+  // completed rounds so far (oldest→newest), for the HUD pip strip + result strip
+  roundHistory: { my: number; opp: number; winner: 'me' | 'opp' | 'draw' }[];
   winner: 'me' | 'opp' | 'draw' | null;
+  newRecord: boolean;
   mmrDelta: number | null;
   ranked: boolean;
   // mid-round review + augment-pick countdown (shared by both timed overlays)
@@ -37,19 +45,14 @@ export interface VersusState {
     oppRoundScore: number,
     roundWins: { me: number; opp: number },
     oppOwned: string[],
+    roundHistory: { my: number; opp: number; winner: 'me' | 'opp' | 'draw' }[],
   ): void;
-  setRoundCheck(
-    my: number,
-    opp: number,
-    winner: 'me' | 'opp' | 'draw',
-    round: number,
-    remainingMs: number,
-  ): void;
+  setRoundCheck(result: RoundResult, remainingMs: number): void;
   setOverlayRemaining(ms: number): void;
   bumpOppGain(delta: number): void;
   sendMyEmote(id: string): void;
   sendOppEmote(id: string): void;
-  setResult(winner: 'me' | 'opp' | 'draw', mmrDelta: number | null): void;
+  setResult(winner: 'me' | 'opp' | 'draw', mmrDelta: number | null, newRecord: boolean): void;
   reset(): void;
 }
 
@@ -61,7 +64,9 @@ const INIT = {
   oppRoundScore: 0,
   oppOwned: [] as string[],
   roundWins: { me: 0, opp: 0 },
+  roundHistory: [] as { my: number; opp: number; winner: 'me' | 'opp' | 'draw' }[],
   winner: null as 'me' | 'opp' | 'draw' | null,
+  newRecord: false,
   mmrDelta: null as number | null,
   ranked: false,
   overlayRemainingMs: 0,
@@ -78,15 +83,15 @@ export const useVersusStore = create<VersusState>((set) => ({
   ...INIT,
   setOpponent: (oppName, oppAvatar, oppTier, ranked) =>
     set({ ...INIT, oppName, oppAvatar, oppTier, ranked }),
-  setLive: (oppTotal, oppRoundScore, roundWins, oppOwned) =>
-    set({ oppTotal, oppRoundScore, roundWins, oppOwned }),
-  setRoundCheck: (my, opp, winner, round, remainingMs) =>
-    set({ roundResult: { my, opp, winner, round }, overlayRemainingMs: remainingMs }),
+  setLive: (oppTotal, oppRoundScore, roundWins, oppOwned, roundHistory) =>
+    set({ oppTotal, oppRoundScore, roundWins, oppOwned, roundHistory }),
+  setRoundCheck: (result, remainingMs) =>
+    set({ roundResult: result, overlayRemainingMs: remainingMs }),
   setOverlayRemaining: (overlayRemainingMs) => set({ overlayRemainingMs }),
   bumpOppGain: (delta) =>
     set((s) => ({ oppGainSeq: s.oppGainSeq + 1, oppGainAmount: delta })),
   sendMyEmote: (id) => set((s) => ({ myEmoteSeq: s.myEmoteSeq + 1, myEmoteId: id })),
   sendOppEmote: (id) => set((s) => ({ oppEmoteSeq: s.oppEmoteSeq + 1, oppEmoteId: id })),
-  setResult: (winner, mmrDelta) => set({ winner, mmrDelta }),
+  setResult: (winner, mmrDelta, newRecord) => set({ winner, mmrDelta, newRecord }),
   reset: () => set({ ...INIT }),
 }));

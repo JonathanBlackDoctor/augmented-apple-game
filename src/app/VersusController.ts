@@ -208,10 +208,20 @@ export class VersusController {
       const r = snap.lastRound;
       if (r) {
         vs.setRoundCheck(
-          r.myScore,
-          r.botScore,
-          r.winner === 'me' ? 'me' : r.winner === 'bot' ? 'opp' : 'draw',
-          snap.round,
+          {
+            my: r.myScore,
+            opp: r.botScore,
+            winner: r.winner === 'me' ? 'me' : r.winner === 'bot' ? 'opp' : 'draw',
+            round: snap.round,
+            bonus: r.bonus,
+            myTotal: snap.myTotal,
+            oppTotal: snap.botTotal,
+            history: snap.roundHistory.map((h) => ({
+              my: h.my,
+              opp: h.bot,
+              winner: h.winner === 'me' ? 'me' : h.winner === 'bot' ? 'opp' : 'draw',
+            })),
+          },
           snap.phaseRemainingMs,
         );
         // React to the round result the moment the review screen opens.
@@ -248,9 +258,20 @@ export class VersusController {
     st.setRoundScore(s.myScore);
     st.setTotalScore(s.myTotal);
     st.setCombo(this.comboStreak);
+    const history = s.roundHistory.map((h) => ({
+      my: h.my,
+      opp: h.bot,
+      winner: h.winner === 'me' ? ('me' as const) : h.winner === 'bot' ? ('opp' as const) : ('draw' as const),
+    }));
     useVersusStore
       .getState()
-      .setLive(s.botTotal, s.botScore, { me: s.roundWins.me, opp: s.roundWins.bot }, s.botOwned);
+      .setLive(
+        s.botTotal,
+        s.botScore,
+        { me: s.roundWins.me, opp: s.roundWins.bot },
+        s.botOwned,
+        history,
+      );
     // Opponent "+N" popup: bot's per-round score is cumulative, so a positive
     // frame-to-frame delta is a fresh clear (round reset → 0 yields a negative
     // delta we ignore).
@@ -316,7 +337,13 @@ export class VersusController {
       this.profileSvc.persist();
     }
     this.board.showSelection(null, false);
-    useVersusStore.getState().setResult(winner, mmrDelta);
+    // New personal-best total (across all modes)? Capture before finishMatch()
+    // rolls the persisted best forward.
+    const gs = useGameStore.getState();
+    const newRecord = s.myTotal > gs.bestTotal;
+    gs.setTotalScore(s.myTotal);
+    gs.finishMatch();
+    useVersusStore.getState().setResult(winner, mmrDelta, newRecord);
     useGameStore.getState().setPhase('result');
   }
 

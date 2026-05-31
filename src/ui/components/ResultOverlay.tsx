@@ -1,4 +1,5 @@
 import { useGameStore } from '../../app/store';
+import { AnimNum } from './AnimNum';
 
 export function ResultOverlay({ onReplay, onHome }: { onReplay: () => void; onHome: () => void }) {
   const totalScore = useGameStore((s) => s.totalScore);
@@ -10,7 +11,7 @@ export function ResultOverlay({ onReplay, onHome }: { onReplay: () => void; onHo
       <div className="result-card">
         <h2 className="result-title">{isBest ? '최고 기록!' : '게임 종료'}</h2>
         <div className="big-score">
-          {totalScore}
+          <AnimNum from={0} to={totalScore} dur={700} />
           <span className="unit">점</span>
         </div>
         <p className="best-line">

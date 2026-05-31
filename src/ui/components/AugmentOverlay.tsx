@@ -27,6 +27,7 @@ export function AugmentOverlay({ onPick, remainingMs, totalMs, onReroll }: Augme
   const tier = useGameStore((s) => s.offerTier);
   const roundIndex = useGameStore((s) => s.roundIndex);
   const rerollsLeft = useGameStore((s) => s.rerollsLeft);
+  const owned = useGameStore((s) => s.owned);
   const timed = remainingMs !== undefined && totalMs !== undefined && totalMs > 0;
   const pct = timed ? Math.max(0, Math.min(1, remainingMs / totalMs)) : 0;
   const secs = timed ? Math.max(0, Math.ceil(remainingMs / 1000)) : 0;
@@ -79,6 +80,23 @@ export function AugmentOverlay({ onPick, remainingMs, totalMs, onReroll }: Augme
               </button>
             );
           })}
+        </div>
+        <div className="cur-build">
+          <span className="cur-build-label">현재 빌드</span>
+          {owned.length === 0 ? (
+            <span className="cur-build-empty">아직 없음 — 첫 증강이에요</span>
+          ) : (
+            owned.map((id, i) => {
+              const a = byId(id);
+              if (!a) return null;
+              return (
+                <span key={`${id}:${i}`} className={`build-chip ${a.tier}`}>
+                  <span className="build-chip-icon">{FAMILY_ICON[a.family]}</span>
+                  {a.name}
+                </span>
+              );
+            })
+          )}
         </div>
       </div>
     </div>

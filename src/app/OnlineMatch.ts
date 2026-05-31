@@ -52,6 +52,8 @@ export interface OnlineSnapshot {
   myTotal: number;
   oppTotal: number;
   roundWins: { me: number; opp: number };
+  // completed rounds so far (oldest→newest), for the result round strip
+  roundHistory: { my: number; opp: number; winner: 'me' | 'opp' | 'draw' }[];
   offers: string[];
   offerTier: AugTier | null;
   rerollsLeft: number;
@@ -112,6 +114,7 @@ export class OnlineMatch {
   private myTotal = 0;
   private oppTotal = 0;
   private roundWins = { me: 0, opp: 0 };
+  private roundHistory: { my: number; opp: number; winner: 'me' | 'opp' | 'draw' }[] = [];
   private readonly tallied = new Set<number>();
 
   private myOwned: string[] = [];
@@ -348,13 +351,16 @@ export class OnlineMatch {
     // Bonus scales with the round number (R1=step … R5=5·step), weighting the late
     // rounds where the strong augments are online.
     const bonus = (r + 1) * this.winnerBonusStep;
-    if (this.myRound > this.oppRound) {
+    const winner: 'me' | 'opp' | 'draw' =
+      this.myRound > this.oppRound ? 'me' : this.oppRound > this.myRound ? 'opp' : 'draw';
+    if (winner === 'me') {
       this.myTotal += bonus;
       this.roundWins.me++;
-    } else if (this.oppRound > this.myRound) {
+    } else if (winner === 'opp') {
       this.oppTotal += bonus;
       this.roundWins.opp++;
     }
+    this.roundHistory.push({ my: this.myRound, opp: this.oppRound, winner });
   }
 
   myBoard(): Readonly<Board> {
@@ -412,6 +418,7 @@ export class OnlineMatch {
       myTotal: this.myTotal,
       oppTotal: this.oppTotal,
       roundWins: { ...this.roundWins },
+      roundHistory: this.roundHistory.map((h) => ({ ...h })),
       offers: [...this.offers],
       offerTier: this.offerTier,
       rerollsLeft: this.rerollsLeft,

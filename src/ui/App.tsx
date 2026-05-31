@@ -8,6 +8,7 @@ import { LeaderboardScreen } from './screens/LeaderboardScreen';
 import { LevelSelectScreen } from './screens/LevelSelectScreen';
 import { InAppBanner } from './components/InAppBanner';
 import { DayNightSky } from './components/DayNightSky';
+import { Toasts } from './components/Toasts';
 
 export function App() {
   const phase = useGameStore((s) => s.phase);
@@ -35,6 +36,7 @@ export function App() {
       <DayNightSky />
       <InAppBanner />
       {content}
+      <Toasts />
     </div>
   );
 }

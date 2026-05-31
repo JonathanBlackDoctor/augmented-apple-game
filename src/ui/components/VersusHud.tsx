@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useGameStore } from '../../app/store';
 import { useVersusStore } from '../../app/versusStore';
+import { hudTimerState } from './hudTimer';
 
 interface Pop {
   seq: number;
@@ -15,6 +16,7 @@ export function VersusHud({ onPause }: { onPause?: () => void }) {
   const pct = Math.max(0, Math.min(1, s.durationMs ? s.remainingMs / s.durationMs : 0));
   const secs = Math.max(0, Math.ceil(s.remainingMs / 1000));
   const low = secs <= 5;
+  const fill = hudTimerState(secs, s.owned);
 
   // Mirror the bot's "+N" gain pulses into a short list of floating popups.
   const [pops, setPops] = useState<Pop[]>([]);
@@ -47,7 +49,7 @@ export function VersusHud({ onPause }: { onPause?: () => void }) {
           )}
         </div>
         <div className={`time-bar${low ? ' low' : ''}`}>
-          <div className="time-fill" style={{ width: `${pct * 100}%` }} />
+          <div className={`time-fill${fill ? ' ' + fill : ''}`} style={{ width: `${pct * 100}%` }} />
         </div>
         <span className={`time-num${low ? ' low' : ''}`}>{secs}</span>
       </div>

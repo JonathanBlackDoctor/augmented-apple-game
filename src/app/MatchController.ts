@@ -10,6 +10,7 @@ import { createMonotonicClock } from './clock';
 import { sfx } from './sound';
 import { useGameStore } from './store';
 import { getSettings } from './settingsStore';
+import { playActivation, playClear, updateAmbient } from './augmentFx';
 
 const NOOP_BUS: AugmentHookBus = { run: () => undefined };
 
@@ -44,6 +45,9 @@ export class MatchController {
   private plan: MatchPlan | null = null;
   private roundIndex = 0;
   private owned: string[] = [];
+  private pendingActivation: string | null = null;
+  private roundDurationMs = 0;
+  private activationTimer = 0;
 
   async mount(parent: HTMLElement): Promise<void> {
     this.parent = parent;
@@ -78,6 +82,7 @@ export class MatchController {
     if (!this.plan) return;
     this.owned.push(id);
     useGameStore.getState().addOwned(id);
+    this.pendingActivation = id; // play its activation FX once the round opens
     sfx.pick();
     this.beginRound();
   }
@@ -97,6 +102,7 @@ export class MatchController {
   destroy(): void {
     this.roundActive = false;
     cancelAnimationFrame(this.raf);
+    clearTimeout(this.activationTimer);
     window.removeEventListener('resize', this.onResize);
     this.ro?.disconnect();
     this.ro = null;
@@ -119,6 +125,7 @@ export class MatchController {
     };
     const bus = plan.buildHookBus ? plan.buildHookBus(this.owned) : NOOP_BUS;
     this.engine.init(cfg, makeRng(cfg.seed), bus);
+    this.board.resetFx();
     this.board.setBoard(this.engine.getBoard());
     this.board.showSelection(null, false);
 
@@ -128,12 +135,24 @@ export class MatchController {
     this.roundActive = true;
 
     const dur = this.engineDuration();
+    this.roundDurationMs = dur;
     const st = useGameStore.getState();
     st.setRound(this.roundIndex);
     st.setRoundScore(0);
     st.setCombo(0, 0);
     useGameStore.setState({ durationMs: dur, remainingMs: dur });
     st.setPhase('round');
+
+    // Play the just-picked augment's activation flourish a beat after the new
+    // board appears (board-family augments sparkle the apples they planted).
+    const activate = this.pendingActivation;
+    this.pendingActivation = null;
+    clearTimeout(this.activationTimer);
+    if (activate) {
+      this.activationTimer = window.setTimeout(() => {
+        if (this.roundActive) playActivation(this.board, activate);
+      }, 140);
+    }
 
     this.loop();
   }
@@ -147,6 +166,7 @@ export class MatchController {
     if (!this.roundActive) return;
     const { remainingMs, ended } = this.engine.tick(this.clock.now());
     useGameStore.getState().setRemaining(remainingMs);
+    updateAmbient(this.board, this.owned, remainingMs, this.roundDurationMs);
     if (ended) {
       this.endRound();
       return;
@@ -157,6 +177,7 @@ export class MatchController {
   private endRound(): void {
     this.roundActive = false;
     cancelAnimationFrame(this.raf);
+    this.board.resetFx();
     const score = this.engine.getScore();
     useGameStore.getState().commitRound(score);
     sfx.end();
@@ -187,7 +208,10 @@ export class MatchController {
   private handlers: DragHandlers = {
     onStart: () => {
       this.engine.setDragging(true);
-      if (this.owned.includes('time.lord')) this.board.setLabelsHidden(true);
+      if (this.owned.includes('time.lord')) {
+        this.board.setLabelsHidden(true);
+        this.board.effects?.desat(true);
+      }
     },
     onMove: (rect: Rect | null) => {
       if (!this.roundActive || !rect) {
@@ -195,16 +219,21 @@ export class MatchController {
         return;
       }
       const ev = this.engine.evaluate(rect);
-      this.board.showSelection(rect, ev.valid);
+      this.board.showSelection(rect, ev.valid, ev.sum);
     },
     onEnd: (rect: Rect | null) => {
       this.engine.setDragging(false);
-      if (this.owned.includes('time.lord')) this.board.setLabelsHidden(false);
+      if (this.owned.includes('time.lord')) {
+        this.board.setLabelsHidden(false);
+        this.board.effects?.desat(false);
+      }
       this.board.showSelection(null, false);
       if (!this.roundActive || !rect) return;
       // A single-cell selection can't sum to the target (apples are 1–9), so a
       // stray tap is a no-op — don't punish the combo or buzz a "fail".
-      if (rect.x0 === rect.x1 && rect.y0 === rect.y1 && !this.engine.evaluate(rect).valid) return;
+      const evalBefore = this.engine.evaluate(rect);
+      if (rect.x0 === rect.x1 && rect.y0 === rect.y1 && !evalBefore.valid) return;
+      const preTags = this.engine.getBoard().tags?.slice() ?? [];
       const res = this.engine.commit({
         seq: ++this.seq,
         rect,
@@ -223,6 +252,18 @@ export class MatchController {
       st.setRoundScore(this.engine.getScore());
       st.setCombo(this.comboStreak, res.count);
       sfx.clear(this.comboStreak);
+      playClear(this.board, this.owned, {
+        cells: res.cells,
+        tags: res.cells.map((i) => preTags[i] ?? 'normal'),
+        count: res.count,
+        comboStreak: this.comboStreak,
+        sum: evalBefore.sum,
+        baseScore: res.baseScore,
+        finalScore: res.finalScore,
+        comboMultiplier: res.comboMultiplier,
+        remainingMs: st.remainingMs,
+        durationMs: this.roundDurationMs,
+      });
     },
   };
 

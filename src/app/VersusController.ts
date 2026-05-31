@@ -12,6 +12,7 @@ import { useGameStore } from './store';
 import { useVersusStore } from './versusStore';
 import { getSettings, useSettingsStore, BOARD_COLS, BOARD_ROWS } from './settingsStore';
 import { VersusMatch, type VersusSnapshot, type VersusPhase } from './VersusMatch';
+import { playActivation, playClear, updateAmbient } from './augmentFx';
 import { LocalProfileService, browserKV } from '../profile';
 import { StandardRankingService, InMemoryRankingStore } from '../ranking';
 import { levelInfo, levelTuning } from '../bot';
@@ -55,6 +56,8 @@ export class VersusController {
   private lastPhase: VersusPhase | null = null;
   private prevBotScore = 0;
   private lastOppEmoteAt = 0; // throttle for the rival's in-round taunt emotes
+  private pendingActivation: string | null = null;
+  private activationTimer = 0;
 
   private readonly profileSvc = new LocalProfileService(browserKV());
   private readonly ranking = new StandardRankingService(new InMemoryRankingStore());
@@ -155,6 +158,7 @@ export class VersusController {
     // The continuous loop drives the round transition + board refresh; here we
     // only register the pick. (No-op if we're past the augment window.)
     this.match.pickAugment(id, this.clock.now());
+    this.pendingActivation = id; // activation FX plays when the next round opens
     sfx.pick();
   }
 
@@ -172,6 +176,7 @@ export class VersusController {
 
   destroy(): void {
     cancelAnimationFrame(this.raf);
+    clearTimeout(this.activationTimer);
     window.removeEventListener('resize', this.onResize);
     this.ro?.disconnect();
     this.ro = null;
@@ -200,13 +205,24 @@ export class VersusController {
       void this.finish();
       return;
     }
+    if (snap.phase !== 'round' && this.lastPhase === 'round') this.board.resetFx();
     if (snap.phase === 'round') {
       // A fresh round just began (augment → round): refresh the board + combo.
       if (this.lastPhase === 'augment') {
+        this.board.resetFx();
         this.board.setBoard(m.myBoard());
         this.comboStreak = 0;
         useGameStore.getState().setCombo(0);
+        const activate = this.pendingActivation;
+        this.pendingActivation = null;
+        clearTimeout(this.activationTimer);
+        if (activate) {
+          this.activationTimer = window.setTimeout(() => {
+            if (useGameStore.getState().phase === 'round') playActivation(this.board, activate);
+          }, 140);
+        }
       }
+      updateAmbient(this.board, snap.myOwned, snap.remainingMs, this.durationMs);
       st.setPhase('round');
     } else if (snap.phase === 'roundCheck') {
       const r = snap.lastRound;
@@ -316,24 +332,33 @@ export class VersusController {
   private handlers: DragHandlers = {
     onStart: () => {
       this.match?.setDragging(true);
-      if (this.match?.snapshot().myOwned.includes('time.lord')) this.board.setLabelsHidden(true);
+      if (this.match?.snapshot().myOwned.includes('time.lord')) {
+        this.board.setLabelsHidden(true);
+        this.board.effects?.desat(true);
+      }
     },
     onMove: (rect: Rect | null) => {
       if (!this.match || !rect) {
         this.board.showSelection(null, false);
         return;
       }
-      this.board.showSelection(rect, this.match.evaluate(rect));
+      const ev = this.match.evalDetail(rect);
+      this.board.showSelection(rect, ev.valid, ev.sum);
     },
     onEnd: (rect: Rect | null) => {
       const m = this.match;
       if (!m) return;
       m.setDragging(false);
-      if (m.snapshot().myOwned.includes('time.lord')) this.board.setLabelsHidden(false);
+      if (m.snapshot().myOwned.includes('time.lord')) {
+        this.board.setLabelsHidden(false);
+        this.board.effects?.desat(false);
+      }
       this.board.showSelection(null, false);
       if (!rect) return;
       // Stray single-cell tap can't be a valid move — silent no-op (keep combo).
-      if (rect.x0 === rect.x1 && rect.y0 === rect.y1 && !m.evaluate(rect)) return;
+      const evalBefore = m.evalDetail(rect);
+      if (rect.x0 === rect.x1 && rect.y0 === rect.y1 && !evalBefore.valid) return;
+      const preTags = m.myBoard().tags?.slice() ?? [];
       const res = m.myCommit(rect, this.clock.now());
       if (!res || 'rejected' in res) {
         this.comboStreak = 0;
@@ -343,11 +368,23 @@ export class VersusController {
       }
       this.comboStreak++;
       this.board.burst(res.cells);
-      this.board.scorePopup(res.cells, res.finalScore);
       this.board.setBoard(m.myBoard());
-      useGameStore.getState().setRoundScore(m.snapshot().myScore);
+      const snap = m.snapshot();
+      useGameStore.getState().setRoundScore(snap.myScore);
       useGameStore.getState().setCombo(this.comboStreak, res.count);
       sfx.clear(this.comboStreak);
+      playClear(this.board, snap.myOwned, {
+        cells: res.cells,
+        tags: res.cells.map((i) => preTags[i] ?? 'normal'),
+        count: res.count,
+        comboStreak: this.comboStreak,
+        sum: evalBefore.sum,
+        baseScore: res.baseScore,
+        finalScore: res.finalScore,
+        comboMultiplier: res.comboMultiplier,
+        remainingMs: snap.remainingMs,
+        durationMs: this.durationMs,
+      });
     },
   };
 
@@ -373,7 +410,7 @@ export class VersusController {
       if (!this.botView && !this.miniCreating) {
         this.miniCreating = true;
         try {
-          const bv = new BoardView();
+          const bv = new BoardView({ fx: false });
           this.miniLayout = this.calcMiniLayout();
           await bv.mount(this.miniHost, this.miniLayout);
           this.botView = bv;

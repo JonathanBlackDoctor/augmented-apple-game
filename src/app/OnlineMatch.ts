@@ -341,6 +341,11 @@ export class OnlineMatch {
   evaluate(rect: Rect): boolean {
     return this.engine.evaluate(rect).valid;
   }
+  /** Preview validity + running sum for the drag UI (no mutation). */
+  evalDetail(rect: Rect): { valid: boolean; sum: number } {
+    const e = this.engine.evaluate(rect);
+    return { valid: e.valid, sum: e.sum };
+  }
   setDragging(d: boolean): void {
     this.engine.setDragging(d);
   }

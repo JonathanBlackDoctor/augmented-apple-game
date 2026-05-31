@@ -21,7 +21,7 @@ export const theme = {
     gem: 0x3fcfd5, // gem apple (augment) — big flat bonus
     gemTop: 0x9af0f3,
     gemEdge: 0x1f9aa0,
-    bomb: 0x4a4a52, // bomb apple (augment) — bonus on clear
+    bomb: 0x4a4a52, // bomb apple (augment) — explodes orthogonal neighbours on clear
     bombTop: 0x7c7c86,
     bombEdge: 0x26262b,
     leaf: 0x5e9a4e,

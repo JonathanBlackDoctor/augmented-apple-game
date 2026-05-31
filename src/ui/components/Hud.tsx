@@ -1,4 +1,5 @@
 import { useGameStore } from '../../app/store';
+import { hudTimerState } from './hudTimer';
 
 export function Hud({ onPause }: { onPause?: () => void }) {
   const s = useGameStore();
@@ -6,6 +7,7 @@ export function Hud({ onPause }: { onPause?: () => void }) {
   const pct = Math.max(0, Math.min(1, s.durationMs ? s.remainingMs / s.durationMs : 0));
   const secs = Math.max(0, Math.ceil(s.remainingMs / 1000));
   const low = secs <= 5;
+  const fill = hudTimerState(secs, s.owned);
   return (
     <div className="hud">
       <div className="hud-side left">
@@ -20,7 +22,7 @@ export function Hud({ onPause }: { onPause?: () => void }) {
       </div>
       <div className="hud-center">
         <div className={`time-bar${low ? ' low' : ''}`}>
-          <div className="time-fill" style={{ width: `${pct * 100}%` }} />
+          <div className={`time-fill${fill ? ' ' + fill : ''}`} style={{ width: `${pct * 100}%` }} />
         </div>
         <span className={`time-num${low ? ' low' : ''}`}>{secs}</span>
       </div>

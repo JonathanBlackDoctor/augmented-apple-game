@@ -21,6 +21,7 @@ export class BoardFx {
   private sumEl: HTMLDivElement | null = null;
   private reduce = false;
   private syncRaf = 0;
+  private cellPx = 0;
 
   mount(host: HTMLElement, canvas: HTMLElement): void {
     this.canvas = canvas;
@@ -34,6 +35,7 @@ export class BoardFx {
     }
     host.appendChild(o);
     this.overlay = o;
+    if (this.cellPx > 0) o.style.setProperty('--bfx-cell', `${this.cellPx}px`);
     try {
       this.reduce =
         typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -55,6 +57,14 @@ export class BoardFx {
       o.style.width = `${c.offsetWidth}px`;
       o.style.height = `${c.offsetHeight}px`;
     });
+  }
+
+  /** Publish the current board cell size (px) so FX dimensions can scale to it
+   *  via the `--bfx-cell` custom property — keeps the dice/ring/headline
+   *  proportional from small phones to wide desktops. */
+  setCell(px: number): void {
+    this.cellPx = px;
+    if (px > 0) this.overlay?.style.setProperty('--bfx-cell', `${px}px`);
   }
 
   /** Clear all transient FX + state classes (between rounds / on reset). */

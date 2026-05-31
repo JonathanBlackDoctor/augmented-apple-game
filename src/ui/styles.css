@@ -2011,6 +2011,10 @@ body {
   overflow: hidden;
   z-index: 2;
   border-radius: var(--radius);
+  /* Live board cell size (px), published by board/BoardFx.setCell(). FX below
+     scale off this so they stay proportional on phone / tablet / desktop; the
+     50px fallback keeps things sane before the first layout sync. */
+  --bfx-cell: 50px;
 }
 
 /* sustain-augment ambience (toggled via .on): time.lord/glasscannon = prism,
@@ -2058,7 +2062,7 @@ body {
   animation: bfx-popup 1.4s ease-out forwards;
 }
 .bfx-big {
-  font: 800 22px var(--font);
+  font: 800 clamp(15px, calc(var(--bfx-cell) * 0.42), 22px) var(--font);
   display: block;
 }
 .bfx-tags {
@@ -2094,8 +2098,8 @@ body {
 .bfx-ring {
   position: absolute;
   transform: translate(-50%, -50%) scale(0.3);
-  width: 40px;
-  height: 40px;
+  width: clamp(26px, calc(var(--bfx-cell) * 0.8), 40px);
+  height: clamp(26px, calc(var(--bfx-cell) * 0.8), 40px);
   border: 3px solid var(--c, #fff);
   border-radius: 50%;
   opacity: 0.9;
@@ -2161,7 +2165,7 @@ body {
   transform: translate(-50%, -50%) scale(0);
   z-index: 7;
   color: var(--c, #fff);
-  font-size: 20px;
+  font-size: clamp(13px, calc(var(--bfx-cell) * 0.4), 20px);
   animation: bfx-spark 0.7s ease-out forwards;
 }
 @keyframes bfx-spark {
@@ -2222,13 +2226,17 @@ body {
   font-size: 14px;
 }
 
-/* Sits on the (now-empty) cleared cells, so it doesn't obscure live apples. */
+/* Sits on the (now-empty) cleared cells, so it doesn't obscure live apples.
+   Sized off the cell (~0.86×) and capped at the original 46px, so it shrinks
+   with the board on phones instead of overflowing the cleared gap. The pips /
+   radius / padding derive from --d, keeping the whole die proportional. */
 .bfx-dice {
+  --d: clamp(28px, calc(var(--bfx-cell) * 0.86), 46px);
   position: absolute;
   transform: translate(-50%, -50%);
-  width: 46px;
-  height: 46px;
-  border-radius: 10px;
+  width: var(--d);
+  height: var(--d);
+  border-radius: calc(var(--d) * 0.21);
   z-index: 8;
   background: linear-gradient(135deg, #fff, #e6e0ff);
   border: 2px solid #cfc6ff;
@@ -2236,12 +2244,12 @@ body {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   grid-template-rows: repeat(3, 1fr);
-  padding: 7px;
+  padding: calc(var(--d) * 0.15);
   animation: bfx-diceroll 1s ease-out forwards;
 }
 .bfx-pip {
-  width: 7px;
-  height: 7px;
+  width: calc(var(--d) * 0.15);
+  height: calc(var(--d) * 0.15);
   border-radius: 50%;
   background: #6f63c8;
   align-self: center;

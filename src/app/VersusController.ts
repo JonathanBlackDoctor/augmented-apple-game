@@ -1,7 +1,6 @@
 // app/VersusController.ts — runtime conductor for the vs-AI mode. Wires the
 // headless VersusMatch to the Pixi board, pointer input, monotonic clock, SFX,
 // profile (anon identity) and ranking (unranked vs bot). Mirrors MatchController.
-// Also renders a small picture-in-picture board mirroring the AI's live board.
 import type { Rect, Profile, PublicProfile } from '../contracts';
 import { BoardView } from '../board/BoardView';
 import { computeLayout, type BoardLayout } from '../board/layout';
@@ -10,7 +9,7 @@ import { createMonotonicClock, type PausableClock } from './clock';
 import { sfx } from './sound';
 import { useGameStore } from './store';
 import { useVersusStore } from './versusStore';
-import { getSettings, useSettingsStore, BOARD_COLS, BOARD_ROWS } from './settingsStore';
+import { getSettings, BOARD_COLS, BOARD_ROWS } from './settingsStore';
 import { VersusMatch, type VersusSnapshot, type VersusPhase } from './VersusMatch';
 import { playActivation, playClear, updateAmbient } from './augmentFx';
 import { LocalProfileService, browserKV } from '../profile';
@@ -43,18 +42,6 @@ export class VersusController {
   private level = 1; // chosen AI level (1..10), read from progress at match start
   private persona: EmotePersona | null = null; // the chosen rival's emote personality
 
-  // AI mini board (picture-in-picture)
-  private miniHost: HTMLDivElement | null = null;
-  private miniNameEl: HTMLElement | null = null;
-  private miniScoreEl: HTMLElement | null = null;
-  private botView: BoardView | null = null;
-  private miniLayout: BoardLayout | null = null;
-  private miniCreating = false;
-  private unsubSettings: (() => void) | null = null;
-  private lastMiniRound = -1;
-  private lastBotSeq = -1;
-  private botFlashUntil = 0;
-
   private raf = 0;
   private comboStreak = 0;
   private match: VersusMatch | null = null;
@@ -86,27 +73,6 @@ export class VersusController {
     this.ro = new ResizeObserver(() => this.onResize());
     this.ro.observe(parent);
     this.profile = await this.profileSvc.signInAnon();
-
-    // AI mini-view host (corner PiP). The host is created once; the Pixi board
-    // inside is created/destroyed to honour the showAiMiniboard setting.
-    this.miniHost = document.createElement('div');
-    this.miniHost.className = 'ai-mini';
-    const bar = document.createElement('div');
-    bar.className = 'ai-mini-bar';
-    const name = document.createElement('span');
-    name.className = 'ai-mini-name';
-    name.textContent = 'AI';
-    this.miniNameEl = name;
-    this.miniScoreEl = document.createElement('span');
-    this.miniScoreEl.className = 'ai-mini-score';
-    this.miniScoreEl.textContent = '0';
-    bar.append(name, this.miniScoreEl);
-    this.miniHost.appendChild(bar);
-    parent.appendChild(this.miniHost);
-    await this.ensureMini(s.showAiMiniboard);
-    this.unsubSettings = useSettingsStore.subscribe((st) => {
-      void this.ensureMini(st.showAiMiniboard);
-    });
   }
 
   startVersus(): void {
@@ -135,8 +101,6 @@ export class VersusController {
     });
     this.comboStreak = 0;
     this.resolved = false;
-    this.lastMiniRound = -1;
-    this.lastBotSeq = -1;
     this.lastPhase = null;
     this.prevBotScore = 0;
     this.prevMyScore = 0;
@@ -145,14 +109,8 @@ export class VersusController {
     useVersusStore
       .getState()
       .setOpponent(`Lv.${this.level} ${info.name}`, info.avatar, info.title, false);
-    if (this.miniNameEl) this.miniNameEl.textContent = `${info.avatar} ${info.name}`;
     this.board.setBoard(this.match.myBoard());
     this.board.showSelection(null, false);
-    if (this.botView) {
-      this.miniLayout = this.calcMiniLayout();
-      this.botView.setLayout(this.miniLayout);
-      this.botView.setBoard(this.match.botBoard());
-    }
     cancelAnimationFrame(this.raf); // avoid a double loop on restart
     this.loop();
   }
@@ -201,14 +159,8 @@ export class VersusController {
     window.removeEventListener('resize', this.onResize);
     this.ro?.disconnect();
     this.ro = null;
-    this.unsubSettings?.();
-    this.unsubSettings = null;
     this.input?.detach();
     this.board.destroy();
-    this.botView?.destroy();
-    this.botView = null;
-    if (this.miniHost?.parentElement) this.miniHost.parentElement.removeChild(this.miniHost);
-    this.miniHost = null;
     this.match = null;
   }
 
@@ -285,7 +237,7 @@ export class VersusController {
     st.setCombo(this.comboStreak);
     useVersusStore
       .getState()
-      .setLive(s.botTotal, s.botScore, { me: s.roundWins.me, opp: s.roundWins.bot });
+      .setLive(s.botTotal, s.botScore, { me: s.roundWins.me, opp: s.roundWins.bot }, s.botOwned);
     // Opponent "+N" popup: bot's per-round score is cumulative, so a positive
     // frame-to-frame delta is a fresh clear (round reset → 0 yields a negative
     // delta we ignore).
@@ -302,7 +254,6 @@ export class VersusController {
     }
     this.prevBotScore = s.botScore;
     this.prevMyScore = s.myScore;
-    this.syncMini(s);
   }
 
   /** Fire a rival emote from `pool`; throttled + probabilistic (scaled by the
@@ -322,29 +273,6 @@ export class VersusController {
   /** True when the rival's standing (banked total + current round) leads. */
   private botAhead(s: VersusSnapshot): boolean {
     return s.botTotal + s.botScore > s.myTotal + s.myScore;
-  }
-
-  /** Mirror the AI's board into the mini-view and briefly flash its last move. */
-  private syncMini(s: VersusSnapshot): void {
-    const m = this.match;
-    if (!m || !this.botView) return;
-    if (this.miniScoreEl) this.miniScoreEl.textContent = String(s.botScore);
-    if (s.round !== this.lastMiniRound) {
-      this.lastMiniRound = s.round;
-      this.lastBotSeq = 0;
-      this.botFlashUntil = 0;
-      this.botView.setBoard(m.botBoard()); // fresh round board
-      this.botView.showSelection(null, false);
-      return;
-    }
-    const move = m.botLastMove();
-    if (move && move.seq !== this.lastBotSeq) {
-      this.lastBotSeq = move.seq;
-      this.botView.setBoard(m.botBoard());
-      this.botFlashUntil = this.clock.now() + 500;
-    }
-    const flash = move && this.clock.now() < this.botFlashUntil ? move.rect : null;
-    this.botView.showSelection(flash, true);
   }
 
   private async finish(): Promise<void> {
@@ -440,53 +368,11 @@ export class VersusController {
     return computeLayout(this.cols, this.rows, w, h, Math.max(4, Math.round(Math.min(w, h) * 0.014)), scale);
   }
 
-  private calcMiniLayout(): BoardLayout {
-    const hw = this.parent?.clientWidth || window.innerWidth;
-    const w = Math.max(120, Math.min(240, Math.round(hw * 0.28)));
-    const h = Math.round((w * this.rows) / this.cols); // keep main-board aspect
-    return computeLayout(this.cols, this.rows, w, h, 4);
-  }
-
-  /** Create/show or hide+destroy the mini board to match the setting. */
-  private async ensureMini(enabled: boolean): Promise<void> {
-    if (!this.miniHost) return;
-    if (enabled) {
-      this.miniHost.style.display = '';
-      if (!this.botView && !this.miniCreating) {
-        this.miniCreating = true;
-        try {
-          const bv = new BoardView({ fx: false });
-          this.miniLayout = this.calcMiniLayout();
-          await bv.mount(this.miniHost, this.miniLayout);
-          this.botView = bv;
-          if (this.match) {
-            this.lastMiniRound = -1;
-            this.lastBotSeq = -1;
-            this.botView.setBoard(this.match.botBoard());
-          }
-        } finally {
-          this.miniCreating = false;
-        }
-      }
-    } else {
-      this.miniHost.style.display = 'none';
-      this.botView?.destroy();
-      this.botView = null;
-    }
-  }
-
   private onResize = (): void => {
     const next = this.calcLayout();
     if (!this.layout || next.width !== this.layout.width || next.height !== this.layout.height) {
       this.layout = next;
       this.board.setLayout(this.layout);
-    }
-    if (this.botView) {
-      const m = this.calcMiniLayout();
-      if (!this.miniLayout || m.width !== this.miniLayout.width || m.height !== this.miniLayout.height) {
-        this.miniLayout = m;
-        this.botView.setLayout(m);
-      }
     }
   };
 }

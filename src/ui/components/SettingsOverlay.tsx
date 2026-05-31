@@ -1,7 +1,7 @@
-// ui/components/SettingsOverlay.tsx — settings modal (sound, AI mini-view, round
-// time, apple size). State lives in the settings store and is persisted to
-// localStorage. Reused by the home screen and the pause menu. (AI difficulty is
-// chosen per-match on the level-select screen; apple count is fixed to medium.)
+// ui/components/SettingsOverlay.tsx — settings modal (sound, round time, apple
+// size). State lives in the settings store and is persisted to localStorage.
+// Reused by the home screen and the pause menu. (AI difficulty is chosen
+// per-match on the level-select screen; apple count is fixed to medium.)
 import { useSettingsStore, DURATION_OPTIONS, APPLE_SIZE_PRESETS } from '../../app/settingsStore';
 
 function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
@@ -53,10 +53,6 @@ export function SettingsOverlay({ onClose }: { onClose: () => void }) {
           <div className="set-row">
             <span className="set-label">사운드</span>
             <Toggle on={s.soundEnabled} onChange={s.setSoundEnabled} />
-          </div>
-          <div className="set-row">
-            <span className="set-label">AI 미니화면</span>
-            <Toggle on={s.showAiMiniboard} onChange={s.setShowAiMiniboard} />
           </div>
           <div className="set-row">
             <span className="set-label">라운드 시간</span>

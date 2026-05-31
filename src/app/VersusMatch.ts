@@ -51,6 +51,7 @@ export interface VersusSnapshot {
   offerTier: AugTier | null;
   rerollsLeft: number;
   myOwned: string[];
+  botOwned: string[];
   winner: 'me' | 'bot' | 'draw' | null;
 }
 
@@ -332,6 +333,7 @@ export class VersusMatch {
       offerTier: this.offerTier,
       rerollsLeft: this.rerollsLeft,
       myOwned: [...this.myOwned],
+      botOwned: [...this.botOwned],
       winner: this.winner,
     };
   }

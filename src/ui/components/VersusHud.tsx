@@ -55,7 +55,14 @@ export function VersusHud({ onPause }: { onPause?: () => void }) {
       </div>
       <div className="vs-side opp">
         <span className="vs-label">{v.oppName}</span>
-        <span className="vs-score">{oppTotal}</span>
+        {/* Re-key on each opponent gain so the pulse animation restarts; gate
+            on seq > 0 to avoid a spurious pulse at match start. */}
+        <span
+          key={`opp-${v.oppGainSeq}`}
+          className={`vs-score${v.oppGainSeq > 0 ? ' opp-score' : ''}`}
+        >
+          {oppTotal}
+        </span>
         {pops.map((p) => (
           <span key={p.seq} className="score-pop" onAnimationEnd={() => removePop(p.seq)}>
             +{p.amount}

@@ -10,7 +10,6 @@ export interface Settings {
   /** Grid scale (0–1): shrinks the whole board so apples stay packed but more
    *  background shows around the edges. Smaller = smaller apples + more margin. */
   appleScale: number;
-  showAiMiniboard: boolean;
 }
 
 /** Selectable round lengths (ms) surfaced in the settings UI. */
@@ -33,7 +32,6 @@ const DEFAULTS: Settings = {
   soundEnabled: true,
   roundDurationMs: 30_000,
   appleScale: 0.8,
-  showAiMiniboard: true,
 };
 
 const KEY = 'aag.settings.v1';
@@ -43,7 +41,6 @@ function pick(s: Settings): Settings {
     soundEnabled: s.soundEnabled,
     roundDurationMs: s.roundDurationMs,
     appleScale: s.appleScale,
-    showAiMiniboard: s.showAiMiniboard,
   };
 }
 
@@ -69,7 +66,6 @@ export interface SettingsStore extends Settings {
   setSoundEnabled(v: boolean): void;
   setRoundDurationMs(v: number): void;
   setAppleScale(v: number): void;
-  setShowAiMiniboard(v: boolean): void;
   reset(): void;
 }
 
@@ -90,7 +86,6 @@ export const useSettingsStore = create<SettingsStore>((set, get) => {
     },
     setRoundDurationMs: (roundDurationMs) => commit({ roundDurationMs }),
     setAppleScale: (appleScale) => commit({ appleScale }),
-    setShowAiMiniboard: (showAiMiniboard) => commit({ showAiMiniboard }),
     reset: () => {
       sfx.setEnabled(DEFAULTS.soundEnabled);
       commit({ ...DEFAULTS });

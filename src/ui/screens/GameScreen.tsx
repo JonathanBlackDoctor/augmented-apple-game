@@ -13,7 +13,7 @@ import { Hud } from '../components/Hud';
 import { VersusHud } from '../components/VersusHud';
 import { AugmentOverlay } from '../components/AugmentOverlay';
 import { RoundCheckOverlay } from '../components/RoundCheckOverlay';
-import { OwnedAugments } from '../components/OwnedAugments';
+import { OwnedAugments, OpponentAugments } from '../components/OwnedAugments';
 import { ResultOverlay } from '../components/ResultOverlay';
 import { VersusResult } from '../components/VersusResult';
 import { EmoteTray } from '../components/EmoteTray';
@@ -144,6 +144,7 @@ export function GameScreen() {
       {isVersus ? <VersusHud onPause={pauseHandler} /> : <Hud onPause={pauseHandler} />}
       <div className="board-host" ref={hostRef} />
       {isVersus && <OwnedAugments />}
+      {isVersus && <OpponentAugments />}
       {isVersus && <EmoteOverlay />}
       {isVersus && phase !== 'result' && !paused && <EmoteTray />}
       {phase === 'roundCheck' && isVersus && <RoundCheckOverlay />}

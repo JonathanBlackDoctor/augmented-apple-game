@@ -89,15 +89,15 @@ export const CATALOG: Augment[] = [
   {
     id: 'time.lord',
     name: '시간의 지배자',
-    desc: '드래그 중 시간 1.5배 감속, 단 그동안 숫자가 보이지 않음',
+    desc: '드래그 중 시간 2배 감속, 단 그동안 숫자가 보이지 않음',
     tier: 'prismatic',
     family: 'time',
     hooks: {
-      // While dragging, time flows at 2/3 speed (1.5x slower); idle is normal,
+      // While dragging, time flows at 1/2 speed (2x slower); idle is normal,
       // so the round always ends (no infinite-pause exploit). The "numbers
       // hidden while dragging" drawback is applied by the UI layer (BoardView).
       onTick: (s, c) =>
-        c.isDragging ? { remainingMs: s.remainingMs + c.deltaMs * (1 / 3), paused: false } : s,
+        c.isDragging ? { remainingMs: s.remainingMs + c.deltaMs * (1 / 2), paused: false } : s,
     },
   },
   // ----- combo -----
@@ -306,13 +306,13 @@ export const CATALOG: Augment[] = [
   {
     id: 'rule.alchemy',
     name: '연금술',
-    desc: '합이 5의 배수면 인정 (5·10·15·20…)',
+    desc: '합이 5의 배수면 인정, 단 25 이하만 (5·10·15·20·25)',
     tier: 'prismatic',
     family: 'rule',
     conflictsWith: ['rule.kindness', 'rule.eleven'],
     hooks: {
       validateSelection: (c) =>
-        c.sum > 0 && c.sum % 5 === 0 && c.cells.length > 0 ? { accept: true } : undefined,
+        c.sum > 0 && c.sum % 5 === 0 && c.sum <= 25 && c.cells.length > 0 ? { accept: true } : undefined,
     },
   },
   {

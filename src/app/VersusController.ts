@@ -10,7 +10,7 @@ import { createMonotonicClock, type PausableClock } from './clock';
 import { sfx } from './sound';
 import { useGameStore } from './store';
 import { useVersusStore } from './versusStore';
-import { getSettings, useSettingsStore } from './settingsStore';
+import { getSettings, useSettingsStore, BOARD_COLS, BOARD_ROWS } from './settingsStore';
 import { VersusMatch, type VersusSnapshot, type VersusPhase } from './VersusMatch';
 import { LocalProfileService, browserKV } from '../profile';
 import { StandardRankingService, InMemoryRankingStore } from '../ranking';
@@ -63,8 +63,8 @@ export class VersusController {
   async mount(parent: HTMLElement): Promise<void> {
     this.parent = parent;
     const s = getSettings();
-    this.cols = s.boardCols;
-    this.rows = s.boardRows;
+    this.cols = BOARD_COLS;
+    this.rows = BOARD_ROWS;
     this.durationMs = s.roundDurationMs;
     this.layout = this.calcLayout();
     await this.board.mount(parent, this.layout);
@@ -101,8 +101,8 @@ export class VersusController {
 
   startVersus(): void {
     const s = getSettings();
-    this.cols = s.boardCols;
-    this.rows = s.boardRows;
+    this.cols = BOARD_COLS;
+    this.rows = BOARD_ROWS;
     this.durationMs = s.roundDurationMs;
     const prog = useProgressStore.getState();
     prog.clearReward(); // drop any reward reveal from a previous match

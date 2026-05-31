@@ -25,9 +25,9 @@ import { PauseOverlay } from '../components/PauseOverlay';
 function buildPlan(mode: 'solo' | 'augment'): MatchPlan {
   const seedBase = `${mode}:${Date.now()}`;
   const s = getSettings();
-  // Honor the board-size setting, then swap to a tall grid on portrait screens so
-  // cells aren't squeezed by the narrow width (bigger, tappable apples on mobile).
-  const { cols, rows } = pickGridDims({ cols: s.boardCols, rows: s.boardRows });
+  // Fixed medium board; swap to a tall grid on portrait screens so cells aren't
+  // squeezed by the narrow width (bigger, tappable apples on mobile).
+  const { cols, rows } = pickGridDims();
   const base = {
     seedBase,
     cols,

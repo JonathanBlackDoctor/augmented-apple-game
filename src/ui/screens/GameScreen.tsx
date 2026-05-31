@@ -149,7 +149,12 @@ export function GameScreen() {
       {phase === 'roundCheck' && isVersus && <RoundCheckOverlay />}
       {phase === 'augment' &&
         (isVersus ? (
-          <AugmentOverlay onPick={onPick} remainingMs={overlayRemainingMs} totalMs={AUGMENT_MS} />
+          <AugmentOverlay
+            onPick={onPick}
+            remainingMs={overlayRemainingMs}
+            totalMs={AUGMENT_MS}
+            onReroll={() => versusRef.current?.reroll()}
+          />
         ) : (
           <AugmentOverlay onPick={onPick} />
         ))}

@@ -147,7 +147,15 @@ export function OnlineScreen() {
             <div className="aug-head">
               {s.offerTier && <span className={`tier-badge ${s.offerTier}`}>{TIER_LABEL[s.offerTier]}</span>}
               <h2>증강 선택</h2>
-              <p className="aug-sub">하나를 골라 빌드를 쌓으세요 · 리롤 없음</p>
+              <p className="aug-sub">하나를 골라 빌드를 쌓으세요</p>
+              <button
+                className="aug-reroll"
+                onClick={() => ctrlRef.current?.reroll()}
+                disabled={s.rerollsLeft <= 0}
+                title={s.rerollsLeft > 0 ? '새로운 증강 3개로 다시 뽑기' : '리롤권을 모두 사용했습니다'}
+              >
+                🎲 리롤 ({s.rerollsLeft})
+              </button>
             </div>
             <div className="aug-grid">
               {s.offers.map((id) => {

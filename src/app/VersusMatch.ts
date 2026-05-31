@@ -14,7 +14,7 @@ import type {
   SeededRng,
 } from '../contracts';
 import { decide, type BotTuning } from '../bot';
-import { tierForRound, rollOffer, buildHookBusFor } from '../augments/runtime';
+import { versusOfferTiers, rollOfferTiers, buildHookBusFor } from '../augments/runtime';
 
 export type VersusPhase = 'round' | 'roundCheck' | 'augment' | 'matchResult';
 
@@ -26,7 +26,11 @@ export interface VersusOptions {
   durationMs: number;
   targetSum: number;
   tuning: BotTuning; // bot strength for this match (from the chosen AI level)
-  winnerBonus: number;
+  // Per-round winner bonus scales with the round number: round R (1-based) grants
+  // R * winnerBonusStep (e.g. 10/20/30/40/50), so late rounds — where the strong
+  // augments are online — decide more of the match.
+  winnerBonusStep: number;
+  rerolls: number; // reroll tokens for the whole match (re-rolls the current offer)
   augmentMs: number; // augment-pick window before auto-picking offers[0]
   roundCheckMs: number; // mid-round review screen before advancing
 }
@@ -45,6 +49,7 @@ export interface VersusSnapshot {
   lastRound: { myScore: number; botScore: number; winner: 'me' | 'bot' | 'draw' } | null;
   offers: string[];
   offerTier: AugTier | null;
+  rerollsLeft: number;
   myOwned: string[];
   winner: 'me' | 'bot' | 'draw' | null;
 }
@@ -55,7 +60,8 @@ const DEFAULTS = {
   rows: 10,
   durationMs: 30_000,
   targetSum: 10,
-  winnerBonus: 50,
+  winnerBonusStep: 10,
+  rerolls: 1,
   augmentMs: 12_000,
   roundCheckMs: 3_500,
 };
@@ -87,6 +93,9 @@ export class VersusMatch {
   private botOwned: string[] = [];
   private offers: string[] = [];
   private offerTier: AugTier | null = null;
+  private offerRound = 0; // the 0-based round the current offer precedes
+  private offerSalt = 0; // bumped on reroll to re-roll the same round's offer
+  private rerollsLeft = 0; // reroll tokens left for the whole match
   private winner: 'me' | 'bot' | 'draw' | null = null;
 
   constructor(opts: Partial<VersusOptions> & { seedBase: string; tuning: BotTuning }) {
@@ -98,12 +107,17 @@ export class VersusMatch {
       durationMs: opts.durationMs ?? DEFAULTS.durationMs,
       targetSum: opts.targetSum ?? DEFAULTS.targetSum,
       tuning: opts.tuning,
-      winnerBonus: opts.winnerBonus ?? DEFAULTS.winnerBonus,
+      winnerBonusStep: opts.winnerBonusStep ?? DEFAULTS.winnerBonusStep,
+      rerolls: opts.rerolls ?? DEFAULTS.rerolls,
       augmentMs: opts.augmentMs ?? DEFAULTS.augmentMs,
       roundCheckMs: opts.roundCheckMs ?? DEFAULTS.roundCheckMs,
     };
     this.botRng = makeRng(`${this.opts.seedBase}:bot`);
+    this.rerollsLeft = this.opts.rerolls;
+    // Initialise round 0's engines so the board is renderable behind the overlay,
+    // then open the start-of-match augment pick before that round actually runs.
     this.beginRound();
+    this.openAugment(0);
   }
 
   private roundSeed(r: number): string {
@@ -193,8 +207,11 @@ export class VersusMatch {
       this.phaseRemainingMs = Math.max(0, (this.phaseEndsAt ?? nowMs) - nowMs);
       if (nowMs >= (this.phaseEndsAt ?? nowMs)) this.advanceAfterCheck(nowMs);
     } else if (this.phase === 'augment') {
-      this.phaseRemainingMs = Math.max(0, (this.phaseEndsAt ?? nowMs) - nowMs);
-      if (nowMs >= (this.phaseEndsAt ?? nowMs) && this.offers.length > 0) {
+      // The deadline is anchored on the first tick we see this overlay, so a pick
+      // opened without a clock (the start-of-match pick) still gets the full window.
+      if (this.phaseEndsAt === null) this.phaseEndsAt = nowMs + this.opts.augmentMs;
+      this.phaseRemainingMs = Math.max(0, this.phaseEndsAt - nowMs);
+      if (nowMs >= this.phaseEndsAt && this.offers.length > 0) {
         this.pickAugment(this.offers[0], nowMs);
       }
     }
@@ -223,11 +240,14 @@ export class VersusMatch {
     this.myTotal += my;
     this.botTotal += bot;
     const winner: 'me' | 'bot' | 'draw' = my > bot ? 'me' : bot > my ? 'bot' : 'draw';
+    // Bonus scales with the round number (R1=step, R2=2·step, …): later rounds,
+    // where the strong augments are online, swing the match harder.
+    const bonus = (this.round + 1) * this.opts.winnerBonusStep;
     if (winner === 'me') {
-      this.myTotal += this.opts.winnerBonus;
+      this.myTotal += bonus;
       this.roundWins.me++;
     } else if (winner === 'bot') {
-      this.botTotal += this.opts.winnerBonus;
+      this.botTotal += bonus;
       this.roundWins.bot++;
     }
     this.lastRound = { myScore: my, botScore: bot, winner };
@@ -236,8 +256,8 @@ export class VersusMatch {
     this.phaseRemainingMs = this.opts.roundCheckMs;
   }
 
-  /** After the review timer: roll the augment offers, or finish the match. */
-  private advanceAfterCheck(nowMs: number): void {
+  /** After the review timer: open the next augment pick, or finish the match. */
+  private advanceAfterCheck(_nowMs: number): void {
     if (this.round + 1 >= this.opts.rounds) {
       this.winner =
         this.myTotal > this.botTotal ? 'me' : this.botTotal > this.myTotal ? 'bot' : 'draw';
@@ -245,24 +265,53 @@ export class VersusMatch {
       this.phaseEndsAt = null;
       this.phaseRemainingMs = 0;
     } else {
-      const tier = tierForRound(this.round + 1);
-      this.offerTier = tier;
-      this.offers = rollOffer(tier, makeRng(`${this.roundSeed(this.round + 1)}:offer:me`), this.myOwned);
-      this.phase = 'augment';
-      this.phaseEndsAt = nowMs + this.opts.augmentMs;
-      this.phaseRemainingMs = this.opts.augmentMs;
+      this.openAugment(this.round + 1);
     }
   }
 
+  /** Open the augment pick that precedes round `forRound` (0-based). The deadline
+   *  is anchored lazily on the first tick (see tick()), so this works both for the
+   *  mid-match picks and the start-of-match pick opened from the constructor. */
+  private openAugment(forRound: number): void {
+    this.offerRound = forRound;
+    this.offerSalt = 0;
+    this.rollMyOffer();
+    this.phase = 'augment';
+    this.phaseEndsAt = null;
+    this.phaseRemainingMs = this.opts.augmentMs;
+  }
+
+  /** (Re)roll the human's offer for the current offerRound + offerSalt. */
+  private rollMyOffer(): void {
+    const tiers = versusOfferTiers(this.offerRound);
+    this.offerTier = tiers[tiers.length - 1]; // badge shows the strongest tier on offer
+    const seed = `${this.roundSeed(this.offerRound)}:offer:me:s${this.offerSalt}`;
+    this.offers = rollOfferTiers(tiers, makeRng(seed), this.myOwned);
+  }
+
+  /** Spend a reroll token to draw a fresh offer for the current pick. Returns
+   *  false (no-op) outside the augment phase or when no tokens remain. */
+  reroll(_nowMs?: number): boolean {
+    if (this.phase !== 'augment' || this.rerollsLeft <= 0) return false;
+    this.rerollsLeft--;
+    this.offerSalt++;
+    this.rollMyOffer();
+    return true;
+  }
+
   /** Human (or the auto-pick timer) picks an augment; the bot auto-picks its
-   *  own; next round begins. */
+   *  own; the round the offer preceded begins. */
   pickAugment(id: string, _nowMs?: number): void {
     if (this.phase !== 'augment') return;
     this.myOwned.push(id);
-    const tier = this.offerTier ?? tierForRound(this.round + 1);
-    const botOffers = rollOffer(tier, makeRng(`${this.roundSeed(this.round + 1)}:offer:bot`), this.botOwned);
+    const tiers = versusOfferTiers(this.offerRound);
+    const botOffers = rollOfferTiers(
+      tiers,
+      makeRng(`${this.roundSeed(this.offerRound)}:offer:bot`),
+      this.botOwned,
+    );
     if (botOffers.length > 0) this.botOwned.push(botOffers[this.botRng.int(botOffers.length)]);
-    this.round++;
+    this.round = this.offerRound;
     this.beginRound();
   }
 
@@ -281,6 +330,7 @@ export class VersusMatch {
       lastRound: this.lastRound ? { ...this.lastRound } : null,
       offers: [...this.offers],
       offerTier: this.offerTier,
+      rerollsLeft: this.rerollsLeft,
       myOwned: [...this.myOwned],
       winner: this.winner,
     };

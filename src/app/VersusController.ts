@@ -162,6 +162,18 @@ export class VersusController {
     sfx.pick();
   }
 
+  /** Spend a reroll token on the current augment offer (no-op if none left). */
+  reroll(): void {
+    if (!this.match) return;
+    if (this.match.reroll(this.clock.now())) {
+      const snap = this.match.snapshot();
+      const st = useGameStore.getState();
+      st.setOffers(snap.offers, snap.offerTier ?? 'silver');
+      st.setRerollsLeft(snap.rerollsLeft);
+      sfx.pick();
+    }
+  }
+
   pause(): void {
     if (this.clock.paused) return;
     this.clock.pause();
@@ -240,6 +252,7 @@ export class VersusController {
       st.setPhase('roundCheck');
     } else if (snap.phase === 'augment') {
       st.setOffers(snap.offers, snap.offerTier ?? 'silver');
+      st.setRerollsLeft(snap.rerollsLeft);
       vs.setOverlayRemaining(snap.phaseRemainingMs);
       st.setPhase('augment');
     }

@@ -670,6 +670,30 @@ body {
   font-size: 13px;
   margin: 0;
 }
+.aug-reroll {
+  margin-top: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+  background: #f3f4f7;
+  border: 1px solid #d9dde3;
+  border-radius: 999px;
+  padding: 6px 16px;
+  cursor: pointer;
+  transition:
+    background 0.12s ease,
+    transform 0.08s ease;
+}
+.aug-reroll:hover:not(:disabled) {
+  background: #e8eaef;
+}
+.aug-reroll:active:not(:disabled) {
+  transform: scale(0.96);
+}
+.aug-reroll:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
 .tier-badge {
   display: inline-block;
   font-size: 12px;

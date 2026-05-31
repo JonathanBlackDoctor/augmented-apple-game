@@ -1,0 +1,870 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>증강 사과게임 · UI 디자인 시안 — 햇살 과수원 (Sunlit Orchard)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,400;0,600;1,400&family=Gowun+Batang:wght@400;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css" />
+<style>
+/* ============================================================
+   증강 사과게임 — UI 디자인 시안
+   테마: "햇살 과수원 (Sunlit Orchard)" · 방향 A
+   따뜻한 크림 페이퍼 · 윤기 도는 과수원 사과 · 허니골드 악센트 · 낮→밤 하늘
+   토큰 출처: src/ui/styles.css + src/board/theme.ts (단일 진실 소스)
+   이 파일은 의뢰서 §4 화면 전체를 현재 테마로 그린 정적 시안입니다.
+   ============================================================ */
+:root {
+  /* ── Sunlit Orchard 토큰 (styles.css와 동기화) ── */
+  --paper: #fbf5e9;
+  --paper-2: #fffdf7;
+  --ink: #3a2a1e;
+  --ink-2: #836a54;
+  --line: #eadcc4;
+  --edge-strong: #d8c6a8;
+
+  --apple: #e04a36;
+  --apple-2: #b8311e;
+  --apple-hi: #ff9a77;
+  --apple-shadow: rgba(224, 74, 54, 0.34);
+
+  --gold: #e3a12a;
+  --gold-2: #b97f12;
+  --gold-bg: #fbefd2;
+  --leaf: #5e9a4e;
+
+  --valid: #3e9f63;
+  --valid-bg: rgba(62, 159, 99, 0.14);
+  --valid-ring: rgba(62, 159, 99, 0.28);
+
+  --prism-a: #8a7dff;
+  --prism-b: #6ad7d0;
+  --prism-c: #ffd97a;
+
+  --track: #eadcc4;
+  --radius: 18px;
+  --radius-sm: 14px;
+  --shadow: 0 16px 40px rgba(120, 80, 40, 0.16);
+  --shadow-sm: 0 6px 20px rgba(120, 80, 40, 0.12);
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --font: 'Pretendard Variable', 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --display: 'Newsreader', 'Gowun Batang', Georgia, serif;
+
+  /* canvas */
+  --canvas: #f0eee9;
+  --grid: rgba(120, 90, 60, 0.07);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  font-family: var(--font);
+  color: var(--ink);
+  background:
+    linear-gradient(0deg, var(--grid) 1px, transparent 1px) 0 0 / 32px 32px,
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px) 0 0 / 32px 32px,
+    var(--canvas);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* ── canvas chrome ── */
+.canvas { max-width: 1240px; margin: 0 auto; padding: 46px 28px 120px; }
+.masthead {
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 30px 34px; margin-bottom: 40px;
+  background:
+    radial-gradient(140% 100% at 50% -20%, #fffdf7, transparent 60%),
+    linear-gradient(180deg, var(--paper-2), var(--paper));
+  border: 1px solid var(--line); border-radius: 26px; box-shadow: var(--shadow);
+}
+.masthead .kicker { font-size: 12px; font-weight: 800; letter-spacing: 2px; color: var(--gold-2); text-transform: uppercase; }
+.masthead h1 { font-family: var(--display); font-weight: 600; font-size: 38px; margin: 2px 0 0; letter-spacing: -0.5px; }
+.masthead p { color: var(--ink-2); font-size: 15px; line-height: 1.6; margin: 6px 0 0; max-width: 760px; }
+.masthead .tagrow { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+.tag { font-size: 12px; font-weight: 700; padding: 5px 12px; border-radius: 999px; background: var(--paper); border: 1px solid var(--line); color: var(--ink-2); }
+.tag.warm { background: var(--gold-bg); color: var(--gold-2); border-color: transparent; }
+
+.section { margin: 52px 0 0; }
+.section > .sec-head { display: flex; align-items: baseline; gap: 12px; margin: 0 0 20px; padding-left: 2px; }
+.section > .sec-head .no { font-family: var(--display); font-size: 22px; color: var(--gold-2); font-weight: 600; }
+.section > .sec-head h2 { font-family: var(--display); font-weight: 600; font-size: 24px; margin: 0; }
+.section > .sec-head .desc { color: var(--ink-2); font-size: 13px; }
+
+.row { display: flex; flex-wrap: wrap; gap: 34px; align-items: flex-start; }
+
+/* artboard frame + caption */
+.board { display: flex; flex-direction: column; gap: 10px; }
+.board .cap { font-size: 12px; font-weight: 700; color: var(--ink-2); letter-spacing: 0.3px; }
+.board .cap .st { color: var(--gold-2); }
+.frame {
+  position: relative; overflow: hidden;
+  border-radius: 28px; border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  /* living day→night sky backdrop */
+  background:
+    radial-gradient(120% 80% at 50% -10%, #fff7e6 0%, #ffe6c4 24%, #ffd1a3 42%, #f6b98e 60%, transparent 76%),
+    linear-gradient(180deg, #aee0f5 0%, #cdeaf3 40%, #fbf5e9 78%, #fbf5e9 100%);
+}
+.frame::after { /* soft hill silhouette */
+  content: ''; position: absolute; left: -10%; right: -10%; bottom: -22%;
+  height: 46%; border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+  background: radial-gradient(120% 100% at 50% 0%, #cfe6b4, #aacd8a 60%, #94bd74);
+  opacity: 0.55; pointer-events: none;
+}
+.frame .sun { position: absolute; top: 26px; right: 30px; width: 56px; height: 56px; border-radius: 50%;
+  background: radial-gradient(circle at 40% 38%, #fff6cf, #ffd86b 60%, #f9c23c);
+  box-shadow: 0 0 40px 10px rgba(255, 210, 110, 0.45); pointer-events: none; }
+.frame .pip { position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: rgba(0,0,0,0); } /* notch placeholder */
+.frame .inner { position: relative; z-index: 2; height: 100%; display: flex; flex-direction: column; }
+
+/* phone vs desktop sizing */
+.phone { width: 320px; height: 660px; }
+.wide  { width: 720px; height: 460px; }
+
+/* ============================================================
+   SHARED COMPONENTS (styles.css mirror)
+   ============================================================ */
+.btn {
+  appearance: none; border: 1px solid transparent; border-radius: 14px;
+  padding: 13px 18px; font-family: var(--font); font-size: 15px; font-weight: 700;
+  color: var(--ink); cursor: default; width: 100%;
+}
+.btn.primary { background: var(--apple); color: #fff; box-shadow: 0 8px 22px var(--apple-shadow); }
+.btn.gold { background: var(--gold); color: #fff; box-shadow: 0 8px 22px rgba(227,161,42,0.32); }
+.btn.versus { background: var(--ink); color: var(--paper-2); }
+.btn.online { background: var(--valid); color: #fff; box-shadow: 0 8px 22px var(--valid-ring); }
+.btn.rank { background: var(--paper-2); color: var(--ink); border-color: var(--line); }
+.btn.ghost { background: transparent; border-color: var(--line); color: var(--ink); }
+.btn.small { padding: 9px 14px; font-size: 13px; }
+.btn-row { display: flex; gap: 10px; }
+.btn-row .btn { flex: 1; }
+
+.chip { font-size: 12px; font-weight: 800; padding: 4px 10px; border-radius: 999px; display: inline-flex; align-items: center; gap: 5px; }
+.chip.round { color: var(--ink-2); background: rgba(255,253,247,0.82); border: 1px solid var(--line); }
+.chip.combo { color: #fff; background: var(--gold); box-shadow: var(--shadow-sm); }
+
+.tier-badge { display: inline-block; font-size: 12px; font-weight: 800; padding: 4px 12px; border-radius: 999px; letter-spacing: 1px; }
+.tier-badge.silver { background: #eef1f4; color: #51606e; }
+.tier-badge.gold { background: var(--gold-bg); color: var(--gold-2); }
+.tier-badge.prismatic { background: linear-gradient(100deg, #efeaff, #e4fbff); color: #6a4bd6; }
+
+/* ============================================================
+   HOME
+   ============================================================ */
+.home { align-items: center; justify-content: center; padding: 24px; flex: 1; display: flex; }
+.home-card {
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  gap: 12px; padding: 34px 28px 24px; width: 100%;
+  background: rgba(255, 253, 247, 0.82);
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  border: 1px solid var(--line); border-radius: 26px; box-shadow: var(--shadow);
+}
+.logo { filter: drop-shadow(0 8px 18px var(--apple-shadow)); }
+.title { font-family: var(--display); font-size: 30px; font-weight: 600; letter-spacing: -0.5px; margin: 2px 0 0; }
+.subtitle { color: var(--ink-2); font-size: 14px; margin: 0; line-height: 1.5; }
+.subtitle b { color: var(--apple); }
+.home-actions { display: flex; flex-direction: column; gap: 10px; width: 100%; margin-top: 8px; }
+.best { color: var(--gold-2); font-weight: 700; font-size: 14px; margin: 6px 0 0; }
+.hint { color: var(--ink-2); font-size: 12px; margin: 2px 0 0; }
+.home-tools { display: flex; gap: 8px; width: 100%; margin-top: 4px; }
+
+/* ============================================================
+   APPLE BOARD (CSS reproduction of the Pixi board)
+   ============================================================ */
+.game { padding: 8px 10px 12px; gap: 8px; flex: 1; display: flex; flex-direction: column; }
+.hud { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; padding: 4px 4px 0; }
+.hud-side { display: flex; align-items: baseline; gap: 6px; }
+.hud-side.right { justify-content: flex-end; }
+.score-val { font-size: 26px; font-weight: 800; letter-spacing: -0.5px; font-variant-numeric: tabular-nums; color: var(--apple); }
+.score-unit { font-size: 12px; color: var(--ink-2); }
+.hud-center { display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 120px; }
+.time-bar { width: 100%; height: 8px; border-radius: 999px; background: var(--track); overflow: hidden; }
+.time-fill { height: 100%; border-radius: 999px; background: var(--valid); }
+.time-bar.low .time-fill { background: var(--apple); }
+.time-num { font-size: 13px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.time-num.low { color: var(--apple); }
+
+.board-host { position: relative; flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; }
+.board {
+  display: grid; gap: 0;
+  padding: 10px; border-radius: var(--radius);
+  background: linear-gradient(180deg, rgba(255,253,247,0.7), rgba(255,253,247,0.5));
+  border: 1px solid var(--line); box-shadow: var(--shadow-sm);
+  position: relative;
+}
+/* apple cell */
+.ap {
+  position: relative; display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-variant-numeric: tabular-nums;
+}
+.ap .body {
+  position: absolute; left: 8%; right: 8%; top: 12%; bottom: 6%;
+  border-radius: 50% 50% 48% 48% / 54% 54% 46% 46%;
+  background:
+    radial-gradient(60% 46% at 50% 16%, var(--apple-hi), transparent 60%),
+    linear-gradient(178deg, #e85540 6%, var(--apple) 52%, var(--apple-2));
+  box-shadow: inset 0 -2px 3px rgba(120,30,16,0.35), 0 1px 2px rgba(120,42,22,0.28);
+}
+.ap .leaf {
+  position: absolute; top: 4%; left: 56%; width: 26%; height: 20%;
+  background: var(--leaf); border-radius: 0 100% 0 100%; transform: rotate(-12deg);
+  z-index: 2;
+}
+.ap .num { position: relative; z-index: 3; color: #fff4ec; text-shadow: 0 1px 1px rgba(120,30,16,0.6); }
+/* golden / wild variants */
+.ap.golden .body { background: radial-gradient(60% 46% at 50% 16%, #ffe7a2, transparent 60%), linear-gradient(178deg, #f3c14e 6%, var(--gold) 52%, var(--gold-2)); }
+.ap.golden .num { text-shadow: 0 1px 1px rgba(150,100,10,0.55); }
+.ap.wild .body { background: radial-gradient(60% 46% at 50% 16%, #b9b1ff, transparent 60%), linear-gradient(178deg, #9a8dff 6%, var(--prism-a) 52%, #5b4fd6); }
+.ap.empty .body, .ap.empty .leaf, .ap.empty .num { display: none; }
+.ap.empty::after { content: ''; position: absolute; left: 26%; right: 26%; top: 30%; bottom: 26%; border-radius: 50%; background: rgba(120,80,40,0.06); }
+
+/* selection box overlay */
+.sel { position: absolute; border-radius: 12px; pointer-events: none; }
+.sel.progress { border: 2px dashed var(--ink); background: rgba(58,42,30,0.06); }
+.sel.valid { border: 2.5px solid var(--valid); background: var(--valid-bg); box-shadow: 0 0 0 4px var(--valid-ring); }
+.sel .seltag {
+  position: absolute; top: -11px; left: 50%; transform: translateX(-50%);
+  font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 999px; white-space: nowrap;
+}
+.sel.valid .seltag { background: var(--valid); color: #fff; }
+.sel.progress .seltag { background: var(--ink); color: var(--paper-2); }
+
+/* burst particles (clear effect) */
+.burst { position: absolute; pointer-events: none; }
+.burst i { position: absolute; width: 6px; height: 6px; border-radius: 50%; background: var(--apple); }
+.burst i:nth-child(2) { background: var(--apple-hi); }
+.burst i:nth-child(3) { background: var(--gold); }
+
+/* owned-augment sidebar */
+.owned { position: absolute; top: 50%; left: 8px; transform: translateY(-50%); display: flex; flex-direction: column; gap: 6px; z-index: 4; }
+.owned-chip { display: flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 999px; background: var(--paper-2); border: 1.5px solid var(--line); box-shadow: var(--shadow-sm); font-size: 10px; font-weight: 700; }
+.owned-chip.gold { border-color: var(--gold); background: linear-gradient(180deg, var(--gold-bg), var(--paper-2) 70%); }
+.owned-chip.prismatic { border-color: transparent; background: linear-gradient(var(--paper-2),var(--paper-2)) padding-box, linear-gradient(125deg, var(--prism-a), var(--prism-b), var(--prism-c)) border-box; }
+
+/* ============================================================
+   OVERLAYS · AUGMENT SELECT · RESULT
+   ============================================================ */
+.overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(251,245,233,0.62); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); z-index: 5; }
+.panel { background: var(--paper-2); border: 1px solid var(--line); border-radius: 24px; box-shadow: var(--shadow); }
+
+.augment-panel { padding: 22px 18px; width: 100%; }
+.aug-head { text-align: center; margin-bottom: 16px; }
+.aug-head h2 { margin: 8px 0 4px; font-family: var(--display); font-size: 22px; font-weight: 600; }
+.aug-sub { color: var(--ink-2); font-size: 12px; margin: 0; }
+.aug-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.aug-grid.stack { grid-template-columns: 1fr; }
+.aug-card { display: flex; flex-direction: column; gap: 7px; align-items: flex-start; text-align: left; padding: 16px 14px; border-radius: var(--radius); background: var(--paper-2); border: 1.5px solid var(--line); position: relative; overflow: hidden; }
+.aug-card.silver { border-color: #d7dde3; }
+.aug-card.gold { border-color: var(--gold); background: linear-gradient(180deg, var(--gold-bg), var(--paper-2) 60%); }
+.aug-card.prismatic { border-color: transparent; background: linear-gradient(var(--paper-2),var(--paper-2)) padding-box, linear-gradient(125deg, var(--prism-a), var(--prism-b), var(--prism-c)) border-box; }
+.aug-card.prismatic::after { content:''; position:absolute; inset:0; background: linear-gradient(125deg, transparent 35%, rgba(255,255,255,0.55) 50%, transparent 65%); pointer-events:none; }
+.aug-icon { font-size: 22px; }
+.aug-fam { font-size: 10px; font-weight: 800; letter-spacing: 1px; color: var(--ink-2); text-transform: uppercase; }
+.aug-name { font-family: var(--display); font-size: 18px; font-weight: 600; }
+.aug-desc { font-size: 12px; color: var(--ink-2); line-height: 1.45; }
+.aug-card .picktag { position: absolute; top: 10px; right: 10px; font-size: 10px; font-weight: 800; color: var(--valid); background: var(--valid-bg); padding: 2px 8px; border-radius: 999px; }
+
+.result-card { padding: 28px 24px; text-align: center; width: 100%; }
+.result-title { margin: 0; font-family: var(--display); font-size: 24px; font-weight: 600; color: var(--valid); }
+.result-card.normal .result-title { color: var(--ink-2); }
+.big-score { font-size: 58px; font-weight: 900; letter-spacing: -2px; margin: 6px 0 2px; color: var(--ink); font-variant-numeric: tabular-nums; }
+.big-score .unit { font-size: 18px; color: var(--ink-2); margin-left: 6px; letter-spacing: 0; }
+.best-line { color: var(--ink-2); font-size: 13px; margin: 0 0 16px; }
+.nr-badge { display: inline-flex; gap: 6px; align-items: center; font-size: 12px; font-weight: 800; color: var(--gold-2); background: var(--gold-bg); padding: 4px 12px; border-radius: 999px; margin-bottom: 6px; }
+
+/* versus */
+.versus-hud { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; padding: 6px; }
+.vs-side { display: flex; flex-direction: column; gap: 2px; }
+.vs-side.opp { align-items: flex-end; }
+.vs-label { font-size: 11px; color: var(--ink-2); }
+.vs-score { font-size: 24px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1; }
+.vs-score.me { color: var(--apple); }
+.vs-wins { font-weight: 800; font-variant-numeric: tabular-nums; color: var(--gold-2); }
+.ai-mini { position: absolute; top: 10px; right: 10px; z-index: 3; border-radius: 12px; overflow: hidden; border: 1px solid var(--edge-strong); box-shadow: var(--shadow-sm); background: var(--paper-2); width: 116px; }
+.ai-mini-bar { display: flex; justify-content: space-between; gap: 8px; padding: 3px 8px; font-size: 10px; font-weight: 800; background: var(--gold-bg); border-bottom: 1px solid var(--line); }
+.ai-mini-name { color: var(--gold-2); letter-spacing: 1px; }
+.ai-mini-score { color: var(--apple); }
+.ai-mini .mini-board { display: grid; gap: 1px; padding: 4px; }
+.ai-mini .mc { aspect-ratio: 1; border-radius: 50%; background: linear-gradient(178deg, #e85540, var(--apple-2)); }
+
+.vs-final { display: flex; align-items: center; justify-content: center; gap: 16px; margin: 12px 0; }
+.vs-final-side { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.vs-final-side .s { font-size: 34px; font-weight: 900; font-variant-numeric: tabular-nums; }
+.vs-final-side.win .s { color: var(--apple); }
+.vs-colon { font-size: 26px; opacity: 0.4; }
+.mmr-line { font-weight: 700; margin-top: 4px; color: var(--valid); }
+
+.countdown { font-family: var(--display); font-size: 92px; font-weight: 600; color: #fff; text-shadow: 0 2px 24px rgba(58,42,30,0.5); }
+
+/* lobby / nickname / inputs */
+.lobby-card { padding: 24px 22px; width: 100%; display: flex; flex-direction: column; gap: 12px; text-align: center; }
+.lobby-card h2 { margin: 0; font-family: var(--display); font-weight: 600; }
+.room-code { font-size: 36px; font-weight: 800; letter-spacing: 8px; color: var(--apple); font-variant-numeric: tabular-nums; }
+.code-input, .nick-input { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; color: var(--ink); padding: 11px; font-size: 18px; text-align: center; width: 100%; font-family: var(--font); }
+.code-input { letter-spacing: 4px; text-transform: uppercase; }
+.spinner { width: 26px; height: 26px; border: 3px solid var(--line); border-top-color: var(--apple); border-radius: 50%; margin: 6px auto; }
+
+/* leaderboard */
+.lb-list { list-style: none; margin: 6px 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.lb-row { display: grid; grid-template-columns: 26px 26px 1fr auto auto; align-items: center; gap: 8px; padding: 8px 10px; background: var(--paper); border: 1px solid var(--line); border-radius: 10px; font-size: 13px; }
+.lb-row.me { background: var(--gold-bg); border-color: var(--gold); }
+.lb-rank { font-weight: 800; color: var(--apple); text-align: center; }
+.lb-nick { text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.lb-tier { font-size: 11px; color: var(--ink-2); }
+.lb-mmr { font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* toast */
+.toast { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 12px; background: var(--ink); color: var(--paper-2); font-size: 13px; font-weight: 600; box-shadow: var(--shadow); }
+
+/* ============================================================
+   FOUNDATION SWATCHES / ICONS
+   ============================================================ */
+.swatches { display: flex; flex-wrap: wrap; gap: 14px; }
+.swatch { width: 92px; }
+.swatch .chipc { height: 56px; border-radius: 14px; border: 1px solid rgba(0,0,0,0.06); box-shadow: var(--shadow-sm); }
+.swatch .nm { font-size: 11px; font-weight: 700; margin-top: 6px; }
+.swatch .hx { font-size: 10px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+
+.typescale { display: flex; flex-direction: column; gap: 10px; background: var(--paper-2); border: 1px solid var(--line); border-radius: 18px; padding: 22px 24px; box-shadow: var(--shadow-sm); }
+.typescale .t-display { font-family: var(--display); font-size: 34px; font-weight: 600; }
+.typescale .t-h { font-family: var(--display); font-size: 22px; font-weight: 600; }
+.typescale .t-body { font-size: 15px; }
+.typescale .t-cap { font-size: 12px; color: var(--ink-2); }
+.typescale .t-num { font-variant-numeric: tabular-nums; font-size: 26px; font-weight: 800; color: var(--apple); }
+
+.mark-grid { display: flex; flex-wrap: wrap; gap: 14px; }
+.mark { width: 104px; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 16px 8px; background: var(--paper-2); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow-sm); }
+.mark .glyph { width: 52px; height: 52px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 26px; }
+.mark .glyph.time { background: #eaf3ff; }
+.mark .glyph.combo { background: #ffeee2; }
+.mark .glyph.board { background: var(--gold-bg); }
+.mark .glyph.rule { background: #eef6ec; }
+.mark .glyph.risk { background: #f3eeff; }
+.mark .glyph.disrupt { background: #fdeaea; }
+.mark .mlabel { font-size: 12px; font-weight: 800; }
+.mark .mdesc { font-size: 10px; color: var(--ink-2); text-align: center; line-height: 1.35; }
+
+.ranks { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-start; }
+.rank-badge { width: 96px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.shield { width: 64px; height: 72px; display: flex; align-items: center; justify-content: center; font-size: 26px; color: #fff;
+  clip-path: polygon(50% 0, 100% 16%, 100% 64%, 50% 100%, 0 64%, 0 16%);
+  box-shadow: var(--shadow-sm); }
+.shield.iron { background: linear-gradient(160deg, #8c8c8c, #5e5e5e); }
+.shield.bronze { background: linear-gradient(160deg, #cd8a4e, #9c5f2c); }
+.shield.silver { background: linear-gradient(160deg, #d7dde3, #9aa6b2); }
+.shield.gold { background: linear-gradient(160deg, #f6cf5e, #d99e1d); }
+.shield.platinum { background: linear-gradient(160deg, #8fe6d6, #46b3a3); }
+.shield.diamond { background: linear-gradient(160deg, #9ad2ff, #5aa0e6); }
+.shield.master { background: linear-gradient(160deg, var(--prism-a), var(--prism-b)); }
+.rank-badge .rn { font-size: 12px; font-weight: 800; }
+.rank-badge .rr { font-size: 10px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+
+.note { background: var(--gold-bg); border-left: 4px solid var(--gold); border-radius: 0 12px 12px 0; padding: 14px 18px; font-size: 13px; color: var(--ink); line-height: 1.6; max-width: 720px; }
+.note b { color: var(--gold-2); }
+.footer { margin-top: 70px; text-align: center; color: var(--ink-2); font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="canvas">
+
+  <!-- ============ MASTHEAD ============ -->
+  <div class="masthead">
+    <div class="kicker">증강 사과게임 · Augmented Apple Game</div>
+    <h1>UI 디자인 시안 — 햇살 과수원</h1>
+    <p>의뢰서(§4 화면 목록·§5 보드 아트·§6 증강·§7 랭크 티어)를 바탕으로, 현재 디자인 테마
+       <b>“햇살 과수원 (Sunlit Orchard)”</b>에 맞춰 전 화면·전 상태를 정적 시안으로 그렸습니다.
+       따뜻한 크림 페이퍼 위 윤기 도는 과수원 사과, 허니골드 악센트, 낮→밤 하늘 배경이 일관된 언어입니다.
+       토큰은 <code>src/ui/styles.css</code> + <code>src/board/theme.ts</code>를 그대로 반영했습니다.</p>
+    <div class="tagrow">
+      <span class="tag warm">방향 A · Sunlit Orchard</span>
+      <span class="tag">크림 페이퍼 #fbf5e9</span>
+      <span class="tag">과수원 레드 #e04a36</span>
+      <span class="tag">허니골드 #e3a12a</span>
+      <span class="tag">유효 그린 #3e9f63</span>
+      <span class="tag">프리즘 #8a7dff→#6ad7d0</span>
+    </div>
+  </div>
+
+  <!-- ============ 00 FOUNDATION ============ -->
+  <div class="section">
+    <div class="sec-head"><span class="no">00</span><h2>파운데이션</h2><span class="desc">컬러 · 타이포 · 모션</span></div>
+    <div class="row">
+      <div class="swatches">
+        <div class="swatch"><div class="chipc" style="background:#fbf5e9"></div><div class="nm">paper</div><div class="hx">#fbf5e9</div></div>
+        <div class="swatch"><div class="chipc" style="background:#fffdf7"></div><div class="nm">paper-2</div><div class="hx">#fffdf7</div></div>
+        <div class="swatch"><div class="chipc" style="background:#3a2a1e"></div><div class="nm">ink</div><div class="hx">#3a2a1e</div></div>
+        <div class="swatch"><div class="chipc" style="background:#836a54"></div><div class="nm">ink-2</div><div class="hx">#836a54</div></div>
+        <div class="swatch"><div class="chipc" style="background:#e04a36"></div><div class="nm">apple</div><div class="hx">#e04a36</div></div>
+        <div class="swatch"><div class="chipc" style="background:#ff9a77"></div><div class="nm">apple-hi</div><div class="hx">#ff9a77</div></div>
+        <div class="swatch"><div class="chipc" style="background:#e3a12a"></div><div class="nm">gold</div><div class="hx">#e3a12a</div></div>
+        <div class="swatch"><div class="chipc" style="background:#5e9a4e"></div><div class="nm">leaf</div><div class="hx">#5e9a4e</div></div>
+        <div class="swatch"><div class="chipc" style="background:#3e9f63"></div><div class="nm">valid</div><div class="hx">#3e9f63</div></div>
+        <div class="swatch"><div class="chipc" style="background:linear-gradient(125deg,#8a7dff,#6ad7d0,#ffd97a)"></div><div class="nm">prism</div><div class="hx">grad</div></div>
+      </div>
+      <div class="typescale">
+        <div class="t-display">증강 사과게임</div>
+        <div class="t-h">라운드 3 · 증강 선택</div>
+        <div class="t-body">합이 10이 되도록 사과를 드래그해 담으세요.</div>
+        <div class="t-cap">계열 라벨 · 안내 문구 · 리롤 없음</div>
+        <div class="t-num">1234567890</div>
+        <div class="t-cap">제목 = Newsreader/Gowun Batang · 본문 = Pretendard · 숫자 = tabular-nums</div>
+      </div>
+    </div>
+    <div class="note" style="margin-top:18px;">
+      <b>모션 원칙</b> — 이징 <code>cubic-bezier(.22,1,.36,1)</code> “soft premium” 스프링. 등장 rise(14px+scale .98) ·
+      제거 pop(scale .6→1) · 저시간 pulse · 프리즘 카드 shine. 과한 blur/filter는 모바일 60fps를 위해 절제합니다.
+    </div>
+  </div>
+
+  <!-- ============ 01 HOME ============ -->
+  <div class="section">
+    <div class="sec-head"><span class="no">01</span><h2>홈</h2><span class="desc">로고 · CTA 3종 · 최고 점수</span></div>
+    <div class="row">
+      <div class="board">
+        <div class="cap">홈 · 모바일 320px</div>
+        <div class="frame phone"><div class="sun"></div><div class="inner">
+          <div class="home">
+            <div class="home-card">
+              <div class="logo">
+                <svg viewBox="0 0 64 64" width="72" height="72">
+                  <path d="M32 18c-7-9-22-6-22 8 0 12 11 24 22 24s22-12 22-24c0-14-15-17-22-8z" fill="var(--apple)"/>
+                  <path d="M34 9c4-3 9-2 11 1-3 3-8 3-11-1z" fill="var(--leaf)"/>
+                  <text x="32" y="43" text-anchor="middle" fill="#fff" style="font:800 19px var(--font)">10</text>
+                </svg>
+              </div>
+              <h1 class="title">증강 사과게임</h1>
+              <p class="subtitle">합이 <b>10</b>이 되도록 사과를 드래그해 담으세요</p>
+              <div class="home-actions">
+                <button class="btn versus">AI와 대결 · 5라운드</button>
+                <button class="btn online">친구와 1:1 대결</button>
+                <button class="btn rank">랭킹 보기</button>
+              </div>
+              <p class="best">최고 점수 248</p>
+              <p class="hint">데스크톱·모바일 모두 드래그로 플레이</p>
+              <div class="home-tools">
+                <button class="btn ghost small">⚙ 설정</button>
+                <button class="btn ghost small">? 도움말</button>
+              </div>
+            </div>
+          </div>
+        </div></div>
+      </div>
+
+      <div class="board">
+        <div class="cap">최초 진입 · 닉네임 설정 <span class="st">(온라인 단계)</span></div>
+        <div class="frame phone"><div class="sun"></div><div class="inner">
+          <div class="home">
+            <div class="lobby-card panel">
+              <h2>반가워요!</h2>
+              <p class="aug-sub">대결에 쓸 닉네임을 정해 주세요</p>
+              <input class="nick-input" value="사과러버" />
+              <button class="btn primary">시작하기</button>
+              <p class="hint">언제든 설정에서 바꿀 수 있어요</p>
+            </div>
+          </div>
+        </div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 02 GAME BOARD + HUD ============ -->
+  <div class="section">
+    <div class="sec-head"><span class="no">02</span><h2>게임 보드 & HUD</h2><span class="desc">선택 박스(진행/유효) · 콤보 · 잔여 ≤5초 · 보유 증강</span></div>
+    <div class="row">
+      <div class="board">
+        <div class="cap">플레이 중 · 데스크톱 <span class="st">(유효=10 선택 + 콤보)</span></div>
+        <div class="frame wide"><div class="inner">
+          <div class="game">
+            <div class="hud">
+              <div class="hud-side"><span class="score-val">86</span><span class="score-unit">점</span></div>
+              <div class="hud-center">
+                <span class="chip round">R 2<span style="opacity:.5">/5</span></span>
+                <div class="time-bar"><div class="time-fill" style="width:62%"></div></div>
+                <span class="time-num">18초</span>
+              </div>
+              <div class="hud-side right"><span class="chip combo">🔥 4 콤보</span></div>
+            </div>
+            <div class="board-host">
+              <div class="owned">
+                <div class="owned-chip gold">🍎 황금 사과</div>
+                <div class="owned-chip">⏱️ 잔상</div>
+                <div class="owned-chip">📏 친절</div>
+              </div>
+              <!-- board placeholder; JS fills it -->
+              <div class="board" id="board-play" style="grid-template-columns:repeat(12,1fr); width:430px;"></div>
+            </div>
+          </div>
+        </div></div>
+      </div>
+
+      <div class="board">
+        <div class="cap">잔여 ≤5초 · 경고 상태</div>
+        <div class="frame phone"><div class="inner">
+          <div class="game">
+            <div class="hud">
+              <div class="hud-side"><span class="score-val">132</span><span class="score-unit">점</span></div>
+              <div class="hud-center">
+                <span class="chip round">R 5<span style="opacity:.5">/5</span></span>
+                <div class="time-bar low"><div class="time-fill" style="width:13%"></div></div>
+                <span class="time-num low">4초</span>
+              </div>
+              <div class="hud-side right"><span class="chip round">⏸</span></div>
+            </div>
+            <div class="board-host">
+              <div class="board" id="board-low" style="grid-template-columns:repeat(9,1fr); width:248px;"></div>
+            </div>
+          </div>
+        </div></div>
+      </div>
+    </div>
+    <div class="note" style="margin-top:18px;">
+      <b>보드 아트(§5)</b> — 사과: 윤기 satin 보디 + 상단 하이라이트 + 잎. 숫자는 크림(#fff4ec) + 깊은 레드 그림자로
+      ~20px 셀에서도 또렷. 선택 박스: <b>진행</b>=잉크 점선/중립, <b>유효(=10)</b>=그린 실선+글로우(가장 중요한 긍정 신호).
+      제거 시 펑 터지는 파티클 버스트가 “손맛”의 핵심. 황금=점수 2배, 와일드=보라(아무 값).
+    </div>
+  </div>
+
+  <!-- ============ 03 AUGMENT SELECT ============ -->
+  <div class="section">
+    <div class="sec-head"><span class="no">03</span><h2>증강 선택</h2><span class="desc">실버 → 골드 → 프리즘 티어 위계 · 3장 중 1 · 리롤 없음</span></div>
+    <div class="row">
+      <div class="board">
+        <div class="cap">골드 티어 (R3·R4) · 데스크톱</div>
+        <div class="frame wide"><div class="inner">
+          <div class="overlay">
+            <div class="augment-panel panel">
+              <div class="aug-head">
+                <span class="tier-badge gold">골드</span>
+                <h2>라운드 3 · 증강 선택</h2>
+                <p class="aug-sub">하나를 골라 빌드를 쌓으세요 · 리롤 없음</p>
+              </div>
+              <div class="aug-grid">
+                <div class="aug-card gold">
+                  <span class="aug-icon">🍎</span>
+                  <span class="aug-fam">보드</span>
+                  <span class="aug-name">황금 사과</span>
+                  <span class="aug-desc">라운드당 황금 사과 2개. 담으면 점수 2배.</span>
+                </div>
+                <div class="aug-card gold">
+                  <span class="aug-icon">🔥</span>
+                  <span class="aug-fam">콤보</span>
+                  <span class="aug-name">연쇄</span>
+                  <span class="aug-desc">콤보 유지 시 점수 1.5×. 끊기면 리셋.</span>
+                </div>
+                <div class="aug-card gold">
+                  <span class="aug-icon">📏</span>
+                  <span class="aug-fam">룰</span>
+                  <span class="aug-name">11의 길</span>
+                  <span class="aug-desc">합 10·11 모두 인정.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div></div>
+      </div>
+
+      <div class="board">
+        <div class="cap">프리즘 티어 (R5) · 모바일 세로 스택 <span class="st">(shine 모션)</span></div>
+        <div class="frame phone"><div class="inner">
+          <div class="overlay">
+            <div class="augment-panel panel">
+              <div class="aug-head">
+                <span class="tier-badge prismatic">프리즘</span>
+                <h2>라운드 5 · 증강 선택</h2>
+                <p class="aug-sub">하나를 골라 빌드를 쌓으세요 · 리롤 없음</p>
+              </div>
+              <div class="aug-grid stack">
+                <div class="aug-card prismatic">
+                  <span class="picktag">보유 중</span>
+                  <span class="aug-fam">⏱️ 시간</span>
+                  <span class="aug-name">시간의 지배자</span>
+                  <span class="aug-desc">드래그하지 않는 동안 타이머 정지.</span>
+                </div>
+                <div class="aug-card prismatic">
+                  <span class="aug-fam">🎲 하이리스크</span>
+                  <span class="aug-name">유리 대포</span>
+                  <span class="aug-desc">점수 3×, 그러나 타이머 2배 속도.</span>
+                </div>
+                <div class="aug-card prismatic">
+                  <span class="aug-fam">📏 룰</span>
+                  <span class="aug-name">연금술</span>
+                  <span class="aug-desc">10의 배수면 모두 인정 (10·20·30…).</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 04 RESULT (SOLO) ============ -->
+  <div class="section">
+    <div class="sec-head"><span class="no">04</span><h2>결과 · 솔로</h2><span class="desc">신기록 / 일반</span></div>
+    <div class="row">
+      <div class="board">
+        <div class="cap">신기록 변형</div>
+        <div class="frame phone"><div class="sun"></div><div class="inner">
+          <div class="overlay">
+            <div class="result-card panel">
+              <span class="nr-badge">🏆 최고 기록!</span>
+              <div class="big-score">248<span class="unit">점</span></div>
+              <p class="best-line">이전 최고 211 · 5라운드</p>
+              <div class="btn-row">
+                <button class="btn ghost">홈으로</button>
+                <button class="btn primary">다시 하기</button>
+              </div>
+            </div>
+          </div>
+        </div></div>
+      </div>
+      <div class="board">
+        <div class="cap">일반 변형</div>
+        <div class="frame phone"><div class="sun"></div><div class="inner">
+          <div class="overlay">
+            <div class="result-card panel normal">
+              <h2 class="result-title">게임 종료</h2>
+              <div class="big-score">173<span class="unit">점</span></div>
+              <p class="best-line">최고 248 · 5라운드</p>
+              <div class="btn-row">
+                <button class="btn ghost">홈으로</button>
+                <button class="btn primary">다시 하기</button>
+              </div>
+            </div>
+          </div>
+        </div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 05 VERSUS ============ -->
+  <div class="section">
+    <div class="sec-head"><span class="no">05</span><h2>대결 · HUD & 결과</h2><span class="desc">5라운드 × 30초 · AI 미니뷰 · ΔMMR</span></div>
+    <div class="row">
+      <div class="board">
+        <div class="cap">대결 HUD · 데스크톱 <span class="st">(AI 미니뷰 PiP)</span></div>
+        <div class="frame wide"><div class="inner">
+          <div class="game">
+            <div class="versus-hud">
+              <div class="vs-side me"><span class="vs-label">나</span><span class="vs-score me">94</span></div>
+              <div class="hud-center">
+                <span class="vs-wins">2 : 1</span>
+                <div class="time-bar"><div class="time-fill" style="width:48%"></div></div>
+                <span class="time-num">R 4/5 · 14초</span>
+              </div>
+              <div class="vs-side opp"><span class="vs-label">아폴로 AI</span><span class="vs-score">88</span></div>
+            </div>
+            <div class="board-host">
+              <div class="ai-mini">
+                <div class="ai-mini-bar"><span class="ai-mini-name">상대</span><span class="ai-mini-score">88</span></div>
+                <div class="mini-board" id="mini-board" style="grid-template-columns:repeat(8,1fr)"></div>
+              </div>
+              <div class="board" id="board-vs" style="grid-template-columns:repeat(11,1fr); width:400px;"></div>
+            </div>
+          </div>
+        </div></div>
+      </div>
+
+      <div class="board">
+        <div class="cap">대결 결과 · 승리 (랭크)</div>
+        <div class="frame phone"><div class="sun"></div><div class="inner">
+          <div class="overlay">
+            <div class="result-card panel">
+              <h2 class="result-title">승리!</h2>
+              <div class="vs-final">
+                <div class="vs-final-side win"><span class="vs-label">나</span><span class="s">94</span></div>
+                <span class="vs-colon">:</span>
+                <div class="vs-final-side"><span class="vs-label">아폴로 AI</span><span class="s">88</span></div>
+              </div>
+              <p class="best-line">라운드 3 : 2</p>
+              <p class="mmr-line">MMR +18 · 실버 → 골드 승급!</p>
+              <div class="btn-row">
+                <button class="btn ghost">홈으로</button>
+                <button class="btn versus">다시 대결</button>
+              </div>
+            </div>
+          </div>
+        </div></div>
+      </div>
+
+      <div class="board">
+        <div class="cap">라운드 시작 · 카운트다운</div>
+        <div class="frame phone"><div class="sun"></div><div class="inner">
+          <div class="overlay" style="background:rgba(58,42,30,0.32)">
+            <div class="countdown">3</div>
+          </div>
+        </div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 06 ONLINE / SYSTEM ============ -->
+  <div class="section">
+    <div class="sec-head"><span class="no">06</span><h2>온라인 · 리더보드 · 시스템</h2><span class="desc">매칭 · 방 코드 · 랭킹 · 토스트</span></div>
+    <div class="row">
+      <div class="board">
+        <div class="cap">로비 · 방 코드</div>
+        <div class="frame phone"><div class="sun"></div><div class="inner">
+          <div class="home">
+            <div class="lobby-card panel">
+              <h2>친구와 1:1</h2>
+              <button class="btn primary">빠른 매칭</button>
+              <div style="display:flex;align-items:center;gap:8px;color:var(--ink-2);font-size:12px"><span style="flex:1;height:1px;background:var(--line)"></span>또는<span style="flex:1;height:1px;background:var(--line)"></span></div>
+              <p class="aug-sub" style="margin:0">비공개 방 코드</p>
+              <div class="room-code">7K2Q9F</div>
+              <input class="code-input" placeholder="코드 입력" value="" />
+              <button class="btn online">입장</button>
+            </div>
+          </div>
+        </div></div>
+      </div>
+
+      <div class="board">
+        <div class="cap">매칭 대기</div>
+        <div class="frame phone"><div class="sun"></div><div class="inner">
+          <div class="home">
+            <div class="lobby-card panel">
+              <h2>상대를 찾는 중…</h2>
+              <div class="spinner"></div>
+              <p class="aug-sub">평균 대기 8초 · 비슷한 MMR을 찾고 있어요</p>
+              <button class="btn ghost">취소</button>
+            </div>
+          </div>
+        </div></div>
+      </div>
+
+      <div class="board">
+        <div class="cap">리더보드 / 티어</div>
+        <div class="frame phone"><div class="sun"></div><div class="inner">
+          <div class="home" style="align-items:stretch">
+            <div class="lobby-card panel" style="text-align:left">
+              <h2 style="text-align:center">랭킹</h2>
+              <ul class="lb-list">
+                <li class="lb-row"><span class="lb-rank">1</span><span>🥇</span><span class="lb-nick">사과여신</span><span class="lb-tier">마스터</span><span class="lb-mmr">1842</span></li>
+                <li class="lb-row"><span class="lb-rank">2</span><span>🍎</span><span class="lb-nick">텐텐</span><span class="lb-tier">다이아</span><span class="lb-mmr">1703</span></li>
+                <li class="lb-row me"><span class="lb-rank">3</span><span>😎</span><span class="lb-nick">사과러버</span><span class="lb-tier">골드</span><span class="lb-mmr">1288</span></li>
+                <li class="lb-row"><span class="lb-rank">4</span><span>🦊</span><span class="lb-nick">콤보킹</span><span class="lb-tier">실버</span><span class="lb-mmr">1102</span></li>
+              </ul>
+              <div class="toast" style="align-self:center;margin-top:6px">📋 결과 링크를 복사했어요</div>
+            </div>
+          </div>
+        </div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 07 ICONOGRAPHY ============ -->
+  <div class="section">
+    <div class="sec-head"><span class="no">07</span><h2>아이코노그래피</h2><span class="desc">증강 계열 6종 · 증강 티어 배지 · 랭크 티어 7종</span></div>
+
+    <div class="cap" style="margin:0 0 12px">증강 계열 마크 6종 (각 색 정체성)</div>
+    <div class="mark-grid">
+      <div class="mark"><div class="glyph time">⏱️</div><div class="mlabel">시간</div><div class="mdesc">+시간 · 감속 · 정지</div></div>
+      <div class="mark"><div class="glyph combo">🔥</div><div class="mlabel">콤보</div><div class="mdesc">연속 · 배수 성장</div></div>
+      <div class="mark"><div class="glyph board">🍎</div><div class="mlabel">보드</div><div class="mdesc">황금·와일드·보충</div></div>
+      <div class="mark"><div class="glyph rule">📏</div><div class="mlabel">룰</div><div class="mdesc">합 규칙 변경</div></div>
+      <div class="mark"><div class="glyph risk">🎲</div><div class="mlabel">하이리스크</div><div class="mdesc">고위험 고수익</div></div>
+      <div class="mark"><div class="glyph disrupt">⚔️</div><div class="mlabel">견제</div><div class="mdesc">상대를 흔듦</div></div>
+    </div>
+
+    <div class="cap" style="margin:26px 0 12px">증강 티어 배지 — 실버 → 골드 → 프리즘 (효과 위계)</div>
+    <div class="row" style="gap:14px; align-items:center">
+      <span class="tier-badge silver">실버</span>
+      <span class="tier-badge gold">골드</span>
+      <span class="tier-badge prismatic">프리즘</span>
+      <span class="aug-sub" style="margin-left:8px">티어가 높을수록 효과가 강하고 화려 (R1·2 → R3·4 → R5)</span>
+    </div>
+
+    <div class="cap" style="margin:26px 0 12px">랭크 티어 배지 7종 — 아이언 → 마스터 <span class="st">(증강 티어와 시각적으로 구분)</span></div>
+    <div class="ranks">
+      <div class="rank-badge"><div class="shield iron">⛏️</div><div class="rn">아이언</div><div class="rr">&lt; 800</div></div>
+      <div class="rank-badge"><div class="shield bronze">🛡️</div><div class="rn">브론즈</div><div class="rr">800–999</div></div>
+      <div class="rank-badge"><div class="shield silver">⚔️</div><div class="rn">실버</div><div class="rr">1000–1199</div></div>
+      <div class="rank-badge"><div class="shield gold">👑</div><div class="rn">골드</div><div class="rr">1200–1399</div></div>
+      <div class="rank-badge"><div class="shield platinum">💠</div><div class="rn">플래티넘</div><div class="rr">1400–1599</div></div>
+      <div class="rank-badge"><div class="shield diamond">💎</div><div class="rn">다이아몬드</div><div class="rr">1600–1799</div></div>
+      <div class="rank-badge"><div class="shield master">🌟</div><div class="rn">마스터</div><div class="rr">≥ 1800</div></div>
+    </div>
+  </div>
+
+  <!-- ============ 08 BOARD ART KIT ============ -->
+  <div class="section">
+    <div class="sec-head"><span class="no">08</span><h2>보드 아트 키트</h2><span class="desc">사과 normal/golden/wild · 선택 박스 · 빈 칸</span></div>
+    <div class="row" style="align-items:center">
+      <div class="board" style="gap:6px"><div class="cap" style="text-align:center">기본</div>
+        <div class="board" style="grid-template-columns:1fr;width:84px"><div class="ap" style="height:84px;font-size:34px"><span class="body"></span><span class="leaf"></span><span class="num">7</span></div></div></div>
+      <div class="board" style="gap:6px"><div class="cap" style="text-align:center">황금 (×2)</div>
+        <div class="board" style="grid-template-columns:1fr;width:84px"><div class="ap golden" style="height:84px;font-size:34px"><span class="body"></span><span class="leaf"></span><span class="num">3</span></div></div></div>
+      <div class="board" style="gap:6px"><div class="cap" style="text-align:center">와일드</div>
+        <div class="board" style="grid-template-columns:1fr;width:84px"><div class="ap wild" style="height:84px;font-size:30px"><span class="body"></span><span class="leaf"></span><span class="num">★</span></div></div></div>
+      <div class="board" style="gap:6px"><div class="cap" style="text-align:center">빈 칸</div>
+        <div class="board" style="grid-template-columns:1fr;width:84px"><div class="ap empty" style="height:84px"></div></div></div>
+      <div class="board" style="gap:6px"><div class="cap" style="text-align:center">진행 중</div>
+        <div class="board" style="grid-template-columns:repeat(2,1fr);width:148px;position:relative;padding:10px">
+          <div class="ap" style="height:60px;font-size:24px"><span class="body"></span><span class="num">4</span></div>
+          <div class="ap" style="height:60px;font-size:24px"><span class="body"></span><span class="num">2</span></div>
+          <div class="sel progress" style="inset:6px"><span class="seltag">6 / 10</span></div>
+        </div></div>
+      <div class="board" style="gap:6px"><div class="cap" style="text-align:center">유효 (=10)</div>
+        <div class="board" style="grid-template-columns:repeat(2,1fr);width:148px;position:relative;padding:10px">
+          <div class="ap" style="height:60px;font-size:24px"><span class="body"></span><span class="num">6</span></div>
+          <div class="ap" style="height:60px;font-size:24px"><span class="body"></span><span class="num">4</span></div>
+          <div class="sel valid" style="inset:6px"><span class="seltag">합 10!</span>
+            <div class="burst" style="left:50%;top:50%"><i style="left:-14px;top:-10px"></i><i style="left:12px;top:-12px"></i><i style="left:4px;top:14px"></i></div>
+          </div>
+        </div></div>
+    </div>
+  </div>
+
+  <div class="footer">증강 사과게임 · UI 디자인 시안 v1.0 · 테마 “햇살 과수원 (Sunlit Orchard)” · 의뢰서 v1.0 기반 · 토큰 출처 styles.css + theme.ts</div>
+</div>
+
+<script>
+// Build the apple grids so legibility + density read true to the game.
+// mulberry32 — deterministic so boards look the same every load.
+function rng(seed){return function(){seed|=0;seed=(seed+0x6D2B79F5)|0;let t=Math.imul(seed^(seed>>>15),1|seed);t=(t+Math.imul(t^(t>>>7),61|t))^t;return((t^(t>>>14))>>>0)/4294967296;};}
+function fill(el, cols, rows, seed, opts){
+  opts = opts || {};
+  const r = rng(seed);
+  el.style.gridTemplateColumns = 'repeat('+cols+',1fr)';
+  const cellPx = (parseInt(el.style.width)||el.offsetWidth) / cols;
+  const fs = Math.max(9, Math.round(cellPx*0.48));
+  for(let i=0;i<cols*rows;i++){
+    const v = 1 + Math.floor(r()*9);
+    const cell = document.createElement('div');
+    cell.className = 'ap';
+    cell.style.height = cellPx + 'px';
+    cell.style.fontSize = fs + 'px';
+    // sprinkle a golden / wild apple if asked
+    if(opts.golden && i===opts.golden){cell.classList.add('golden');}
+    if(opts.wild && i===opts.wild){cell.classList.add('wild');}
+    cell.innerHTML = '<span class="body"></span>'+(i%7===0?'<span class="leaf"></span>':'')+'<span class="num">'+(cell.classList.contains('wild')?'★':v)+'</span>';
+    el.appendChild(cell);
+  }
+}
+function fillMini(el, cols, rows, seed){
+  const r = rng(seed);
+  for(let i=0;i<cols*rows;i++){const c=document.createElement('div');c.className='mc';if(r()<0.12)c.style.opacity='0';el.appendChild(c);}
+}
+window.addEventListener('DOMContentLoaded',function(){
+  const play = document.getElementById('board-play');
+  fill(play, 12, 8, 12345, {golden: 27, wild: 53});
+  // overlay a valid selection box on the play board
+  if(play){
+    const cell = play.offsetWidth/12;
+    const sel = document.createElement('div');
+    sel.className='sel valid';
+    sel.style.left = (10 + cell*3) + 'px'; sel.style.top = (10 + cell*2) + 'px';
+    sel.style.width = (cell*2 - 2) + 'px'; sel.style.height = (cell*2 - 2) + 'px';
+    sel.innerHTML = '<span class="seltag">합 10!</span>';
+    play.appendChild(sel);
+  }
+  fill(document.getElementById('board-low'), 9, 11, 999, {});
+  fill(document.getElementById('board-vs'), 11, 8, 4242, {golden: 40});
+  fillMini(document.getElementById('mini-board'), 8, 6, 77);
+});
+</script>
+</body>
+</html>

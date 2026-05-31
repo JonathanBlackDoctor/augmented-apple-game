@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>이파리 위치 튜너 — 꼭지에서 돋아나오듯</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css" />
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:linear-gradient(180deg,#FBF5E9,#F4EDDF);color:#3A2A1E;
+    font-family:'Pretendard Variable',-apple-system,sans-serif;padding:24px 22px 60px;}
+  h1{font-size:21px;margin:0 0 4px;letter-spacing:-.02em;}
+  .lead{font-size:13px;color:#7a6552;max-width:74ch;line-height:1.6;margin:0 0 18px;}
+  .lead b{color:#E04A36;}
+
+  .wrap{display:flex;gap:40px;flex-wrap:wrap;align-items:flex-start;}
+
+  /* ── v2 사과 본체 (사과 시안 v2.html faithful 그대로) ── */
+  .apple{position:relative;display:inline-block;}
+  .apple .fruit{position:absolute;inset:0;z-index:2;border-radius:50%;
+    background:radial-gradient(72% 60% at 50% 30%,#ED6138,#E5512C 56%,#DC4824);
+    filter:drop-shadow(0 1.5px 2px rgba(40,18,12,.28));}
+  .apple .num{position:absolute;inset:0;z-index:7;display:flex;align-items:center;justify-content:center;
+    font-weight:800;font-size:calc(var(--ap)*0.46);color:#FFF4EC;text-shadow:0 1px 1.5px rgba(120,30,16,.36);}
+  /* 꼭지 — v2 그대로 */
+  .apple .stem{position:absolute;z-index:3;top:-10%;left:47.5%;width:7.5%;height:24%;border-radius:40%;
+    background:linear-gradient(#7C4B2B,#5C3620);transform:rotate(11deg);transform-origin:bottom center;}
+  /* 이파리 — v2 모양/색, 위치는 JS 가 주입 */
+  .apple .leaf{position:absolute;z-index:4;border-radius:0 100% 0 100%;
+    box-shadow:inset -1px -1px 1.5px rgba(0,0,0,.18);background:linear-gradient(150deg,#69B23A,#4C9626);}
+
+  .stage{display:flex;align-items:flex-end;gap:40px;background:#fffdf7;border:1px solid #ecdfc9;border-radius:16px;padding:30px 36px 24px;}
+  .stack{display:flex;flex-direction:column;align-items:center;gap:8px;}
+  .stack .px{font-size:10px;color:#b0a08c;}
+  .cellbox{outline:1px dashed rgba(224,74,54,.4);}
+  .gridmini{display:grid;grid-template-columns:repeat(4,52px);gap:7px;background:#fbe7d8;padding:12px;border-radius:10px;}
+
+  .panel{min-width:300px;background:#fffdf7;border:1px solid #ecdfc9;border-radius:16px;padding:20px 22px;}
+  .panel h2{font-size:14px;margin:0 0 14px;}
+  .ctrl{margin-bottom:13px;}
+  .ctrl label{display:flex;justify-content:space-between;font-size:12px;font-weight:600;margin-bottom:4px;}
+  .ctrl label span{color:#E0613B;font-variant-numeric:tabular-nums;}
+  .ctrl input[type=range]{width:100%;accent-color:#E0613B;}
+  .row2{display:flex;gap:10px;flex-wrap:wrap;margin:6px 0 14px;}
+  .pbtn{appearance:none;border:1px solid #e0c9a8;background:#fff;color:#3A2A1E;font-family:inherit;
+    font-weight:700;font-size:12px;border-radius:9px;padding:8px 12px;cursor:pointer;}
+  .pbtn:hover{background:#fbe7d8;}
+  .toggle{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;margin-bottom:14px;cursor:pointer;}
+  .out{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;background:#2a2018;color:#ffe9c8;
+    border-radius:10px;padding:12px 14px;line-height:1.7;white-space:pre-wrap;margin-top:6px;}
+  .out b{color:#ffd083;}
+</style>
+</head>
+<body>
+  <h1>🍃 이파리 위치 튜너</h1>
+  <p class="lead">
+    "<b>꼭지에서 잎이 돋아나오듯</b>" — 슬라이더로 잎의 위치·크기·각도를 실시간으로 맞춰 보세요.
+    잎 모양/색·본체·꼭지는 <b>사과 시안 v2.html 그대로</b>이고, 바뀌는 건 잎의 위치/각도뿐입니다.
+    아래 <b>프리셋</b>으로 시작점을 잡은 뒤 미세 조정하시면 됩니다. 원하는 모양이 나오면
+    하단 검은 박스의 값을 그대로 알려주시면 candyApple.ts 에 반영합니다.
+  </p>
+
+  <div class="wrap">
+    <div class="stage">
+      <div class="stack">
+        <div class="apple" id="big" style="--ap:150px;width:150px;height:150px">
+          <span class="fruit"></span><span class="stem"></span><span class="leaf"></span><span class="num">3</span>
+        </div>
+        <span class="px">150px (확대)</span>
+      </div>
+      <div class="stack">
+        <div class="gridmini" id="grid"></div>
+        <span class="px">게임 실제 셀 52px · 점선=셀 경계</span>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>프리셋</h2>
+      <div class="row2">
+        <button class="pbtn" data-preset="A">A · v2 원본(17°)</button>
+        <button class="pbtn" data-preset="sprout">꼭지서 위로 솟음</button>
+        <button class="pbtn" data-preset="sproutR">위로+오른쪽</button>
+        <button class="pbtn" data-preset="sproutL">위로+왼쪽</button>
+      </div>
+
+      <h2>미세 조정</h2>
+      <div class="ctrl"><label>top <span id="vtop"></span></label><input type="range" id="top" min="-40" max="20" step="0.5"></div>
+      <div class="ctrl"><label>left <span id="vleft"></span></label><input type="range" id="left" min="0" max="90" step="0.5"></div>
+      <div class="ctrl"><label>width <span id="vw"></span></label><input type="range" id="w" min="14" max="44" step="0.5"></div>
+      <div class="ctrl"><label>height <span id="vh"></span></label><input type="range" id="h" min="12" max="40" step="0.5"></div>
+      <div class="ctrl"><label>rotate <span id="vrot"></span></label><input type="range" id="rot" min="-120" max="160" step="1"></div>
+      <label class="toggle"><input type="checkbox" id="flip"> 좌우 반전 (잎 뒤집기)</label>
+      <div class="ctrl"><label>transform-origin</label>
+        <select id="origin" style="width:100%;padding:7px;border-radius:8px;border:1px solid #e0c9a8;font-family:inherit;font-size:12px">
+          <option value="bottom left">bottom left</option>
+          <option value="bottom center">bottom center</option>
+          <option value="bottom right">bottom right</option>
+          <option value="center">center</option>
+        </select>
+      </div>
+
+      <div class="out" id="out"></div>
+    </div>
+  </div>
+
+<script>
+  const S = { top:-16, left:48, w:30, h:27, rot:17, flip:false, origin:'bottom left' };
+  const PRESETS = {
+    A:       { top:-16, left:48, w:30, h:27, rot:17,  flip:false, origin:'bottom left' },
+    sprout:  { top:-30, left:46, w:26, h:30, rot:0,   flip:false, origin:'bottom center' },
+    sproutR: { top:-26, left:50, w:28, h:28, rot:38,  flip:false, origin:'bottom left' },
+    sproutL: { top:-26, left:24, w:28, h:28, rot:-38, flip:false, origin:'bottom right' },
+  };
+  const ids = ['top','left','w','h','rot'];
+  const $ = s => document.getElementById(s);
+
+  function leafCss(){
+    const t = `rotate(${S.rot}deg)` + (S.flip ? ' scaleX(-1)' : '');
+    return { top:S.top+'%', left:S.left+'%', width:S.w+'%', height:S.h+'%',
+             transform:t, transformOrigin:S.origin };
+  }
+  function paintLeaf(el){ Object.assign(el.style, leafCss()); }
+
+  function buildGrid(){
+    const g = $('grid'); g.innerHTML='';
+    const nums=[7,2,5,1,3,9,4,6];
+    for(let i=0;i<8;i++){
+      const a=document.createElement('div'); a.className='apple'+(i===0?' cellbox':'');
+      a.style.cssText='--ap:52px;width:52px;height:52px;position:relative';
+      a.innerHTML='<span class="fruit"></span><span class="stem"></span><span class="leaf"></span><span class="num">'+nums[i]+'</span>';
+      g.appendChild(a);
+    }
+  }
+
+  function refresh(){
+    document.querySelectorAll('.apple .leaf').forEach(paintLeaf);
+    $('vtop').textContent=S.top+'%'; $('vleft').textContent=S.left+'%';
+    $('vw').textContent=S.w+'%'; $('vh').textContent=S.h+'%'; $('vrot').textContent=S.rot+'°';
+    $('top').value=S.top; $('left').value=S.left; $('w').value=S.w; $('h').value=S.h; $('rot').value=S.rot;
+    $('flip').checked=S.flip; $('origin').value=S.origin;
+    $('out').innerHTML =
+      `<b>.leaf 위치값</b>\n`+
+      `top:    ${S.top}%\n`+
+      `left:   ${S.left}%\n`+
+      `width:  ${S.w}%\n`+
+      `height: ${S.h}%\n`+
+      `rotate: ${S.rot}°  ${S.flip?'(좌우반전)':''}\n`+
+      `origin: ${S.origin}`;
+  }
+
+  ids.forEach(id=>$(id).addEventListener('input',e=>{ S[id==='w'?'w':id==='h'?'h':id]=parseFloat(e.target.value); refresh(); }));
+  $('flip').addEventListener('change',e=>{ S.flip=e.target.checked; refresh(); });
+  $('origin').addEventListener('change',e=>{ S.origin=e.target.value; refresh(); });
+  document.querySelectorAll('[data-preset]').forEach(b=>b.addEventListener('click',()=>{ Object.assign(S,PRESETS[b.dataset.preset]); refresh(); }));
+
+  buildGrid();
+  Object.assign(S, PRESETS.sproutR); // 시작점: 위로+오른쪽 (요청 방향)
+  refresh();
+</script>
+</body>
+</html>

@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>이파리 위치 검토 — 사과 시안 v2 적용</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css" />
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:linear-gradient(180deg,#FBF5E9,#F4EDDF);color:#3A2A1E;
+    font-family:'Pretendard Variable',-apple-system,sans-serif;padding:28px 20px 60px;}
+  h1{font-size:22px;margin:0 0 4px;letter-spacing:-.02em;}
+  .lead{font-size:13.5px;color:#7a6552;max-width:70ch;line-height:1.6;margin:0 0 22px;}
+  .lead b{color:#E04A36;}
+
+  /* ── v2 사과 본체 (사과 시안 v2.html 의 faithful 변형 그대로) ── */
+  .apple{position:relative;display:inline-block;}
+  .apple .fruit{position:absolute;inset:0;z-index:2;border-radius:50%;
+    background:radial-gradient(72% 60% at 50% 30%,#ED6138,#E5512C 56%,#DC4824);
+    filter:drop-shadow(0 1.5px 2px rgba(40,18,12,.28));}
+  .apple .num{position:absolute;inset:0;z-index:7;display:flex;align-items:center;justify-content:center;
+    font-weight:800;font-size:calc(var(--ap)*0.46);color:#FFF4EC;
+    text-shadow:0 1px 1.5px rgba(120,30,16,.36);}
+
+  /* 꼭지 — v2 그대로 (모든 후보 공통) */
+  .apple .stem{position:absolute;z-index:3;top:-10%;left:47.5%;width:7.5%;height:24%;border-radius:40%;
+    background:linear-gradient(#7C4B2B,#5C3620);transform:rotate(11deg);transform-origin:bottom center;}
+
+  /* 이파리 — v2 그대로의 모양/색, 위치만 후보별로 다름 */
+  .apple .leaf{position:absolute;z-index:4;border-radius:0 100% 0 100%;
+    box-shadow:inset -1px -1px 1.5px rgba(0,0,0,.18);
+    background:linear-gradient(150deg,#69B23A,#4C9626);}
+
+  /* ── 후보 A — v2 시안 그대로 (오른쪽으로 뻗음) ── */
+  .A .leaf{top:-16%;left:48%;width:30%;height:27%;transform:rotate(17deg);transform-origin:bottom left;}
+  /* ── 후보 B — 어깨에 얹힌 듯 낮게/작게 (셀 밖으로 덜 튀어나옴) ── */
+  .B .leaf{top:-7%;left:50%;width:26%;height:23%;transform:rotate(24deg);transform-origin:bottom left;}
+  /* ── 후보 C — 왼쪽으로 뻗음 (꼭지 오른쪽 · 잎 왼쪽, 전통적 배치) ── */
+  .C .leaf{top:-16%;left:22%;width:30%;height:27%;transform:rotate(-17deg) scaleX(-1);transform-origin:bottom right;}
+
+  /* 셀 경계(이웃 사과와의 간섭 확인용) */
+  .cellbox{position:relative;outline:1px dashed rgba(224,74,54,.35);outline-offset:0;}
+  .cellbox::after{content:"셀 경계";position:absolute;left:0;bottom:-15px;font-size:9px;color:#c7a;opacity:.7;}
+
+  .cols{display:flex;gap:34px;flex-wrap:wrap;align-items:flex-start;margin-top:8px;}
+  .card{background:#fffdf7;border:1px solid #ecdfc9;border-radius:14px;padding:22px 22px 16px;}
+  .card h2{font-size:15px;margin:0 0 2px;}
+  .card .tag{display:inline-block;font-size:10.5px;font-weight:700;color:#fff;background:#E0613B;border-radius:999px;padding:2px 9px;margin-bottom:10px;}
+  .card.rec .tag{background:#3a8a3a;}
+  .card .desc{font-size:12px;color:#7a6552;line-height:1.5;margin:10px 0 0;max-width:24ch;}
+  .row{display:flex;align-items:flex-end;gap:26px;padding:10px 0 6px;}
+  .stack{display:flex;flex-direction:column;align-items:center;gap:6px;}
+  .stack .px{font-size:9.5px;color:#b0a08c;}
+  .code{font-family:ui-monospace,Menlo,monospace;font-size:10.5px;color:#9a8472;margin-top:8px;white-space:pre-wrap;}
+
+  /* 게임 실제 크기(52px 셀) 한 줄 비교 */
+  .strip{display:flex;gap:7px;background:#fbe7d8;padding:14px;border-radius:10px;margin-top:6px;}
+  .ref{margin-top:30px;padding-top:18px;border-top:1px solid #e7dac4;}
+</style>
+</head>
+<body>
+  <h1>🍃 이파리 위치 검토</h1>
+  <p class="lead">
+    <b>사과 시안 v2.html</b> 의 사과 디자인(본체·꼭지·이파리 모양/색)을 게임에 그대로 이식합니다.
+    아래는 동일한 v2 본체·꼭지 위에 <b>이파리 위치 3안</b>을 올린 것입니다.
+    각 카드 위쪽은 큰 크기(보기용), 아래 줄은 <b>게임 실제 셀 크기 52px</b> 입니다.
+    점선은 셀 경계로, 이파리가 위로 얼마나 튀어나와 이웃 사과와 겹칠 수 있는지 보여줍니다.
+    <b>원하시는 안을 알려주시면</b> 그 위치로 candyApple.ts 에 반영하겠습니다.
+  </p>
+
+  <div class="cols">
+    <div class="card rec A">
+      <span class="tag">후보 A · 추천</span>
+      <h2>v2 시안 그대로 (오른쪽)</h2>
+      <div class="row">
+        <div class="stack">
+          <div class="apple" style="--ap:120px;width:120px;height:120px">
+            <span class="fruit"></span><span class="stem"></span><span class="leaf"></span><span class="num">3</span>
+          </div>
+          <span class="px">120px</span>
+        </div>
+      </div>
+      <div class="strip A">
+        <div class="cellbox"><div class="apple" style="--ap:52px;width:52px;height:52px"><span class="fruit"></span><span class="stem"></span><span class="leaf"></span><span class="num">7</span></div></div>
+        <div class="apple" style="--ap:52px;width:52px;height:52px"><span class="fruit"></span><span class="stem"></span><span class="leaf"></span><span class="num">2</span></div>
+        <div class="apple" style="--ap:52px;width:52px;height:52px"><span class="fruit"></span><span class="stem"></span><span class="leaf"></span><span class="num">5</span></div>
+      </div>
+      <p class="desc">시안과 100% 동일. 잎이 꼭지 오른쪽에서 위로 뻗습니다.</p>
+      <div class="code">top:-16% left:48%
+w30% h27% rot17° (bottom-left)</div>
+    </div>
+
+    <div class="card B">
+      <span class="tag">후보 B</span>
+      <h2>어깨에 얹힘 (낮게·작게)</h2>
+      <div class="row">
+        <div class="stack">
+          <div class="apple" style="--ap:120px;width:120px;height:120px">
+            <span class="fruit"></span><span class="stem"></span><span class="leaf"></span><span class="num">3</span>
+          </div>
+          <span class="px">120px</span>
+        </div>
+      </div>
+      <div class="strip B">
+        <div class="cellbox"><div class="apple" style="--ap:52px;width:52px;height:52px"><span class="fruit"></span><span class="stem"></span><span class="leaf"></span><span class="num">7</span></div></div>
+        <div class="apple" style="--ap:52px;width:52px;height:52px"><span class="fruit"></span><span class="stem"></span><span class="leaf"></span><span class="num">2</span></div>
+        <div class="apple" style="--ap:52px;width:52px;height:52px"><span class="fruit"></span><span class="stem"></span><span class="leaf"></span><span class="num">5</span></div>
+      </div>
+      <p class="desc">잎이 더 낮고 작아 셀 밖으로 덜 튀어나옵니다. 빽빽한 보드에서 이웃과 겹침이 적습니다.</p>
+      <div class="code">top:-7% left:50%
+w26% h23% rot24° (bottom-left)</div>
+    </div>
+
+    <div class="card C">
+      <span class="tag">후보 C</span>
+      <h2>왼쪽으로 뻗음 (전통적)</h2>
+      <div class="row">
+        <div class="stack">
+          <div class="apple" style="--ap:120px;width:120px;height:120px">
+            <span class="fruit"></span><span class="stem"></span><span class="leaf"></span><span class="num">3</span>
+          </div>
+          <span class="px">120px</span>
+        </div>
+      </div>
+      <div class="strip C">
+        <div class="cellbox"><div class="apple" style="--ap:52px;width:52px;height:52px"><span class="fruit"></span><span class="stem"></span><span class="leaf"></span><span class="num">7</span></div></div>
+        <div class="apple" style="--ap:52px;width:52px;height:52px"><span class="fruit"></span><span class="stem"></span><span class="leaf"></span><span class="num">2</span></div>
+        <div class="apple" style="--ap:52px;width:52px;height:52px"><span class="fruit"></span><span class="stem"></span><span class="leaf"></span><span class="num">5</span></div>
+      </div>
+      <p class="desc">꼭지는 오른쪽, 잎은 왼쪽 — 식물 도감풍의 안정적인 좌우 분리 배치입니다.</p>
+      <div class="code">top:-16% left:22%
+w30% h27% rot-17° (bottom-right)</div>
+    </div>
+  </div>
+
+  <div class="ref">
+    <p class="lead" style="margin-bottom:12px">참고 — <b>사과 시안 v2.html</b> 원본 잎 위치(= 후보 A). 본체/꼭지/잎의 모양·색은 세 안 모두 v2 그대로이며, <b>오직 잎의 위치/각도만</b> 다릅니다.</p>
+  </div>
+</body>
+</html>

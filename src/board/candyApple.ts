@@ -16,9 +16,19 @@ import type { CellTag } from '../contracts';
 /** 사과 변형 종류 = 보드 셀 태그. 보디 팔레트·광택·숫자 색만 달라진다. */
 export type AppleVariant = CellTag;
 
-/** 확정 실루엣 path (viewBox 0 0 100 100, 좌우 대칭, 상단 중앙 꼭지 패임) */
+/**
+ * 확정 실루엣 path (viewBox 0 0 100 100, 좌우 대칭, 상단 중앙 꼭지 패임).
+ * 본편 배경(배경 - 낮밤 순환.html)과 동일한 갱신 path — 더 둥글고 통통하다.
+ */
 export const APPLE_SILHOUETTE =
-  'M45 14C48 17 52 17 55 14C68 9 91 23 91 51C91 74 73 90 50 90C27 90 9 74 9 51C9 23 32 9 45 14Z';
+  'M44 15C47 18 53 18 56 15C67 11 90 24 90 50C90 73 72 89 50 89C28 89 10 73 10 50C10 24 33 11 44 15Z';
+
+/**
+ * 잎이 줄기에 붙는 지점(피벗)을 셀 0..1 정규 좌표로 노출한다.
+ * board 레이어가 잎 스프라이트의 anchor·위치를 이 값으로 잡아, 이 점을 축으로
+ * 바람에 흔들리게 한다. (drawLeaf 의 실루엣 좌표 (51.74, 16.5) 에서 유도)
+ */
+export const LEAF_ANCHOR = { x: 0.5174, y: 0.165 } as const;
 
 const clamp01 = (x: number): number => Math.max(0, Math.min(1, x));
 
@@ -260,8 +270,10 @@ export function drawApple(ctx: CanvasRenderingContext2D, opt: DrawAppleOptions):
   ctx.fill();
   ctx.restore();
 
-  // 꼭지·잎은 보디 뒤(아래)에 깔아 보디가 밑동을 덮게 한다.
-  if (showDeco) drawStemLeaf(ctx, v, s);
+  // 꼭지는 보디 뒤(아래)에 깔아 보디가 밑동을 덮게 한다.
+  // 잎은 보디 텍스처에 굽지 않는다 — board 레이어가 셀마다 개별 스프라이트로
+  // 얹어 바람에 따로 흔들리게 하기 위함(renderLeafCanvas 참고).
+  if (showDeco) drawStem(ctx, v, s);
 
   // ── 보디(실루엣 클립 안) ──
   ctx.save();
@@ -325,10 +337,11 @@ export function drawApple(ctx: CanvasRenderingContext2D, opt: DrawAppleOptions):
 
   ctx.restore(); // 보디 클립 해제
 
-  // ── 숫자 (Quicksand, 셀 0.47배, apple-spec.json > typography) ──
+  // ── 숫자 (Quicksand, apple-spec.json > typography) ──
+  // 크기를 0.40으로 줄이고, 사과 윗부분이 통통하므로 "시각적 중앙"으로 살짝 위(0.46)에 둔다.
   if (value != null) {
     const small = size <= 24;
-    const ratio = small ? 0.52 : 0.47;
+    const ratio = small ? 0.46 : 0.4;
     ctx.fillStyle = v.number;
     ctx.font = `${small ? 700 : 600} ${size * ratio}px Quicksand, "Pretendard Variable", Pretendard, sans-serif`;
     ctx.textAlign = 'center';
@@ -336,15 +349,36 @@ export function drawApple(ctx: CanvasRenderingContext2D, opt: DrawAppleOptions):
     ctx.shadowColor = 'rgba(120,28,14,0.34)';
     ctx.shadowBlur = small ? size * 0.04 : size * 0.05;
     ctx.shadowOffsetY = small ? 1.5 : 2;
-    ctx.fillText(String(value), size * 0.5, size * 0.52);
+    ctx.fillText(String(value), size * 0.5, size * 0.46);
   }
 }
 
-/** 꼭지(stem) + 잎(leaf). 0..100 정규 좌표를 s 로 스케일해 그린다. */
-function drawStemLeaf(ctx: CanvasRenderingContext2D, v: VariantSpec, s: number): void {
+/** 꼭지(stem)만 그린다. 0..100 정규 좌표를 s 로 스케일. (잎은 분리 — drawLeaf) */
+function drawStem(ctx: CanvasRenderingContext2D, v: VariantSpec, s: number): void {
   ctx.save();
   ctx.scale(s, s);
+  // 꼭지 — 중앙 딤플에서 살짝 기운 두꺼운 막대 (geometry.stem)
+  ctx.translate(50, 15);
+  ctx.rotate((13 * Math.PI) / 180);
+  const sg = ctx.createLinearGradient(0, -13, 0, 2);
+  sg.addColorStop(0, v.stem[0]);
+  sg.addColorStop(1, v.stem[1]);
+  ctx.strokeStyle = sg;
+  ctx.lineWidth = 3.6;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(0, 2);
+  ctx.lineTo(0, -13);
+  ctx.stroke();
+  ctx.restore();
+}
 
+/**
+ * 잎(leaf)만 그린다. 0..100 정규 좌표(셀 박스)에서 본래 위치 그대로 그리므로,
+ * 셀 크기와 같은 캔버스에 담으면 줄기 옆 제자리에 잎이 온다. 잎이 줄기에 붙는
+ * 점(≈ 51.74, 16.5 = LEAF_ANCHOR)을 축으로 board 레이어가 회전시켜 흔든다.
+ */
+function drawLeaf(ctx: CanvasRenderingContext2D, v: VariantSpec): void {
   // 잎 — 상단 우측, -30° 기운 페탈 (geometry.leaf)
   ctx.save();
   ctx.translate(63, 10);
@@ -363,24 +397,6 @@ function drawStemLeaf(ctx: CanvasRenderingContext2D, v: VariantSpec, s: number):
   ctx.moveTo(-11, 0);
   ctx.lineTo(11, 0);
   ctx.stroke();
-  ctx.restore();
-
-  // 꼭지 — 중앙 딤플에서 살짝 기운 두꺼운 막대 (geometry.stem)
-  ctx.save();
-  ctx.translate(50, 15);
-  ctx.rotate((13 * Math.PI) / 180);
-  const sg = ctx.createLinearGradient(0, -13, 0, 2);
-  sg.addColorStop(0, v.stem[0]);
-  sg.addColorStop(1, v.stem[1]);
-  ctx.strokeStyle = sg;
-  ctx.lineWidth = 3.6;
-  ctx.lineCap = 'round';
-  ctx.beginPath();
-  ctx.moveTo(0, 2);
-  ctx.lineTo(0, -13);
-  ctx.stroke();
-  ctx.restore();
-
   ctx.restore();
 }
 
@@ -402,6 +418,32 @@ export function renderAppleCanvas(
   if (ctx) {
     ctx.scale(resolution, resolution);
     drawApple(ctx, { ...opt, value: opt.value ?? null });
+  }
+  return canvas;
+}
+
+/**
+ * 잎 전용 offscreen 캔버스(셀과 같은 size 박스, 잎만 제자리에 그림).
+ * board 레이어가 Texture.from 으로 올려, anchor=LEAF_ANCHOR 로 잎이 줄기에
+ * 붙는 점을 축으로 회전시켜 바람 흔들림을 준다.
+ */
+export function renderLeafCanvas(opt: {
+  size: number;
+  variant?: AppleVariant;
+  resolution?: number;
+}): HTMLCanvasElement {
+  const v = VARIANTS[opt.variant ?? 'normal'] ?? VARIANTS.normal;
+  const resolution =
+    opt.resolution ?? (typeof window !== 'undefined' ? Math.min(window.devicePixelRatio || 1, 2) : 1);
+  const px = Math.max(1, Math.round(opt.size * resolution));
+  const canvas = document.createElement('canvas');
+  canvas.width = px;
+  canvas.height = px;
+  const ctx = canvas.getContext('2d');
+  if (ctx) {
+    ctx.scale(resolution, resolution);
+    ctx.scale(opt.size / 100, opt.size / 100); // 0..100 정규 좌표로 그린다
+    drawLeaf(ctx, v);
   }
   return canvas;
 }

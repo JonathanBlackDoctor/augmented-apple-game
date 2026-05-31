@@ -6,7 +6,14 @@ import { useGameStore } from '../app/store';
 import { theme } from './theme';
 import type { BoardLayout } from './layout';
 import { cellRect, cellCenter } from './layout';
-import { type AppleLook, lookAt, numberColor, renderAppleCanvas } from './candyApple';
+import {
+  type AppleLook,
+  LEAF_ANCHOR,
+  lookAt,
+  numberColor,
+  renderAppleCanvas,
+  renderLeafCanvas,
+} from './candyApple';
 
 const APPLE_TAGS: CellTag[] = ['normal', 'golden', 'gem', 'bomb', 'wild'];
 
@@ -41,6 +48,7 @@ export class BoardView {
 
   private cells: Container[] = [];
   private bodies: Sprite[] = [];
+  private leaves: (Sprite | undefined)[] = [];
   private cellTags: CellTag[] = [];
   private labels: Text[] = [];
   private particles: Particle[] = [];
@@ -49,6 +57,14 @@ export class BoardView {
   // Shared candy-gloss apple textures, one per tag, regenerated when the
   // day-night look (or the cell size) changes. All cells of a tag share one.
   private texCache = new Map<CellTag, Texture>();
+  // Leaf textures are split out of the body so each leaf can sway on its own.
+  // They depend only on cell size (not the day-night look), so they are rebuilt
+  // far less often than the bodies.
+  private leafTexCache = new Map<CellTag, Texture>();
+  // Per-cell wind phase/speed so every leaf flutters individually, plus a clock.
+  private leafPhase: number[] = [];
+  private leafSpeed: number[] = [];
+  private windMs = 0;
   private look: AppleLook = lookAt(0.16);
   private lookKey = -1;
   private texCell = 0;
@@ -205,6 +221,14 @@ export class BoardView {
       }
     }
     this.texCache.clear();
+    for (const tex of this.leafTexCache.values()) {
+      try {
+        tex.destroy(true);
+      } catch {
+        /* already gone */
+      }
+    }
+    this.leafTexCache.clear();
   }
 
   // ---- internals ------------------------------------------------------------
@@ -212,6 +236,7 @@ export class BoardView {
   private onTick = (): void => {
     this.updateLook();
     const dt = this.app.ticker.deltaMS;
+    this.animateLeaves(dt);
     if (this.particles.length > 0) {
       const next: Particle[] = [];
       for (const p of this.particles) {
@@ -249,16 +274,39 @@ export class BoardView {
     }
   };
 
+  // Gentle individual leaf sway. Each leaf pivots at its base with its own phase
+  // and a small speed offset; a slow shared "gust" swells the amplitude so the
+  // whole orchard breathes together without ever moving in lockstep.
+  private animateLeaves(dt: number): void {
+    if (this.leaves.length === 0) return;
+    this.windMs += dt;
+    const w = this.windMs / 1000;
+    const gust = 0.72 + 0.4 * Math.sin(w * 0.45); // slow wind swell
+    const amp = 0.12 * gust; // ~7° base, breathing a little above/below
+    for (let i = 0; i < this.leaves.length; i++) {
+      const leaf = this.leaves[i];
+      if (!leaf) continue;
+      const sp = this.leafSpeed[i];
+      const ph = this.leafPhase[i];
+      // primary sway + a small faster harmonic for a livelier, organic flutter
+      leaf.rotation = amp * Math.sin(w * 1.7 * sp + ph) + amp * 0.32 * Math.sin(w * 3.3 * sp + ph * 1.7);
+    }
+  }
+
   private rebuild(): void {
     this.gridLayer.removeChildren();
     this.cells = [];
     this.bodies = [];
+    this.leaves = [];
+    this.leafPhase = [];
+    this.leafSpeed = [];
     this.cellTags = [];
     this.labels = [];
     if (!this.board || !this.layout) return;
     const l = this.layout;
     const b = this.board;
     this.ensureTextures(l.cell, true);
+    const showLeaf = l.cell > 24; // matches apple-spec LOD (hide deco on tiny cells)
     for (let i = 0; i < b.cells.length; i++) {
       const col = i % b.cols;
       const row = Math.floor(i / b.cols);
@@ -271,13 +319,28 @@ export class BoardView {
       body.anchor.set(0.5);
       body.setSize(l.cell);
 
+      // Leaf is its own sprite (behind the body, so its base stays tucked under
+      // the apple) pivoting at LEAF_ANCHOR so the tip can sway in the wind.
+      let leaf: Sprite | undefined;
+      if (showLeaf) {
+        leaf = new Sprite(this.leafTexCache.get(tag));
+        leaf.anchor.set(LEAF_ANCHOR.x, LEAF_ANCHOR.y);
+        leaf.setSize(l.cell);
+        leaf.position.set((LEAF_ANCHOR.x - 0.5) * l.cell, (LEAF_ANCHOR.y - 0.5) * l.cell);
+      }
+
       const label = this.makeLabel(String(b.cells[i] || ''), l.cell, tag);
 
-      cont.addChild(body, label);
+      if (leaf) cont.addChild(leaf, body, label);
+      else cont.addChild(body, label);
       cont.visible = b.cells[i] > 0;
       this.gridLayer.addChild(cont);
       this.cells.push(cont);
       this.bodies.push(body);
+      this.leaves.push(leaf);
+      // Random phase + slight speed variance → no two leaves move in lockstep.
+      this.leafPhase.push(Math.random() * Math.PI * 2);
+      this.leafSpeed.push(0.82 + Math.random() * 0.36);
       this.cellTags.push(tag);
       this.labels.push(label);
     }
@@ -285,12 +348,15 @@ export class BoardView {
 
   // Quicksand cream numeral, coloured per the candy-gloss variant (apple-spec
   // > typography). Kept as a crisp Pixi Text so it never re-renders with the look.
+  // Smaller (0.40) and nudged up to the apple's *optical* centre — the rounded
+  // top reads heavier, so the geometric centre looks a touch low.
   private makeLabel(text: string, cell: number, tag: CellTag): Text {
+    const ratio = cell > 24 ? 0.4 : 0.46;
     const label = new Text({
       text,
       style: {
         fontFamily: `Quicksand, ${theme.font}`,
-        fontSize: Math.round(cell * 0.47),
+        fontSize: Math.round(cell * ratio),
         fontWeight: '600',
         fill: numberColor(tag),
         dropShadow: {
@@ -303,7 +369,7 @@ export class BoardView {
       },
     });
     label.anchor.set(0.5);
-    label.position.set(0, cell * 0.02);
+    label.position.set(0, -cell * 0.04);
     return label;
   }
 
@@ -330,6 +396,8 @@ export class BoardView {
       }
       const body = this.bodies[i];
       if (body && tag !== this.cellTags[i]) body.texture = this.texCache.get(tag) ?? body.texture;
+      const leaf = this.leaves[i];
+      if (leaf && tag !== this.cellTags[i]) leaf.texture = this.leafTexCache.get(tag) ?? leaf.texture;
       this.cellTags[i] = tag;
     }
   }
@@ -383,6 +451,25 @@ export class BoardView {
       if (!body) continue;
       body.texture = this.texCache.get(this.cellTags[i]) ?? body.texture;
       if (sizeChanged) body.setSize(cell);
+    }
+
+    // Leaf textures don't depend on the day-night look — only rebuild them when
+    // the cell size changes (or on first run), then re-fit/re-point every leaf.
+    if (sizeChanged || this.leafTexCache.size === 0) {
+      for (const tag of APPLE_TAGS) {
+        const canvas = renderLeafCanvas({ size: cell, variant: tag });
+        const tex = Texture.from(canvas);
+        const old = this.leafTexCache.get(tag);
+        this.leafTexCache.set(tag, tex);
+        old?.destroy(true);
+      }
+      for (let i = 0; i < this.leaves.length; i++) {
+        const leaf = this.leaves[i];
+        if (!leaf) continue;
+        leaf.texture = this.leafTexCache.get(this.cellTags[i]) ?? leaf.texture;
+        leaf.setSize(cell);
+        leaf.position.set((LEAF_ANCHOR.x - 0.5) * cell, (LEAF_ANCHOR.y - 0.5) * cell);
+      }
     }
   }
 }

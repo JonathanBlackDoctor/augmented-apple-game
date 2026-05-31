@@ -2177,13 +2177,16 @@ body {
 }
 
 /* sustain-augment ambience (toggled via .on): time.lord/glasscannon = prism,
-   time.warmup = warm, time.spurt last 7s = red pulse */
+   time.warmup = warm, time.spurt last 7s = red pulse.
+   Pinned to the viewport (position: fixed) so the glow frames the WHOLE game
+   screen, not just the board canvas it's parented to. */
 .bfx-vig {
-  position: absolute;
+  position: fixed;
   inset: 0;
   opacity: 0;
-  border-radius: var(--radius);
+  border-radius: 0;
   transition: opacity 0.5s;
+  z-index: 4;
 }
 .bfx-vig.on {
   opacity: 1;

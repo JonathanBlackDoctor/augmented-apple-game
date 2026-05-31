@@ -1,5 +1,5 @@
 // ui/components/SettingsOverlay.tsx — settings modal (sound, AI difficulty,
-// round time, board size, AI mini-view). State lives in the settings store and
+// round time, board size, apple size). State lives in the settings store and
 // is persisted to localStorage. Reused by the home screen and the pause menu.
 import {
   useSettingsStore,
@@ -66,10 +66,6 @@ export function SettingsOverlay({ onClose }: { onClose: () => void }) {
           <div className="set-row">
             <span className="set-label">사운드</span>
             <Toggle on={s.soundEnabled} onChange={s.setSoundEnabled} />
-          </div>
-          <div className="set-row">
-            <span className="set-label">AI 미니화면</span>
-            <Toggle on={s.showAiMiniboard} onChange={s.setShowAiMiniboard} />
           </div>
           <div className="set-row">
             <span className="set-label">AI 난이도</span>

@@ -15,6 +15,7 @@ export interface VersusState {
   oppTier: string;
   oppTotal: number;
   oppRoundScore: number;
+  oppOwned: string[];
   roundWins: { me: number; opp: number };
   winner: 'me' | 'opp' | 'draw' | null;
   mmrDelta: number | null;
@@ -26,7 +27,12 @@ export interface VersusState {
   oppGainSeq: number;
   oppGainAmount: number;
   setOpponent(name: string, avatar: string, tier: string, ranked: boolean): void;
-  setLive(oppTotal: number, oppRoundScore: number, roundWins: { me: number; opp: number }): void;
+  setLive(
+    oppTotal: number,
+    oppRoundScore: number,
+    roundWins: { me: number; opp: number },
+    oppOwned: string[],
+  ): void;
   setRoundCheck(
     my: number,
     opp: number,
@@ -46,6 +52,7 @@ const INIT = {
   oppTier: 'Silver',
   oppTotal: 0,
   oppRoundScore: 0,
+  oppOwned: [] as string[],
   roundWins: { me: 0, opp: 0 },
   winner: null as 'me' | 'opp' | 'draw' | null,
   mmrDelta: null as number | null,
@@ -60,7 +67,8 @@ export const useVersusStore = create<VersusState>((set) => ({
   ...INIT,
   setOpponent: (oppName, oppAvatar, oppTier, ranked) =>
     set({ ...INIT, oppName, oppAvatar, oppTier, ranked }),
-  setLive: (oppTotal, oppRoundScore, roundWins) => set({ oppTotal, oppRoundScore, roundWins }),
+  setLive: (oppTotal, oppRoundScore, roundWins, oppOwned) =>
+    set({ oppTotal, oppRoundScore, roundWins, oppOwned }),
   setRoundCheck: (my, opp, winner, round, remainingMs) =>
     set({ roundResult: { my, opp, winner, round }, overlayRemainingMs: remainingMs }),
   setOverlayRemaining: (overlayRemainingMs) => set({ overlayRemainingMs }),

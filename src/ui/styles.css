@@ -1088,31 +1088,60 @@ body {
   opacity: 0.85;
 }
 
-/* floating "+N" score popup (opponent gains, anchored by .vs-side) */
+/* floating "+N" score popup (opponent gains, anchored by .vs-side). The
+   opponent board is no longer visible, so this is the primary "they scored"
+   cue — large, glowing, and longer-lived. */
 .score-pop {
   position: absolute;
   top: 100%;
   right: 0;
-  font-size: 18px;
+  font-size: 30px;
   font-weight: 900;
   color: var(--apple);
   font-variant-numeric: tabular-nums;
-  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.7);
+  text-shadow:
+    0 2px 6px rgba(255, 255, 255, 0.85),
+    0 0 14px var(--apple-shadow);
   pointer-events: none;
-  animation: score-float 0.85s var(--ease) both;
+  animation: score-float 1.1s var(--ease) both;
 }
 @keyframes score-float {
   0% {
-    transform: translateY(0) scale(0.7);
+    transform: translateY(0) scale(0.6);
     opacity: 0;
   }
-  25% {
-    transform: translateY(-8px) scale(1.05);
+  20% {
+    transform: translateY(-10px) scale(1.35);
+    opacity: 1;
+  }
+  45% {
+    transform: translateY(-16px) scale(1);
     opacity: 1;
   }
   100% {
-    transform: translateY(-30px) scale(1);
+    transform: translateY(-46px) scale(1);
     opacity: 0;
+  }
+}
+
+/* Opponent score number pulses when they score (re-keyed in VersusHud). */
+.vs-score {
+  display: inline-block;
+}
+.opp-score {
+  animation: opp-score-pulse 0.5s var(--ease);
+}
+@keyframes opp-score-pulse {
+  0% {
+    transform: scale(1);
+    color: var(--ink);
+  }
+  35% {
+    transform: scale(1.3);
+    color: var(--apple);
+  }
+  100% {
+    transform: scale(1);
   }
 }
 
@@ -1185,66 +1214,121 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* owned-augment build sidebar (during play) */
+/* owned-augment build sidebars (during versus play): compact trading-card
+   faces — a scaled-down `.aug-card`. Player on the left, opponent on the
+   right. Both rows never intercept the drag (pointer-events: none). */
 .owned-augments {
   position: absolute;
   top: 50%;
-  left: 10px;
   transform: translateY(-50%);
   display: flex;
   flex-direction: column;
   gap: 6px;
   z-index: 4;
   pointer-events: none;
-  max-width: 132px;
+  width: 64px;
+  max-height: 92%;
+  overflow: hidden; /* clip overflow on short viewports; cards hug the edge */
 }
-.owned-aug-chip {
+.owned-augments.left {
+  left: 10px;
+}
+.owned-augments.right {
+  right: 10px;
+  align-items: flex-end;
+}
+.owned-card {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 6px;
-  padding: 5px 9px;
-  border-radius: 999px;
+  gap: 2px;
+  width: 60px;
+  padding: 5px 4px 4px;
+  border-radius: 10px;
   background: var(--paper-2);
   border: 1.5px solid var(--line);
   box-shadow: var(--shadow-sm);
   animation: pop 0.25s var(--ease) both;
+  position: relative;
+  overflow: hidden;
 }
-.owned-aug-chip.gold {
+/* Tier treatments mirror the canonical pick card (.aug-card) so the build
+   sidebars read as the same card family as the augment-select showcase. */
+.owned-card.silver {
+  border-color: #d7dde3;
+}
+.owned-card.gold {
   border-color: var(--gold);
-  background: linear-gradient(180deg, var(--gold-bg), var(--paper-2) 70%);
+  background: linear-gradient(180deg, var(--gold-bg), var(--paper-2) 60%);
 }
-.owned-aug-chip.prismatic {
+.owned-card.prismatic {
   border-color: transparent;
   background:
     linear-gradient(var(--paper-2), var(--paper-2)) padding-box,
-    linear-gradient(125deg, #8a7dff, #6ad7d0, #ffd97a) border-box;
+    linear-gradient(125deg, var(--prism-a), var(--prism-b), #ffd97a) border-box;
 }
-.owned-aug-emblem {
+.owned-card.prismatic::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    125deg,
+    transparent 30%,
+    rgba(255, 255, 255, 0.5) 50%,
+    transparent 70%
+  );
+  transform: translateX(-100%);
+  animation: prism-shine 4.5s var(--ease) infinite;
+  pointer-events: none;
+}
+.owned-card-art {
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.owned-card-emblem {
   display: block;
-  width: 24px;
-  height: 24px;
-  flex: 0 0 auto;
-  font-size: 14px; /* fallback emoji size for crest-less families */
+  width: 100%;
+  height: 100%;
+  font-size: 22px; /* fallback emoji size for crest-less families */
   line-height: 1;
 }
-/* Crisp at chip scale: drop the per-tier glow the full-size crest uses. */
-.owned-aug-emblem .emblem {
-  filter: drop-shadow(0 1px 1px rgba(80, 60, 30, 0.18));
+/* Crisp at card scale: drop the per-tier glow the full-size crest uses. */
+.owned-card-emblem .emblem {
+  filter: drop-shadow(0 1px 2px rgba(80, 60, 30, 0.2));
 }
-.owned-aug-name {
-  font-size: 11px;
-  font-weight: 700;
+.owned-card-name {
+  font-size: 9px;
+  font-weight: 800;
   color: var(--ink);
+  max-width: 100%;
+  text-align: center;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 @media (max-width: 560px) {
-  .owned-aug-name {
+  .owned-card-name {
     display: none;
   }
   .owned-augments {
+    width: 44px;
+  }
+  .owned-augments.left {
     left: 4px;
+  }
+  .owned-augments.right {
+    right: 4px;
+  }
+  .owned-card {
+    width: 44px;
+    padding: 4px 3px;
+  }
+  .owned-card-art {
+    width: 30px;
+    height: 30px;
   }
 }
 .result-card.versus .vs-final {
@@ -1264,48 +1348,6 @@ body {
 .result-card.versus.win .result-title { color: var(--apple); }
 .result-card.versus.loss .result-title { color: var(--ink-2); }
 .mmr-line { font-weight: 700; margin-top: 4px; color: var(--valid); }
-
-/* ---- AI mini-view (picture-in-picture of the bot's board) ---- */
-.ai-mini {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  z-index: 3;
-  pointer-events: none; /* never intercept the player's drag */
-  border-radius: 12px;
-  overflow: hidden;
-  border: 1px solid var(--edge-strong);
-  box-shadow: var(--shadow-sm);
-  background: var(--panel);
-}
-.ai-mini > canvas {
-  display: block;
-}
-.ai-mini-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 3px 8px;
-  font-size: 11px;
-  font-weight: 800;
-  background: var(--gold-bg);
-  border-bottom: 1px solid var(--line);
-}
-.ai-mini-name {
-  color: var(--gold-2);
-  letter-spacing: 1px;
-}
-.ai-mini-score {
-  color: var(--apple);
-  font-variant-numeric: tabular-nums;
-}
-@media (max-width: 560px) {
-  .ai-mini {
-    top: 8px;
-    right: 8px;
-  }
-}
 
 /* ---- icon buttons (in-HUD pause) ---- */
 .icon-btn {

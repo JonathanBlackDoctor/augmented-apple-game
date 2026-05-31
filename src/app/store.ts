@@ -3,7 +3,7 @@ import { create } from 'zustand';
 import type { AugTier } from '../contracts';
 
 export type Phase = 'home' | 'round' | 'roundCheck' | 'augment' | 'result';
-export type Mode = 'solo' | 'augment' | 'versus' | 'online' | 'leaderboard';
+export type Mode = 'solo' | 'augment' | 'versus' | 'online' | 'leaderboard' | 'levels';
 
 const BEST_KEY = 'aag.bestTotal.v1';
 function loadBest(): number {
@@ -41,6 +41,7 @@ export interface GameStore {
   startAugment(): void;
   startMatch(totalRounds: number, durationMs: number): void;
   startVersus(totalRounds: number, durationMs: number): void;
+  startLevels(): void;
   startOnline(): void;
   startLeaderboard(): void;
   setPhase(p: Phase): void;
@@ -94,6 +95,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set({ phase: 'round', ...resetRound(totalRounds, durationMs) }),
   startVersus: (totalRounds, durationMs) =>
     set({ mode: 'versus', phase: 'round', ...resetRound(totalRounds, durationMs) }),
+  startLevels: () => set({ mode: 'levels', phase: 'home' }),
   startOnline: () => set({ mode: 'online' }),
   startLeaderboard: () => set({ mode: 'leaderboard' }),
   setPhase: (phase) => set({ phase }),

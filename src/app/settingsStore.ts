@@ -2,17 +2,11 @@
 // Read by the home/game screens and the controllers; written by the settings UI.
 // Mirrors the best-score localStorage pattern in store.ts (key aag.bestTotal.v1).
 import { create } from 'zustand';
-import type { Difficulty } from '../bot';
 import { sfx } from './sound';
-
-export type AiDifficultyPref = 'auto' | Difficulty; // 'auto' | 'easy' | 'normal' | 'hard'
 
 export interface Settings {
   soundEnabled: boolean;
-  aiDifficulty: AiDifficultyPref;
   roundDurationMs: number;
-  boardCols: number;
-  boardRows: number;
   /** Grid scale (0–1): shrinks the whole board so apples stay packed but more
    *  background shows around the edges. Smaller = smaller apples + more margin. */
   appleScale: number;
@@ -21,12 +15,10 @@ export interface Settings {
 /** Selectable round lengths (ms) surfaced in the settings UI. */
 export const DURATION_OPTIONS = [20_000, 30_000, 45_000, 60_000] as const;
 
-/** Selectable apple counts surfaced in the settings UI (grid dimensions). */
-export const BOARD_PRESETS: { label: string; cols: number; rows: number }[] = [
-  { label: '적게', cols: 11, rows: 7 },
-  { label: '보통', cols: 17, rows: 10 },
-  { label: '많이', cols: 21, rows: 12 },
-];
+/** Fixed board dimensions (the former "보통/medium" apple-count preset). Apple
+ *  count is no longer user-configurable — it's pinned to this medium grid. */
+export const BOARD_COLS = 17;
+export const BOARD_ROWS = 10;
 
 /** Selectable apple sizes (board scale). Smaller shrinks the whole board, keeping
  *  apples packed while leaving more background margin around it. */
@@ -38,10 +30,7 @@ export const APPLE_SIZE_PRESETS: { label: string; scale: number }[] = [
 
 const DEFAULTS: Settings = {
   soundEnabled: true,
-  aiDifficulty: 'auto',
   roundDurationMs: 30_000,
-  boardCols: 17,
-  boardRows: 10,
   appleScale: 0.8,
 };
 
@@ -50,10 +39,7 @@ const KEY = 'aag.settings.v1';
 function pick(s: Settings): Settings {
   return {
     soundEnabled: s.soundEnabled,
-    aiDifficulty: s.aiDifficulty,
     roundDurationMs: s.roundDurationMs,
-    boardCols: s.boardCols,
-    boardRows: s.boardRows,
     appleScale: s.appleScale,
   };
 }
@@ -78,9 +64,7 @@ function save(s: Settings): void {
 
 export interface SettingsStore extends Settings {
   setSoundEnabled(v: boolean): void;
-  setAiDifficulty(v: AiDifficultyPref): void;
   setRoundDurationMs(v: number): void;
-  setBoardSize(cols: number, rows: number): void;
   setAppleScale(v: number): void;
   reset(): void;
 }
@@ -100,9 +84,7 @@ export const useSettingsStore = create<SettingsStore>((set, get) => {
       sfx.setEnabled(soundEnabled);
       commit({ soundEnabled });
     },
-    setAiDifficulty: (aiDifficulty) => commit({ aiDifficulty }),
     setRoundDurationMs: (roundDurationMs) => commit({ roundDurationMs }),
-    setBoardSize: (boardCols, boardRows) => commit({ boardCols, boardRows }),
     setAppleScale: (appleScale) => commit({ appleScale }),
     reset: () => {
       sfx.setEnabled(DEFAULTS.soundEnabled);

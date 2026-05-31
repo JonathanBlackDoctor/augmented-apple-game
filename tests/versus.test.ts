@@ -1,10 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { VersusMatch } from '../src/app/VersusMatch';
 import { findMoves } from '../src/bot/solver';
+import { levelTuning } from '../src/bot';
 
 /** Drive a full match headlessly: the "human" auto-plays with the solver. */
 function playFullMatch(seedBase: string): VersusMatch {
-  const m = new VersusMatch({ seedBase, difficulty: 'normal', durationMs: 3000 });
+  const m = new VersusMatch({ seedBase, tuning: levelTuning(5), durationMs: 3000 });
   let now = 0;
   let guard = 0;
   while (m.snapshot().phase !== 'matchResult' && guard++ < 200000) {
@@ -47,7 +48,7 @@ describe('VersusMatch — you vs AI, full headless match', () => {
   });
 
   it('enters a mid-round review (roundCheck) once a round ends', () => {
-    const m = new VersusMatch({ seedBase: 'check:1', difficulty: 'normal', durationMs: 1000 });
+    const m = new VersusMatch({ seedBase: 'check:1', tuning: levelTuning(5), durationMs: 1000 });
     let now = 0;
     while (m.snapshot().phase === 'round' && now < 5000) now = (m.tick(now), now + 50);
     const snap = m.snapshot();
@@ -60,7 +61,7 @@ describe('VersusMatch — you vs AI, full headless match', () => {
   it('auto-picks the first offer when the augment timer elapses', () => {
     const m = new VersusMatch({
       seedBase: 'auto:1',
-      difficulty: 'normal',
+      tuning: levelTuning(5),
       durationMs: 1000,
       roundCheckMs: 200,
       augmentMs: 2000,

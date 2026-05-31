@@ -26,6 +26,11 @@ export interface VersusState {
   // opponent "+N" score-popup pulses (seq bumps each time the bot scores)
   oppGainSeq: number;
   oppGainAmount: number;
+  // emote bubbles (Clash-Royale-style): seq bumps each time a side emotes
+  myEmoteSeq: number;
+  myEmoteId: string | null;
+  oppEmoteSeq: number;
+  oppEmoteId: string | null;
   setOpponent(name: string, avatar: string, tier: string, ranked: boolean): void;
   setLive(
     oppTotal: number,
@@ -42,6 +47,8 @@ export interface VersusState {
   ): void;
   setOverlayRemaining(ms: number): void;
   bumpOppGain(delta: number): void;
+  sendMyEmote(id: string): void;
+  sendOppEmote(id: string): void;
   setResult(winner: 'me' | 'opp' | 'draw', mmrDelta: number | null): void;
   reset(): void;
 }
@@ -61,6 +68,10 @@ const INIT = {
   roundResult: null as RoundResult | null,
   oppGainSeq: 0,
   oppGainAmount: 0,
+  myEmoteSeq: 0,
+  myEmoteId: null as string | null,
+  oppEmoteSeq: 0,
+  oppEmoteId: null as string | null,
 };
 
 export const useVersusStore = create<VersusState>((set) => ({
@@ -74,6 +85,8 @@ export const useVersusStore = create<VersusState>((set) => ({
   setOverlayRemaining: (overlayRemainingMs) => set({ overlayRemainingMs }),
   bumpOppGain: (delta) =>
     set((s) => ({ oppGainSeq: s.oppGainSeq + 1, oppGainAmount: delta })),
+  sendMyEmote: (id) => set((s) => ({ myEmoteSeq: s.myEmoteSeq + 1, myEmoteId: id })),
+  sendOppEmote: (id) => set((s) => ({ oppEmoteSeq: s.oppEmoteSeq + 1, oppEmoteId: id })),
   setResult: (winner, mmrDelta) => set({ winner, mmrDelta }),
   reset: () => set({ ...INIT }),
 }));

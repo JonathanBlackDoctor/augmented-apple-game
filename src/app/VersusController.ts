@@ -23,6 +23,14 @@ const ROUNDS = 5;
 export const AUGMENT_MS = 12_000; // augment-pick window before auto-picking
 export const ROUND_CHECK_MS = 3_500; // mid-round review screen duration
 
+// Rival emote reaction pools (Clash-Royale-style). All ids must exist in EMOTES.
+const EMOTE_GREET = ['hi', 'apple', 'wink']; // match start
+const EMOTE_TAUNT = ['smug', 'cool', 'lol', 'fire', 'bolt', 'trophy']; // scoring while ahead
+const EMOTE_RALLY = ['fire', 'bolt', 'angry']; // fired up at a new round
+const EMOTE_NEUTRAL = ['nice', 'cool', 'wink']; // scoring while even/behind
+const EMOTE_FRUSTRATED = ['shock', 'angry']; // the player just pulled ahead
+const EMOTE_THROTTLE_MS = 3000; // min gap between (non-forced) rival emotes
+
 export class VersusController {
   private readonly board = new BoardView();
   private readonly clock: PausableClock = createMonotonicClock();
@@ -55,6 +63,7 @@ export class VersusController {
   private resolved = false;
   private lastPhase: VersusPhase | null = null;
   private prevBotScore = 0;
+  private prevMyScore = 0; // track the player's clears to let the rival react
   private lastOppEmoteAt = 0; // throttle for the rival's in-round taunt emotes
   private pendingActivation: string | null = null;
   private activationTimer = 0;
@@ -131,6 +140,7 @@ export class VersusController {
     this.lastBotSeq = -1;
     this.lastPhase = null;
     this.prevBotScore = 0;
+    this.prevMyScore = 0;
     this.lastOppEmoteAt = 0;
     useGameStore.getState().startVersus(ROUNDS, this.durationMs);
     useVersusStore
@@ -207,8 +217,10 @@ export class VersusController {
     }
     if (snap.phase !== 'round' && this.lastPhase === 'round') this.board.resetFx();
     if (snap.phase === 'round') {
-      // A fresh round just began (augment → round): refresh the board + combo.
-      if (this.lastPhase === 'augment') {
+      if (this.lastPhase === null) {
+        this.botEmote(EMOTE_GREET, { force: true }); // the rival greets at match start
+      } else if (this.lastPhase === 'augment') {
+        // A fresh round just began (augment → round): refresh the board + combo.
         this.board.resetFx();
         this.board.setBoard(m.myBoard());
         this.comboStreak = 0;
@@ -221,6 +233,7 @@ export class VersusController {
             if (useGameStore.getState().phase === 'round') playActivation(this.board, activate);
           }, 140);
         }
+        this.botEmote(this.botAhead(snap) ? EMOTE_TAUNT : EMOTE_RALLY, { chance: 0.85 });
       }
       updateAmbient(this.board, snap.myOwned, snap.remainingMs, this.durationMs);
       st.setPhase('round');
@@ -260,23 +273,35 @@ export class VersusController {
     // Opponent "+N" popup: bot's per-round score is cumulative, so a positive
     // frame-to-frame delta is a fresh clear (round reset → 0 yields a negative
     // delta we ignore).
-    const delta = s.botScore - this.prevBotScore;
-    if (delta > 0) {
-      useVersusStore.getState().bumpOppGain(delta);
-      this.maybeBotEmote(); // the rival taunts as it scores (Clash-Royale flavor)
+    const botDelta = s.botScore - this.prevBotScore;
+    const myDelta = s.myScore - this.prevMyScore;
+    if (botDelta > 0) {
+      useVersusStore.getState().bumpOppGain(botDelta);
+      // Reacts to its own clear: gloat when ahead, stay breezy when even/behind.
+      this.botEmote(this.botAhead(s) ? EMOTE_TAUNT : EMOTE_NEUTRAL, { chance: 0.55 });
+    } else if (myDelta > 0 && !this.botAhead(s)) {
+      // The player just scored and is (still) ahead → the rival looks rattled.
+      this.botEmote(EMOTE_FRUSTRATED, { chance: 0.4 });
     }
     this.prevBotScore = s.botScore;
+    this.prevMyScore = s.myScore;
     this.syncMini(s);
   }
 
-  /** Occasionally fire a rival emote when the bot scores (throttled, cosmetic). */
-  private maybeBotEmote(): void {
+  /** Fire a rival emote from `pool`; throttled + probabilistic unless `force`. */
+  private botEmote(pool: string[], opts?: { force?: boolean; chance?: number }): void {
     const now = this.clock.now();
-    if (now - this.lastOppEmoteAt < 5000) return;
-    if (Math.random() > 0.35) return;
+    if (!opts?.force) {
+      if (now - this.lastOppEmoteAt < EMOTE_THROTTLE_MS) return;
+      if (Math.random() > (opts?.chance ?? 0.5)) return;
+    }
     this.lastOppEmoteAt = now;
-    const pool = ['smug', 'cool', 'lol', 'fire', 'nice', 'wink'];
     useVersusStore.getState().sendOppEmote(pool[Math.floor(Math.random() * pool.length)]);
+  }
+
+  /** True when the rival's standing (banked total + current round) leads. */
+  private botAhead(s: VersusSnapshot): boolean {
+    return s.botTotal + s.botScore > s.myTotal + s.myScore;
   }
 
   /** Mirror the AI's board into the mini-view and briefly flash its last move. */

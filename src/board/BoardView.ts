@@ -332,7 +332,7 @@ export class BoardView {
       style: {
         fontFamily: `Quicksand, ${theme.font}`,
         fontSize: Math.round(cell * 0.47),
-        fontWeight: '600',
+        fontWeight: '800',
         fill: numberColor(tag),
         dropShadow: {
           color: 0x781c0e, // rgba(120,28,14)

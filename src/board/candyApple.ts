@@ -248,33 +248,44 @@ export interface DrawAppleOptions {
 }
 
 /**
- * 캔디 글로스 사과 1개를 (0,0)~(size,size) 영역에 그린다. (candy.js > 사과 레이어 이식)
+ * 사과 1개를 (0,0)~(size,size) 영역에 그린다.
+ * 업로드된 HTML(사과 — 위로+왼쪽 잎) 그대로의 정적 평면 룩:
+ *   원형 본체(border-radius:50%) + 평면 radial 한 겹 + drop-shadow.
+ * 캔디 글로스(sheen/ambient/rim)·낮밤 시간반응은 제거됐다(look 미사용).
  */
 export function drawApple(ctx: CanvasRenderingContext2D, opt: DrawAppleOptions): void {
-  const { size, value, look } = opt;
+  const { size, value } = opt;
   const variant = opt.variant ?? 'normal';
   const v = VARIANTS[variant] ?? VARIANTS.normal;
   const showDeco = opt.decorations ?? size > 24;
   const s = size / 100; // 0..100 정규 좌표 → 픽셀
+  const cx = size * 0.5;
+  const cy = size * 0.5;
+  const r = size * 0.5; // border-radius:50% → 완전한 원
 
-  // 접지 그림자 (dropShadow: 0 0.03cell 0.055cell rgba(40,16,10, 0.3·shadow_a))
+  // ── 본체 그림자: filter:drop-shadow(0 1.5px 2px rgba(40,18,12,.28)) ──
+  // HTML 150px 기준값을 셀 크기에 비례시킨다(1.5/150, 2/150).
+  // 불투명 원을 한 번 그려 그림자만 남기고, 본체로 완전히 덮는다.
   ctx.save();
-  ctx.globalAlpha = clamp01(0.3 * look.shadow_a);
-  ctx.fillStyle = 'rgb(40,16,10)';
+  ctx.shadowColor = 'rgba(40,18,12,0.28)';
+  ctx.shadowOffsetX = 0;
+  ctx.shadowOffsetY = size * 0.01;
+  ctx.shadowBlur = size * 0.0133;
+  ctx.fillStyle = v.palette[2];
   ctx.beginPath();
-  ctx.ellipse(size * 0.5, size * 0.95, size * 0.4, size * 0.085, 0, 0, Math.PI * 2);
-  ctx.filter = `blur(${Math.max(1, size * 0.03)}px)`;
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
 
-  // ── 보디(실루엣 클립 안) ──
+  // ── 본체: 원형 클립 안, 평면 radial 한 겹 ──
+  //   background: radial-gradient(72% 60% at 50% 30%, #ED6138, #E5512C 56%, #DC4824)
   ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.clip();
   ctx.scale(s, s);
-  ctx.clip(new Path2D(APPLE_SILHOUETTE));
-
-  // 1) base — 사과 시안 v2.html 본체: radial 72% 60% at 50% 30% (core → mid 56% → edge)
   if (v.rainbow) {
-    // wild matches any value → a glossy 5-colour prism along a 176° axis.
+    // wild matches any value → a 5-colour prism along a 176° axis.
     const rad = (176 * Math.PI) / 180;
     const dx = Math.cos(rad);
     const dy = Math.sin(rad);
@@ -293,65 +304,20 @@ export function drawApple(ctx: CanvasRenderingContext2D, opt: DrawAppleOptions):
       [1, v.palette[2]],
     ]);
   }
+  ctx.restore();
 
-  // 2) sheen — radial 86% 78% at 50% 2% (하늘 반사). 색은 동적 hl 또는 변형 고정색.
-  const sheenColor = v.sheen === 'sky' ? look.hl : v.sheen;
-  radialFill(ctx, 50, 2, 86, 78, [
-    [0, sheenColor],
-    [0.6, 'rgba(255,255,255,0)'],
-  ]);
-
-  // 2.5) 와일드 이리데센트 글린트 — radial 60% 50% at 70% 70%
-  if (v.iridescent) {
-    radialFill(ctx, 70, 70, 60, 50, [
-      [0, 'rgba(120,220,200,0.40)'],
-      [0.62, 'rgba(120,220,200,0)'],
-    ]);
-  }
-
-  // 3) specular — radial 46% 38% at 35% 24% (확정: normal=0. gold/wild만 사용)
-  if (v.specular) {
-    radialFill(ctx, 35, 24, 46, 38, [
-      [0, `rgba(255,255,255,${v.specular})`],
-      [0.7, 'rgba(255,255,255,0)'],
-    ]);
-  }
-
-  // 4) ambient — radial 54% 36% at 50% 100% (하단 코어 음영). 알파 = look.amb.
-  const [ar, ag, ab] = v.amb;
-  radialFill(ctx, 50, 100, 54, 36, [
-    [0, `rgba(${ar},${ag},${ab},${clamp01(look.amb)})`],
-    [0.68, `rgba(${ar},${ag},${ab},0)`],
-  ]);
-
-  // 5) rim light — screen 합성, 알파 rim_a, 색 = 해/달 디스크. (rimLight.layers)
-  ctx.globalCompositeOperation = 'screen';
-  const { r, g, b } = look.rim;
-  const ra = clamp01(look.rim_a);
-  radialFill(ctx, 82, 80, 120, 95, [
-    [0, `rgba(${r},${g},${b},${ra})`],
-    [0.4, `rgba(${r},${g},${b},0)`],
-  ]);
-  radialFill(ctx, 50, 2, 90, 30, [
-    [0, `rgba(${r},${g},${b},${ra})`],
-    [0.6, `rgba(${r},${g},${b},0)`],
-  ]);
-  ctx.globalCompositeOperation = 'source-over';
-
-  ctx.restore(); // 보디 클립 해제
-
-  // 꼭지·잎은 보디 위(앞)에 얹는다 (사과 시안 v2: 잎/꼭지 z > 과일).
+  // 꼭지·잎은 보디 위(앞)에 얹는다 (HTML z-순서: 잎/꼭지 > 과일).
   if (showDeco) drawStemLeaf(ctx, v, s);
 
-  // ── 숫자 (Quicksand, 셀 0.47배, apple-spec.json > typography) ──
+  // ── 숫자 (Quicksand, weight 800, 셀 0.46배) ──
   if (value != null) {
     const small = size <= 24;
-    const ratio = small ? 0.52 : 0.47;
+    const ratio = small ? 0.52 : 0.46;
     ctx.fillStyle = v.number;
-    ctx.font = `${small ? 700 : 600} ${size * ratio}px Quicksand, "Pretendard Variable", Pretendard, sans-serif`;
+    ctx.font = `800 ${size * ratio}px Quicksand, "Pretendard Variable", Pretendard, sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.shadowColor = 'rgba(120,28,14,0.34)';
+    ctx.shadowColor = 'rgba(120,30,16,0.36)';
     ctx.shadowBlur = small ? size * 0.04 : size * 0.05;
     ctx.shadowOffsetY = small ? 1.5 : 2;
     ctx.fillText(String(value), size * 0.5, size * 0.52);

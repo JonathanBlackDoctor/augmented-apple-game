@@ -45,8 +45,8 @@ describe('OnlineMatch — 2-client in-memory full match', () => {
     expect(host.phase).toBe('matchResult');
     expect(guest.phase).toBe('matchResult');
     expect(host.oppPresent).toBe(true);
-    expect(host.myOwned.length).toBe(4);
-    expect(guest.myOwned.length).toBe(4);
+    expect(host.myOwned.length).toBe(5); // one pick before each of the 5 rounds (incl. start)
+    expect(guest.myOwned.length).toBe(5);
     expect(host.myTotal + host.oppTotal).toBeGreaterThan(0);
     expect(host.roundWins.me + host.roundWins.opp).toBeLessThanOrEqual(5);
     const mirror = { me: 'opp', opp: 'me', draw: 'draw' } as const;
@@ -90,6 +90,38 @@ describe('OnlineMatch — board aspect sync', () => {
     expect(guest.myBoard().cols).toBe(host.myBoard().cols);
     expect(guest.myBoard().rows).toBe(host.myBoard().rows);
     expect(guest.myBoard().cols).toBe(10);
+  });
+});
+
+describe('OnlineMatch — start-of-match pick + reroll', () => {
+  it('opens on a start pick (round 0) and reroll spends the one token', async () => {
+    const backend = new InMemoryNetBackend();
+    const sa = new BackendNetSession(backend);
+    const sb = new BackendNetSession(backend);
+    await sa.join('ROOMRR', A);
+    await sb.join('ROOMRR', B);
+    const host = new OnlineMatch({ session: sa, role: 'host', self: A, roomId: 'ROOMRR', ...FAST });
+    const guest = new OnlineMatch({ session: sb, role: 'guest', self: B, roomId: 'ROOMRR', ...FAST });
+    await host.start();
+    await guest.start();
+    let now = 0;
+    // Drive past countdown into the first (start-of-match) augment pick.
+    for (let i = 0; i < 200 && host.snapshot().phase !== 'augment'; i++) {
+      host.tick(now);
+      guest.tick(now);
+      now += 50;
+    }
+    const before = host.snapshot();
+    expect(before.phase).toBe('augment');
+    expect(before.round).toBe(0); // precedes round 1
+    expect(before.myOwned.length).toBe(0); // nothing owned until this pick
+    expect(before.rerollsLeft).toBe(1);
+    expect(host.reroll()).toBe(true);
+    const after = host.snapshot();
+    expect(after.rerollsLeft).toBe(0);
+    expect(after.offers).not.toEqual(before.offers);
+    expect(after.offers.length).toBe(3);
+    expect(host.reroll()).toBe(false); // out of tokens
   });
 });
 

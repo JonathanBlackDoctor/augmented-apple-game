@@ -24,6 +24,7 @@ export interface OnlineStore {
   owned: string[];
   offers: string[];
   offerTier: AugTier | null;
+  rerollsLeft: number;
   winner: 'me' | 'opp' | 'draw' | null;
   mmrDelta: number | null;
   oppName: string;
@@ -55,6 +56,7 @@ const INIT = {
   owned: [] as string[],
   offers: [] as string[],
   offerTier: null as AugTier | null,
+  rerollsLeft: 1,
   winner: null as 'me' | 'opp' | 'draw' | null,
   mmrDelta: null as number | null,
   oppName: '상대',

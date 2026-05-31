@@ -2,9 +2,16 @@
 import { create } from 'zustand';
 import type { AugTier } from '../contracts';
 import type { OnlinePhase } from './OnlineMatch';
+import type { RoundResult } from './versusStore';
 import { START_MMR } from '../ranking/elo';
 
 export type OnlineStage = 'menu' | 'hosting' | 'connecting' | 'playing' | 'result';
+
+// Overlay durations, mirroring versus (VersusController AUGMENT_MS / ROUND_CHECK_MS).
+// Single source for both the match schedule (OnlineController → OnlineMatch) and the
+// overlay countdown bars (OnlineScreen), so the timer and the schedule never drift.
+export const ONLINE_AUGMENT_MS = 12_000;
+export const ONLINE_ROUND_CHECK_MS = 3_500;
 
 export interface OnlineStore {
   stage: OnlineStage;
@@ -25,9 +32,17 @@ export interface OnlineStore {
   roundHistory: { my: number; opp: number; winner: 'me' | 'opp' | 'draw' }[];
   combo: number;
   owned: string[];
+  oppOwned: string[];
   offers: string[];
   offerTier: AugTier | null;
   rerollsLeft: number;
+  // countdown for the timed augment / roundCheck overlays (schedule-driven)
+  overlayRemainingMs: number;
+  // the just-finished round, for the mid-round review screen (라운드 점검)
+  roundResult: RoundResult | null;
+  // opponent "+N" score-popup pulses (seq bumps each time the opponent scores)
+  oppGainSeq: number;
+  oppGainAmount: number;
   winner: 'me' | 'opp' | 'draw' | null;
   mmrDelta: number | null;
   mmr: number; // my MMR AFTER the ranked result (for the result rank band)
@@ -61,9 +76,14 @@ const INIT = {
   roundHistory: [] as { my: number; opp: number; winner: 'me' | 'opp' | 'draw' }[],
   combo: 0,
   owned: [] as string[],
+  oppOwned: [] as string[],
   offers: [] as string[],
   offerTier: null as AugTier | null,
   rerollsLeft: 1,
+  overlayRemainingMs: 0,
+  roundResult: null as RoundResult | null,
+  oppGainSeq: 0,
+  oppGainAmount: 0,
   winner: null as 'me' | 'opp' | 'draw' | null,
   mmrDelta: null as number | null,
   mmr: START_MMR,

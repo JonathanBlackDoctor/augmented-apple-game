@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>적용 결과 — 사과 시안 v2 (게임 렌더러 candyApple.ts)</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css" />
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:linear-gradient(180deg,#FBF5E9,#F4EDDF);color:#3A2A1E;
+    font-family:'Pretendard Variable',-apple-system,sans-serif;padding:24px 22px 60px;}
+  h1{font-size:21px;margin:0 0 4px;}
+  .lead{font-size:13px;color:#7a6552;max-width:78ch;line-height:1.6;margin:0 0 16px;}
+  .lead b{color:#E04A36;}
+  .bar{display:flex;gap:10px;align-items:center;margin-bottom:18px;}
+  .bar button{appearance:none;border:1px solid #e0c9a8;background:#fff;font-family:inherit;font-weight:700;
+    font-size:12.5px;border-radius:10px;padding:8px 14px;cursor:pointer;}
+  .bar button.on{background:#E0613B;color:#fff;border-color:transparent;}
+  .card{display:inline-block;background:#fffdf7;border:1px solid #ecdfc9;border-radius:14px;padding:18px 20px;margin:0 18px 18px 0;vertical-align:top;}
+  .card h2{font-size:13px;margin:0 0 10px;}
+  .grid{display:grid;grid-template-columns:repeat(6,52px);gap:7px;background:#fbe7d8;padding:12px;border-radius:10px;}
+  .row{display:flex;gap:22px;align-items:flex-end;}
+  .cap{font-size:10px;color:#b0a08c;margin-top:6px;text-align:center;}
+</style>
+</head>
+<body>
+  <h1>🍎 적용 결과 미리보기 — 게임 렌더러 그대로</h1>
+  <p class="lead">
+    <b>src/board/candyApple.ts</b> 의 <u>최종 코드</u>를 그대로 옮겨 캔버스로 렌더한 결과입니다(게임 화면과 동일).
+    본체는 v2 radial 본체색, 꼭지는 둥근 막대, 잎은 v2 페탈 모양을 <b>승인하신 위치
+    (왼쪽 위로 돋아나오듯)</b>에 본체 <b>앞</b>으로 얹었습니다. 점선=셀 경계.
+  </p>
+  <div class="bar">
+    <span style="font-size:12px;color:#7a6552;font-weight:600">조명(라운드 진행):</span>
+    <button data-t="0.16" class="on">아침</button>
+    <button data-t="0.5">한낮</button>
+    <button data-t="0.76">해질녘</button>
+    <button data-t="1">밤</button>
+  </div>
+  <div id="root"></div>
+
+<script>
+// ── candyApple.ts 핵심 로직 이식 (확인용) ───────────────────────────────
+const APPLE_SILHOUETTE='M45 14C48 17 52 17 55 14C68 9 91 23 91 51C91 74 73 90 50 90C27 90 9 74 9 51C9 23 32 9 45 14Z';
+const clamp01=x=>Math.max(0,Math.min(1,x));
+function hexToRgb(hex){const h=hex.replace('#','');const n=parseInt(h.length===3?h.split('').map(c=>c+c).join(''):h,16);return{r:(n>>16)&255,g:(n>>8)&255,b:n&255};}
+function rgbToHex({r,g,b}){const c=v=>Math.round(Math.max(0,Math.min(255,v))).toString(16).padStart(2,'0');return`#${c(r)}${c(g)}${c(b)}`;}
+function mix(a,b,t){const A=hexToRgb(a),B=hexToRgb(b);return rgbToHex({r:A.r+(B.r-A.r)*t,g:A.g+(B.g-A.g)*t,b:A.b+(B.b-A.b)*t});}
+const lerp=(a,b,k)=>a+(b-a)*k;
+const SCENE_KEYS=[
+ {sky:['#A9C8E4','#FCE6CB','#F8CF9E'],disc:'#FFF1CC',star:0.0},
+ {sky:['#8FBFE9','#EAF3F7','#FCF4DE'],disc:'#FFFEF6',star:0.0},
+ {sky:['#A6BFDC','#FFE7B8','#FFD295'],disc:'#FFE3A4',star:0.0},
+ {sky:['#7E6CA6','#FF9C76','#FFC062'],disc:'#FF865A',star:0.22},
+ {sky:['#10173A','#1E2A52','#34375F'],disc:'#DCE4FF',star:1.0},
+];
+function sceneAt(t){const x=clamp01(t),seg=x*(SCENE_KEYS.length-1);let i=Math.floor(seg);if(i>=SCENE_KEYS.length-1)i=SCENE_KEYS.length-2;const k=seg-i,A=SCENE_KEYS[i],B=SCENE_KEYS[i+1];return{sky1:mix(A.sky[1],B.sky[1],k),disc:mix(A.disc,B.disc,k),star:lerp(A.star,B.star,k)};}
+const LOOK_SKY=0.6,LOOK_RIM=0.55,LOOK_DEPTH=0.35;
+function lookAt(t){const f=sceneAt(t);return{hl:mix('#ffffff',f.sky1,Math.min(LOOK_SKY,1)*0.72),amb:0.22+LOOK_DEPTH*0.5+f.star*0.16,rim:hexToRgb(f.disc),rim_a:Math.min(LOOK_RIM*(0.34+0.66*Math.max(f.star,0.22)),1),shadow_a:0.6+LOOK_DEPTH*0.6};}
+const VARIANTS={
+ normal:{palette:['#ED6138','#E5512C','#DC4824'],amb:[70,16,8],number:'#FFF4EC',sheen:'sky',leaf:['#69B23A','#4C9626'],stem:['#7C4B2B','#5C3620']},
+ golden:{palette:['#f4c659','#dca21f','#ad7d13'],amb:[90,60,8],number:'#5a3c08',sheen:'#ffe9a8',specular:0.55,leaf:['#cdd07a','#9aa24e'],stem:['#8a5630','#5f3a1f']},
+ wild:{palette:['#9e92ff','#7d6df0','#5f4cd6'],amb:[40,24,90],number:'#ffffff',sheen:'#fdeaff',specular:0.5,rainbow:true,leaf:['#9fe6c4','#56b78c'],stem:['#6a5cc0','#473a90']},
+ gem:{palette:['#6fe3e0','#2bb6c8','#1c7e96'],amb:[8,60,70],number:'#eafdff',sheen:'sky',leaf:['#9ee0d8','#4fb3ad'],stem:['#3a7d70','#1f5048']},
+ bomb:{palette:['#6a6f86','#454a63','#2a2e44'],amb:[20,20,44],number:'#f2f2f6',sheen:'sky',fuse:true,leaf:['#9bbf7e','#6f9a52'],stem:['#5a5060','#3a3340']},
+};
+function radialFill(ctx,cx,cy,rx,ry,stops){ctx.save();ctx.translate(cx,cy);ctx.scale(rx,ry);const g=ctx.createRadialGradient(0,0,0,0,0,1);for(const[o,c]of stops)g.addColorStop(o,c);ctx.fillStyle=g;ctx.fillRect(-300,-300,600,600);ctx.restore();}
+function drawFuse(ctx){ctx.strokeStyle='#8a6a40';ctx.lineWidth=3.4;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(50,14);ctx.quadraticCurveTo(54,6,62,8);ctx.stroke();const tx=62,ty=8;const gg=ctx.createRadialGradient(tx,ty,0,tx,ty,7);gg.addColorStop(0,'rgba(255,255,255,0.95)');gg.addColorStop(0.5,'rgba(255,181,58,0.7)');gg.addColorStop(1,'rgba(255,181,58,0)');ctx.fillStyle=gg;ctx.beginPath();ctx.arc(tx,ty,7,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fff3c4';const r=6;ctx.beginPath();ctx.moveTo(tx,ty-r);ctx.lineTo(tx+r*0.3,ty);ctx.lineTo(tx,ty+r);ctx.lineTo(tx-r*0.3,ty);ctx.closePath();ctx.moveTo(tx-r,ty);ctx.lineTo(tx,ty-r*0.3);ctx.lineTo(tx+r,ty);ctx.lineTo(tx,ty+r*0.3);ctx.closePath();ctx.fill();ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(tx,ty,1.8,0,Math.PI*2);ctx.fill();}
+function drawStemLeaf(ctx,v,s){
+  ctx.save();ctx.scale(s,s);
+  if(v.fuse){drawFuse(ctx);ctx.restore();return;}
+  // 꼭지
+  ctx.save();ctx.translate(51.25,14);ctx.rotate(11*Math.PI/180);
+  const sw=7.5,sh=24;const sg=ctx.createLinearGradient(0,-sh,0,0);sg.addColorStop(0,v.stem[0]);sg.addColorStop(1,v.stem[1]);ctx.fillStyle=sg;
+  ctx.beginPath();ctx.roundRect(-sw/2,-sh,sw,sh,sw*0.4);ctx.fill();ctx.restore();
+  // 잎
+  ctx.save();ctx.translate(52,2);ctx.rotate(-38*Math.PI/180);
+  const lw=28,lh=28;
+  ctx.beginPath();ctx.moveTo(-lw,-lh);ctx.quadraticCurveTo(0,-lh,0,0);ctx.quadraticCurveTo(-lw,0,-lw,-lh);ctx.closePath();
+  const lg=ctx.createLinearGradient(0,-lh,-lw,0);lg.addColorStop(0,v.leaf[0]);lg.addColorStop(1,v.leaf[1]);ctx.fillStyle=lg;ctx.fill();
+  ctx.clip();const ish=ctx.createRadialGradient(0,0,0,0,0,lw*0.55);ish.addColorStop(0,'rgba(0,0,0,0.18)');ish.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=ish;ctx.fillRect(-lw,-lh,lw,lh);ctx.restore();
+  ctx.restore();
+}
+function drawApple(ctx,opt){
+  const{size,value,look}=opt;const v=VARIANTS[opt.variant||'normal'];const showDeco=opt.decorations??size>24;const s=size/100;
+  ctx.save();ctx.globalAlpha=clamp01(0.3*look.shadow_a);ctx.fillStyle='rgb(40,16,10)';ctx.beginPath();ctx.ellipse(size*0.5,size*0.95,size*0.4,size*0.085,0,0,Math.PI*2);ctx.filter=`blur(${Math.max(1,size*0.03)}px)`;ctx.fill();ctx.restore();
+  ctx.save();ctx.scale(s,s);ctx.clip(new Path2D(APPLE_SILHOUETTE));
+  if(v.rainbow){const rad=176*Math.PI/180,dx=Math.cos(rad),dy=Math.sin(rad);const g1=ctx.createLinearGradient(50-dx*50,50-dy*50,50+dx*50,50+dy*50);g1.addColorStop(0,'#ff9ec4');g1.addColorStop(0.25,'#ffe08a');g1.addColorStop(0.5,'#8fe6c8');g1.addColorStop(0.72,'#7fc4f0');g1.addColorStop(1,'#b3a8ff');ctx.fillStyle=g1;ctx.fillRect(0,0,100,100);}
+  else{radialFill(ctx,50,30,72,60,[[0,v.palette[0]],[0.56,v.palette[1]],[1,v.palette[2]]]);}
+  const sheenColor=v.sheen==='sky'?look.hl:v.sheen;radialFill(ctx,50,2,86,78,[[0,sheenColor],[0.6,'rgba(255,255,255,0)']]);
+  if(v.specular){radialFill(ctx,35,24,46,38,[[0,`rgba(255,255,255,${v.specular})`],[0.7,'rgba(255,255,255,0)']]);}
+  const[ar,ag,ab]=v.amb;radialFill(ctx,50,100,54,36,[[0,`rgba(${ar},${ag},${ab},${clamp01(look.amb)})`],[0.68,`rgba(${ar},${ag},${ab},0)`]]);
+  ctx.globalCompositeOperation='screen';const{r,g,b}=look.rim;const ra=clamp01(look.rim_a);
+  radialFill(ctx,82,80,120,95,[[0,`rgba(${r},${g},${b},${ra})`],[0.4,`rgba(${r},${g},${b},0)`]]);
+  radialFill(ctx,50,2,90,30,[[0,`rgba(${r},${g},${b},${ra})`],[0.6,`rgba(${r},${g},${b},0)`]]);
+  ctx.globalCompositeOperation='source-over';ctx.restore();
+  if(showDeco)drawStemLeaf(ctx,v,s);
+  if(value!=null){const small=size<=24,ratio=small?0.52:0.47;ctx.fillStyle=v.number;ctx.font=`${small?700:600} ${size*ratio}px Quicksand,"Pretendard Variable",Pretendard,sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.shadowColor='rgba(120,28,14,0.34)';ctx.shadowBlur=small?size*0.04:size*0.05;ctx.shadowOffsetY=small?1.5:2;ctx.fillText(String(value),size*0.5,size*0.52);}
+}
+function mk(size,value,variant,look){const dpr=Math.min(window.devicePixelRatio||1,2);const c=document.createElement('canvas');c.width=size*dpr;c.height=size*dpr;c.style.width=size+'px';c.style.height=size+'px';const ctx=c.getContext('2d');ctx.scale(dpr,dpr);drawApple(ctx,{size,value,variant,look});return c;}
+
+let T=0.16;
+function render(){
+  const look=lookAt(T);const root=document.getElementById('root');root.innerHTML='';
+  // 1) normal 52px 그리드 (잎 겹침 확인)
+  const c1=document.createElement('div');c1.className='card';
+  c1.innerHTML='<h2>normal · 게임 셀 52px</h2>';
+  const g=document.createElement('div');g.className='grid';
+  const nums=[3,7,1,9,2,5,4,8,6,1,3,2,9,5,7,4,6,8];
+  for(let i=0;i<18;i++){const w=document.createElement('div');w.style.cssText='position:relative;width:52px;height:52px;outline:1px dashed rgba(224,74,54,.30)';w.appendChild(mk(52,nums[i],'normal',look));g.appendChild(w);}
+  c1.appendChild(g);root.appendChild(c1);
+  // 2) 변형별 대형
+  const c2=document.createElement('div');c2.className='card';c2.innerHTML='<h2>변형별 (130px)</h2>';
+  const row=document.createElement('div');row.className='row';
+  [['normal',3],['golden',5],['wild',7],['gem',2],['bomb',9]].forEach(([variant,n])=>{
+    const col=document.createElement('div');col.appendChild(mk(130,n,variant,look));
+    const cap=document.createElement('div');cap.className='cap';cap.textContent=variant;col.appendChild(cap);row.appendChild(col);
+  });
+  c2.appendChild(row);root.appendChild(c2);
+}
+document.querySelectorAll('.bar button').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('.bar button').forEach(x=>x.classList.remove('on'));b.classList.add('on');T=parseFloat(b.dataset.t);render();}));
+render();
+</script>
+</body>
+</html>

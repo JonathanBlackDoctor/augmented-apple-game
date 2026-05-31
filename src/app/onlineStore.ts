@@ -10,6 +10,7 @@ export interface OnlineStore {
   stage: OnlineStage;
   roomCode: string;
   link: string;
+  isPublic: boolean;
   error: string | null;
   phase: OnlinePhase;
   round: number;
@@ -45,6 +46,7 @@ const INIT = {
   stage: 'menu' as OnlineStage,
   roomCode: '',
   link: '',
+  isPublic: false,
   error: null as string | null,
   phase: 'lobby' as OnlinePhase,
   round: 0,

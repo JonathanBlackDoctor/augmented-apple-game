@@ -25,7 +25,7 @@ export const ROUND_CHECK_MS = 3_500; // mid-round review screen duration
 // Each rival's emote tone + frequency lives on its AiLevel.emote persona
 // (see bot/levels.ts). The throttle just prevents back-to-back spam; how often a
 // rival actually emotes is gated by its `chattiness`.
-const EMOTE_THROTTLE_MS = 2500;
+const EMOTE_THROTTLE_MS = 1500;
 
 export class VersusController {
   private readonly board = new BoardView();
@@ -199,12 +199,20 @@ export class VersusController {
         }
         if (this.persona)
           this.botEmote(this.botAhead(snap) ? this.persona.ahead : this.persona.even, {
-            chance: 0.85,
+            chance: 0.92,
           });
       }
       updateAmbient(this.board, snap.myOwned, snap.remainingMs, this.durationMs);
       st.setPhase('round');
     } else if (snap.phase === 'roundCheck') {
+      if (this.lastPhase === 'round' && this.persona) {
+        const r = snap.lastRound;
+        if (r) {
+          this.botEmote(r.winner === 'bot' ? this.persona.ahead : this.persona.behind, {
+            chance: 0.88,
+          });
+        }
+      }
       const r = snap.lastRound;
       if (r) {
         vs.setRoundCheck(
@@ -246,11 +254,19 @@ export class VersusController {
     if (botDelta > 0) {
       useVersusStore.getState().bumpOppGain(botDelta);
       // Reacts to its own clear: gloat when ahead, stay breezy when even/behind.
+      // A big clear (3+) triggers more reliably.
       if (this.persona)
-        this.botEmote(this.botAhead(s) ? this.persona.ahead : this.persona.even, { chance: 0.55 });
-    } else if (myDelta > 0 && !this.botAhead(s)) {
-      // The player just scored and is (still) ahead → the rival looks rattled.
-      if (this.persona) this.botEmote(this.persona.behind, { chance: 0.4 });
+        this.botEmote(this.botAhead(s) ? this.persona.ahead : this.persona.even, {
+          chance: botDelta >= 3 ? 0.82 : 0.70,
+        });
+    } else if (myDelta > 0) {
+      if (!this.botAhead(s)) {
+        // The player just scored and is (still) ahead → the rival looks rattled.
+        if (this.persona) this.botEmote(this.persona.behind, { chance: 0.60 });
+      } else {
+        // Player scored but bot is still ahead → dismissive/confident reaction.
+        if (this.persona) this.botEmote(this.persona.even, { chance: 0.45 });
+      }
     }
     this.prevBotScore = s.botScore;
     this.prevMyScore = s.myScore;

@@ -208,10 +208,20 @@ export class VersusController {
       const r = snap.lastRound;
       if (r) {
         vs.setRoundCheck(
-          r.myScore,
-          r.botScore,
-          r.winner === 'me' ? 'me' : r.winner === 'bot' ? 'opp' : 'draw',
-          snap.round,
+          {
+            my: r.myScore,
+            opp: r.botScore,
+            winner: r.winner === 'me' ? 'me' : r.winner === 'bot' ? 'opp' : 'draw',
+            round: snap.round,
+            bonus: r.bonus,
+            myTotal: snap.myTotal,
+            oppTotal: snap.botTotal,
+            history: snap.roundHistory.map((h) => ({
+              my: h.my,
+              opp: h.bot,
+              winner: h.winner === 'me' ? 'me' : h.winner === 'bot' ? 'opp' : 'draw',
+            })),
+          },
           snap.phaseRemainingMs,
         );
         // React to the round result the moment the review screen opens.

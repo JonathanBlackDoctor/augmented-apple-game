@@ -8,6 +8,7 @@ import { computeLayout, type BoardLayout } from '../board/layout';
 import { pickGridDims } from '../board/orientation';
 import { InputController, type DragHandlers } from '../input/InputController';
 import { createMonotonicClock } from './clock';
+import { START_MMR } from '../ranking/elo';
 import { sfx } from './sound';
 import { playActivation, playClear, updateAmbient } from './augmentFx';
 import { useOnlineStore } from './onlineStore';
@@ -249,7 +250,9 @@ export class OnlineController {
       await this.persistProfile();
     }
     this.board.showSelection(null, false);
-    useOnlineStore.getState().set({ stage: 'result', winner, mmrDelta });
+    useOnlineStore
+      .getState()
+      .set({ stage: 'result', winner, mmrDelta, mmr: this.profile?.mmr ?? START_MMR });
   }
 
   private handlers: DragHandlers = {

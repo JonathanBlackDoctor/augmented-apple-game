@@ -2,6 +2,7 @@
 import { create } from 'zustand';
 import type { AugTier } from '../contracts';
 import type { OnlinePhase } from './OnlineMatch';
+import { START_MMR } from '../ranking/elo';
 
 export type OnlineStage = 'menu' | 'hosting' | 'connecting' | 'playing' | 'result';
 
@@ -27,6 +28,7 @@ export interface OnlineStore {
   rerollsLeft: number;
   winner: 'me' | 'opp' | 'draw' | null;
   mmrDelta: number | null;
+  mmr: number; // my MMR AFTER the ranked result (for the result rank band)
   oppName: string;
   oppPresent: boolean;
   oppConnected: boolean;
@@ -59,6 +61,7 @@ const INIT = {
   rerollsLeft: 1,
   winner: null as 'me' | 'opp' | 'draw' | null,
   mmrDelta: null as number | null,
+  mmr: START_MMR,
   oppName: '상대',
   oppPresent: false,
   oppConnected: false,

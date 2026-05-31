@@ -4,6 +4,8 @@ import { useOnlineStore } from '../../app/onlineStore';
 import { OnlineController } from '../../app/OnlineController';
 import { byId } from '../../augments';
 import { OnlineHud } from '../components/OnlineHud';
+import { AnimNum } from '../components/AnimNum';
+import { RankBand } from '../components/RankBand';
 
 const TIER_LABEL: Record<string, string> = { silver: '실버', gold: '골드', prismatic: '프리즘' };
 
@@ -187,23 +189,22 @@ export function OnlineScreen() {
             <div className="vs-final">
               <div className="vs-final-side">
                 <span className="vs-label">{s.myName}</span>
-                <span className="big-score">{s.myTotal}</span>
+                <span className="big-score">
+                  <AnimNum from={0} to={s.myTotal} dur={700} />
+                </span>
               </div>
               <span className="vs-colon">:</span>
               <div className="vs-final-side">
                 <span className="vs-label">{s.oppName}</span>
-                <span className="big-score">{s.oppTotal}</span>
+                <span className="big-score">
+                  <AnimNum from={0} to={s.oppTotal} dur={700} />
+                </span>
               </div>
             </div>
             <p className="best-line">
               라운드 {s.roundWins.me} : {s.roundWins.opp}
             </p>
-            {s.mmrDelta !== null && (
-              <p className="mmr-line">
-                MMR {s.mmrDelta >= 0 ? '+' : ''}
-                {s.mmrDelta}
-              </p>
-            )}
+            {s.mmrDelta !== null && <RankBand mmrAfter={s.mmr} mmrDelta={s.mmrDelta} />}
             <div className="btn-row">
               <button className="btn ghost" onClick={goHome}>
                 홈으로

@@ -7,6 +7,11 @@ export interface RoundResult {
   opp: number;
   winner: 'me' | 'opp' | 'draw';
   round: number; // 0-based round that just finished
+  bonus: number; // winner bonus awarded this round
+  myTotal: number; // cumulative total AFTER this round (incl. bonus)
+  oppTotal: number;
+  // every finished round so far (oldest→newest), for the pip strip
+  history: { my: number; opp: number; winner: 'me' | 'opp' | 'draw' }[];
 }
 
 export interface VersusState {
@@ -38,13 +43,7 @@ export interface VersusState {
     roundWins: { me: number; opp: number },
     oppOwned: string[],
   ): void;
-  setRoundCheck(
-    my: number,
-    opp: number,
-    winner: 'me' | 'opp' | 'draw',
-    round: number,
-    remainingMs: number,
-  ): void;
+  setRoundCheck(result: RoundResult, remainingMs: number): void;
   setOverlayRemaining(ms: number): void;
   bumpOppGain(delta: number): void;
   sendMyEmote(id: string): void;
@@ -80,8 +79,8 @@ export const useVersusStore = create<VersusState>((set) => ({
     set({ ...INIT, oppName, oppAvatar, oppTier, ranked }),
   setLive: (oppTotal, oppRoundScore, roundWins, oppOwned) =>
     set({ oppTotal, oppRoundScore, roundWins, oppOwned }),
-  setRoundCheck: (my, opp, winner, round, remainingMs) =>
-    set({ roundResult: { my, opp, winner, round }, overlayRemainingMs: remainingMs }),
+  setRoundCheck: (result, remainingMs) =>
+    set({ roundResult: result, overlayRemainingMs: remainingMs }),
   setOverlayRemaining: (overlayRemainingMs) => set({ overlayRemainingMs }),
   bumpOppGain: (delta) =>
     set((s) => ({ oppGainSeq: s.oppGainSeq + 1, oppGainAmount: delta })),

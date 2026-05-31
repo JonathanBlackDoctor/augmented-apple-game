@@ -1237,6 +1237,165 @@ body {
   color: var(--ink);
   font-variant-numeric: tabular-nums;
 }
+/* winner bonus chip floating above the winning side */
+.rc-side {
+  position: relative;
+}
+.rc-bonus {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 800;
+  color: #fff;
+  background: var(--gold);
+  padding: 2px 9px;
+  border-radius: 999px;
+  box-shadow: var(--shadow-sm);
+  animation: pop 0.25s var(--ease) both;
+}
+/* cumulative total rollup */
+.rc-total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 0 auto 12px;
+  max-width: 280px;
+  padding: 8px 14px;
+  border-radius: var(--radius);
+  background: var(--paper-2);
+  border: 1px solid var(--line);
+}
+.rc-total-label {
+  font-size: 12px;
+  color: var(--ink-2);
+}
+.rc-total-val {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.rc-total-val .opp {
+  color: var(--apple-2);
+}
+.rc-total-sep {
+  color: var(--ink-2);
+  margin: 0 6px;
+}
+/* per-round pip strip (R1..Rn with this-side W/L tint) */
+.rc-pips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.rc-pip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  min-width: 42px;
+  padding: 4px 6px;
+  border-radius: 10px;
+  background: var(--paper-2);
+  border: 1.5px solid var(--line);
+}
+.rc-pip.w {
+  border-color: var(--valid-ring);
+  background: var(--valid-bg);
+}
+.rc-pip.l {
+  border-color: var(--apple-shadow);
+  background: rgba(224, 74, 54, 0.1);
+}
+.rc-pip.new {
+  animation: pop 0.3s var(--ease) both;
+}
+.rc-pip-r {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--ink-2);
+}
+.rc-pip-v {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Ranked result MMR band ---------- */
+.mmrbox {
+  margin: 4px 0 16px;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  background: var(--paper-2);
+  border: 1px solid var(--line);
+  text-align: left;
+}
+.mmr-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.tier-chip {
+  font-size: 13px;
+  font-weight: 800;
+  color: #fff;
+  padding: 3px 12px;
+  border-radius: 999px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+.mmr-delta {
+  font-size: 14px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.mmr-delta.up {
+  color: var(--valid);
+}
+.mmr-delta.down {
+  color: var(--apple-2);
+}
+.mmr-track {
+  height: 10px;
+  border-radius: 999px;
+  background: var(--track);
+  overflow: hidden;
+}
+.mmr-track i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.6s var(--ease);
+}
+.mmr-scale {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.mmr-promote {
+  margin-top: 8px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 800;
+  animation: pop 0.3s var(--ease) both;
+}
+.mmr-promote.up {
+  color: var(--valid);
+}
+.mmr-promote.down {
+  color: var(--apple-2);
+}
 
 /* owned-augment build sidebars (during versus play): compact trading-card
    faces — a scaled-down `.aug-card`. Player on the left, opponent on the

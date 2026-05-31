@@ -3,6 +3,7 @@ import { useVersusStore } from '../../app/versusStore';
 import { useProgressStore } from '../../app/progressStore';
 import { getEmote } from '../../emotes';
 import { MAX_LEVEL } from '../../bot';
+import { AnimNum } from './AnimNum';
 
 export function VersusResult({
   onReplay,
@@ -33,12 +34,16 @@ export function VersusResult({
         <div className="vs-final">
           <div className="vs-final-side">
             <span className="vs-label">나</span>
-            <span className="big-score">{myTotal}</span>
+            <span className="big-score">
+              <AnimNum from={0} to={myTotal} dur={700} />
+            </span>
           </div>
           <span className="vs-colon">:</span>
           <div className="vs-final-side">
             <span className="vs-label">{v.oppName}</span>
-            <span className="big-score">{v.oppTotal}</span>
+            <span className="big-score">
+              <AnimNum from={0} to={v.oppTotal} dur={700} />
+            </span>
           </div>
         </div>
         <p className="best-line">

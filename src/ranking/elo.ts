@@ -51,3 +51,23 @@ export function tierFromMmr(mmr: number): Tier {
   for (const b of TIER_BANDS) if (mmr >= b.min) return b.tier;
   return 'Iron';
 }
+
+export interface MmrBand {
+  tier: Tier;
+  min: number; // band floor (Iron reported as 0 for display/progress)
+  max: number; // next band's floor (top band: min + 300)
+  pct: number; // 0..100 progress within [min, max)
+}
+
+/** Current tier band + progress toward the next tier (for result-screen bars). */
+export function mmrBand(mmr: number): MmrBand {
+  const asc = [...TIER_BANDS].reverse(); // low → high
+  let i = 0;
+  for (let j = 0; j < asc.length; j++) if (mmr >= asc[j].min) i = j;
+  const cur = asc[i];
+  const next = asc[i + 1];
+  const min = Number.isFinite(cur.min) ? cur.min : 0;
+  const max = next ? next.min : min + 300;
+  const pct = Math.max(0, Math.min(100, ((mmr - min) / (max - min)) * 100));
+  return { tier: cur.tier, min, max, pct };
+}

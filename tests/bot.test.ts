@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { buildPrefix, findMoves } from '../src/bot/solver';
-import { decide, difficultyForMmr } from '../src/bot/BotPlayer';
+import { decide, type BotTuning } from '../src/bot/BotPlayer';
 import { makeRng } from '../src/core';
 import type { Board, Cell, CellTag } from '../src/contracts';
 
@@ -45,24 +45,33 @@ describe('bot solver', () => {
 
 describe('bot decide', () => {
   const b = board(3, 2, [4, 6, 1, 9, 1, 2]);
+  const strong: BotTuning = { minDelayMs: 400, maxDelayMs: 900, pickTop: 1, blunderChance: 0 };
 
-  it('hard difficulty returns a valid move', () => {
-    expect(decide(b, 10, 'hard', makeRng('s'))).not.toBeNull();
+  it('returns a valid move', () => {
+    expect(decide(b, 10, strong, makeRng('s'))).not.toBeNull();
   });
 
   it('is deterministic for a fixed seed', () => {
-    expect(decide(b, 10, 'normal', makeRng('seed1'))).toEqual(
-      decide(b, 10, 'normal', makeRng('seed1')),
-    );
+    expect(decide(b, 10, strong, makeRng('seed1'))).toEqual(decide(b, 10, strong, makeRng('seed1')));
   });
 
   it('returns null on a board with no solution', () => {
-    expect(decide(board(2, 1, [1, 2]), 10, 'hard', makeRng('x'))).toBeNull();
+    expect(decide(board(2, 1, [1, 2]), 10, strong, makeRng('x'))).toBeNull();
   });
 
-  it('maps mmr to difficulty', () => {
-    expect(difficultyForMmr(1000)).toBe('easy');
-    expect(difficultyForMmr(1300)).toBe('normal');
-    expect(difficultyForMmr(1700)).toBe('hard');
+  it('perfect tuning (pickTop 1, no blunder) takes a maximum-size move', () => {
+    // [1,2,3,4] sums to 10 (4 cells) and [5,5] sums to 10 (2 cells).
+    const b2 = board(6, 1, [1, 2, 3, 4, 5, 5]);
+    const moves = findMoves(b2, 10);
+    const max = Math.max(...moves.map((m) => m.count));
+    const d = decide(b2, 10, strong, makeRng('z'))!;
+    const chosen = moves.find(
+      (m) =>
+        m.rect.x0 === d.rect.x0 &&
+        m.rect.x1 === d.rect.x1 &&
+        m.rect.y0 === d.rect.y0 &&
+        m.rect.y1 === d.rect.y1,
+    )!;
+    expect(chosen.count).toBe(max);
   });
 });

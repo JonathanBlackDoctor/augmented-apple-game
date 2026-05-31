@@ -48,6 +48,9 @@ export const sfx = {
   pick(): void {
     blip(660, 140, 0.06, 'sine');
   },
+  emote(): void {
+    blip(880, 90, 0.05, 'triangle');
+  },
   end(): void {
     blip(420, 220, 0.06, 'triangle');
   },

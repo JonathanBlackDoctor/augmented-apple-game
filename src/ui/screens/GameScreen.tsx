@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { makeRng } from '../../core';
 import { useGameStore } from '../../app/store';
+import { useProgressStore } from '../../app/progressStore';
+import { MAX_LEVEL } from '../../bot';
 import { getSettings } from '../../app/settingsStore';
 import { MatchController, type MatchPlan } from '../../app/MatchController';
 import { VersusController, AUGMENT_MS } from '../../app/VersusController';
@@ -14,6 +16,8 @@ import { RoundCheckOverlay } from '../components/RoundCheckOverlay';
 import { OwnedAugments } from '../components/OwnedAugments';
 import { ResultOverlay } from '../components/ResultOverlay';
 import { VersusResult } from '../components/VersusResult';
+import { EmoteTray } from '../components/EmoteTray';
+import { EmoteOverlay } from '../components/EmoteOverlay';
 import { SettingsOverlay } from '../components/SettingsOverlay';
 import { HelpOverlay } from '../components/HelpOverlay';
 import { PauseOverlay } from '../components/PauseOverlay';
@@ -21,9 +25,9 @@ import { PauseOverlay } from '../components/PauseOverlay';
 function buildPlan(mode: 'solo' | 'augment'): MatchPlan {
   const seedBase = `${mode}:${Date.now()}`;
   const s = getSettings();
-  // Honor the board-size setting, then swap to a tall grid on portrait screens so
-  // cells aren't squeezed by the narrow width (bigger, tappable apples on mobile).
-  const { cols, rows } = pickGridDims({ cols: s.boardCols, rows: s.boardRows });
+  // Fixed medium board; swap to a tall grid on portrait screens so cells aren't
+  // squeezed by the narrow width (bigger, tappable apples on mobile).
+  const { cols, rows } = pickGridDims();
   const base = {
     seedBase,
     cols,
@@ -104,6 +108,12 @@ export function GameScreen() {
     else soloRef.current?.restart();
   };
   const onHome = (): void => useGameStore.getState().goHome();
+  const onLevels = (): void => useGameStore.setState({ mode: 'levels', phase: 'home' });
+  const onNextLevel = (): void => {
+    const p = useProgressStore.getState();
+    p.selectLevel(Math.min(MAX_LEVEL, p.selectedLevel + 1));
+    versusRef.current?.restart();
+  };
 
   const activeCtrl = (): MatchController | VersusController | null =>
     isVersus ? versusRef.current : soloRef.current;
@@ -134,6 +144,8 @@ export function GameScreen() {
       {isVersus ? <VersusHud onPause={pauseHandler} /> : <Hud onPause={pauseHandler} />}
       <div className="board-host" ref={hostRef} />
       {isVersus && <OwnedAugments />}
+      {isVersus && <EmoteOverlay />}
+      {isVersus && phase !== 'result' && !paused && <EmoteTray />}
       {phase === 'roundCheck' && isVersus && <RoundCheckOverlay />}
       {phase === 'augment' &&
         (isVersus ? (
@@ -148,7 +160,7 @@ export function GameScreen() {
         ))}
       {phase === 'result' &&
         (isVersus ? (
-          <VersusResult onReplay={onReplay} onHome={onHome} />
+          <VersusResult onReplay={onReplay} onNextLevel={onNextLevel} onLevels={onLevels} />
         ) : (
           <ResultOverlay onReplay={onReplay} onHome={onHome} />
         ))}

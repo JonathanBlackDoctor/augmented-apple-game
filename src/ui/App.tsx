@@ -5,6 +5,7 @@ import { HomeScreen } from './screens/HomeScreen';
 import { GameScreen } from './screens/GameScreen';
 import { OnlineScreen } from './screens/OnlineScreen';
 import { LeaderboardScreen } from './screens/LeaderboardScreen';
+import { LevelSelectScreen } from './screens/LevelSelectScreen';
 import { InAppBanner } from './components/InAppBanner';
 import { DayNightSky } from './components/DayNightSky';
 
@@ -22,6 +23,8 @@ export function App() {
       <OnlineScreen />
     ) : mode === 'leaderboard' ? (
       <LeaderboardScreen />
+    ) : mode === 'levels' ? (
+      <LevelSelectScreen />
     ) : phase === 'home' ? (
       <HomeScreen />
     ) : (

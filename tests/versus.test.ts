@@ -1,10 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { VersusMatch } from '../src/app/VersusMatch';
 import { findMoves } from '../src/bot/solver';
+import { levelTuning } from '../src/bot';
 
 /** Drive a full match headlessly: the "human" auto-plays with the solver. */
 function playFullMatch(seedBase: string): VersusMatch {
-  const m = new VersusMatch({ seedBase, difficulty: 'normal', durationMs: 3000 });
+  const m = new VersusMatch({ seedBase, tuning: levelTuning(5), durationMs: 3000 });
   let now = 0;
   let guard = 0;
   while (m.snapshot().phase !== 'matchResult' && guard++ < 200000) {
@@ -15,11 +16,11 @@ function playFullMatch(seedBase: string): VersusMatch {
         if (moves.length > 0) m.myCommit(moves[0].rect, now);
       }
       now += 50;
-    } else if (snap.phase === 'roundCheck') {
-      // mid-round review is timer-driven: just advance the clock past it
-      now += 50;
     } else if (snap.phase === 'augment') {
       m.pickAugment(snap.offers[0], now);
+      now += 50;
+    } else {
+      // mid-round review is timer-driven: just advance the clock past it
       now += 50;
     }
   }
@@ -47,7 +48,7 @@ describe('VersusMatch — you vs AI, full headless match', () => {
   });
 
   it('enters a mid-round review (roundCheck) once a round ends', () => {
-    const m = new VersusMatch({ seedBase: 'check:1', difficulty: 'normal', durationMs: 1000 });
+    const m = new VersusMatch({ seedBase: 'check:1', tuning: levelTuning(5), durationMs: 1000 });
     let now = 0;
     // The match opens on the start-of-match augment pick; take it to reach round 1.
     if (m.snapshot().phase === 'augment') m.pickAugment(m.snapshot().offers[0], now);
@@ -59,32 +60,10 @@ describe('VersusMatch — you vs AI, full headless match', () => {
     expect(snap.phaseRemainingMs).toBeGreaterThan(0);
   });
 
-  it('opens on a start-of-match augment pick before round 1', () => {
-    const m = new VersusMatch({ seedBase: 'start:1', difficulty: 'normal', durationMs: 1000 });
-    const snap = m.snapshot();
-    expect(snap.phase).toBe('augment');
-    expect(snap.round).toBe(0); // the pick precedes round 1 (0-based round 0)
-    expect(snap.offers.length).toBe(3);
-    expect(snap.myOwned.length).toBe(0); // nothing owned until this pick is made
-    expect(snap.rerollsLeft).toBe(1); // one reroll token per match
-  });
-
-  it('reroll spends a token and draws a fresh offer; second reroll is a no-op', () => {
-    const m = new VersusMatch({ seedBase: 'reroll:1', difficulty: 'normal', durationMs: 1000 });
-    const before = m.snapshot().offers.slice();
-    expect(m.reroll()).toBe(true);
-    const after = m.snapshot();
-    expect(after.rerollsLeft).toBe(0);
-    expect(after.offers).not.toEqual(before); // a different draw
-    expect(after.offers.length).toBe(3);
-    expect(m.reroll()).toBe(false); // out of tokens
-    expect(m.snapshot().rerollsLeft).toBe(0);
-  });
-
   it('auto-picks the first offer when the augment timer elapses', () => {
     const m = new VersusMatch({
       seedBase: 'auto:1',
-      difficulty: 'normal',
+      tuning: levelTuning(5),
       durationMs: 1000,
       roundCheckMs: 200,
       augmentMs: 2000,
@@ -99,5 +78,25 @@ describe('VersusMatch — you vs AI, full headless match', () => {
     const snap = m.snapshot();
     expect(snap.phase).toBe('round'); // advanced into round 2
     expect(snap.myOwned).toContain(expected);
+  });
+});
+
+describe('VersusMatch — start-of-match pick + reroll', () => {
+  it('opens on a start pick (round 0) and reroll spends the one token', () => {
+    const m = new VersusMatch({ seedBase: 'start:1', tuning: levelTuning(5), durationMs: 1000 });
+    const before = m.snapshot();
+    expect(before.phase).toBe('augment');
+    expect(before.round).toBe(0); // the pick precedes round 1 (0-based round 0)
+    expect(before.offers.length).toBe(3);
+    expect(before.myOwned.length).toBe(0); // nothing owned until this pick is made
+    expect(before.rerollsLeft).toBe(1); // one reroll token per match
+    const beforeOffers = before.offers.slice();
+    expect(m.reroll()).toBe(true);
+    const after = m.snapshot();
+    expect(after.rerollsLeft).toBe(0);
+    expect(after.offers).not.toEqual(beforeOffers);
+    expect(after.offers.length).toBe(3);
+    expect(m.reroll()).toBe(false); // out of tokens
+    expect(m.snapshot().rerollsLeft).toBe(0);
   });
 });

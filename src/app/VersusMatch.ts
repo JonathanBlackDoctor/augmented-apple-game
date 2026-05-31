@@ -13,7 +13,7 @@ import type {
   RoundConfig,
   SeededRng,
 } from '../contracts';
-import { decide, type Difficulty } from '../bot';
+import { decide, type BotTuning } from '../bot';
 import { versusOfferTiers, rollOfferTiers, buildHookBusFor } from '../augments/runtime';
 
 export type VersusPhase = 'round' | 'roundCheck' | 'augment' | 'matchResult';
@@ -25,7 +25,7 @@ export interface VersusOptions {
   rows: number;
   durationMs: number;
   targetSum: number;
-  difficulty: Difficulty;
+  tuning: BotTuning; // bot strength for this match (from the chosen AI level)
   // Per-round winner bonus scales with the round number: round R (1-based) grants
   // R * winnerBonusStep (e.g. 10/20/30/40/50), so late rounds — where the strong
   // augments are online — decide more of the match.
@@ -98,7 +98,7 @@ export class VersusMatch {
   private rerollsLeft = 0; // reroll tokens left for the whole match
   private winner: 'me' | 'bot' | 'draw' | null = null;
 
-  constructor(opts: Partial<VersusOptions> & { seedBase: string; difficulty: Difficulty }) {
+  constructor(opts: Partial<VersusOptions> & { seedBase: string; tuning: BotTuning }) {
     this.opts = {
       seedBase: opts.seedBase,
       rounds: opts.rounds ?? DEFAULTS.rounds,
@@ -106,7 +106,7 @@ export class VersusMatch {
       rows: opts.rows ?? DEFAULTS.rows,
       durationMs: opts.durationMs ?? DEFAULTS.durationMs,
       targetSum: opts.targetSum ?? DEFAULTS.targetSum,
-      difficulty: opts.difficulty,
+      tuning: opts.tuning,
       winnerBonusStep: opts.winnerBonusStep ?? DEFAULTS.winnerBonusStep,
       rerolls: opts.rerolls ?? DEFAULTS.rerolls,
       augmentMs: opts.augmentMs ?? DEFAULTS.augmentMs,
@@ -222,7 +222,7 @@ export class VersusMatch {
     const elapsed = nowMs - (this.roundStartMs ?? nowMs);
     let guard = 0;
     while (this.botActive && elapsed >= this.botNextAt && guard++ < 12) {
-      const d = decide(this.botEngine.getBoard(), this.opts.targetSum, this.opts.difficulty, this.botRng);
+      const d = decide(this.botEngine.getBoard(), this.opts.targetSum, this.opts.tuning, this.botRng);
       if (!d) {
         this.botActive = false;
         break;

@@ -170,7 +170,7 @@ export const EMBLEM_SVG: Record<string, string> = {
         <path d="M50 46 L66 50 L58 84 L50 84 Z" fill="#1f5d9e" opacity=".25"/>
         <circle cx="44" cy="38" r="2.6" fill="#fff" opacity=".85" class="anim twinkle"/>
       </g>
-      <g transform="translate(76,78)"><circle r="11" fill="#fffdf6"/><circle r="11" fill="none" stroke="#E3A12A" stroke-width="2.2"/><text x="0" y="2.7" text-anchor="middle" font-family="var(--font)" font-size="7.6" font-weight="800" fill="#B97F12">+15</text></g>
+      <g transform="translate(76,78)"><circle r="11" fill="#fffdf6"/><circle r="11" fill="none" stroke="#E3A12A" stroke-width="2.2"/><text x="0" y="2.7" text-anchor="middle" font-family="var(--font)" font-size="7.6" font-weight="800" fill="#B97F12">+20</text></g>
     </svg>`,
   "board.bomb": `<svg class="emblem silver" viewBox="0 0 100 100" role="img" aria-label="폭탄 사과">
       <defs><radialGradient id="bm-b" cx="38%" cy="30%" r="82%"><stop offset="0" stop-color="#6b7280"/><stop offset="45" stop-color="#3a4250"/><stop offset="100" stop-color="#1c2230"/></radialGradient></defs>

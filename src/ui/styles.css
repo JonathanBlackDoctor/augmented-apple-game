@@ -1605,6 +1605,293 @@ body {
 .lb-tier { font-size: 12px; color: var(--ink-2); }
 .lb-mmr { font-weight: 700; font-variant-numeric: tabular-nums; color: var(--ink); }
 
+/* ============================================================
+   AI LEVEL CAMPAIGN — level select + emote collection/rewards
+   ============================================================ */
+.levels {
+  align-items: center;
+  justify-content: flex-start;
+  overflow-y: auto;
+  padding: 24px 16px 32px;
+}
+.levels-card {
+  width: min(460px, 96vw);
+  margin: auto;
+  background: rgba(255, 253, 247, 0.86);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  box-shadow: var(--shadow);
+  padding: 18px 18px 22px;
+  animation: rise 0.4s var(--ease) both;
+}
+.levels-top {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 8px;
+}
+.levels-top .title.sm {
+  text-align: center;
+  margin: 0;
+}
+.levels-top .btn.ghost.small:last-child {
+  justify-self: end;
+}
+.levels-sub {
+  text-align: center;
+  color: var(--ink-2);
+  font-size: 13px;
+  margin: 8px 0 14px;
+}
+.levels-sub b {
+  color: var(--apple);
+}
+.level-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+.level-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 14px 8px 12px;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  cursor: pointer;
+  font-family: var(--font);
+  transition:
+    transform 0.12s var(--ease),
+    box-shadow 0.18s var(--ease);
+}
+.level-card:not(:disabled):hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+.level-card .lv-avatar {
+  font-size: 34px;
+  line-height: 1.1;
+}
+.level-card .lv-name {
+  font-weight: 800;
+  font-size: 14px;
+  color: var(--ink);
+}
+.level-card .lv-title {
+  font-size: 11px;
+  color: var(--ink-2);
+}
+.level-card .lv-badge {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--ink-2);
+}
+.level-card.current {
+  border-color: var(--apple);
+  box-shadow: 0 0 0 2px var(--apple-shadow);
+}
+.level-card.current .lv-badge {
+  color: var(--apple);
+}
+.level-card.cleared {
+  background: var(--gold-bg);
+  border-color: var(--gold-soft);
+}
+.level-card.locked {
+  cursor: not-allowed;
+  opacity: 0.5;
+  filter: grayscale(0.6);
+}
+
+/* ---- emote collection (dex) ---- */
+.emote-card {
+  max-width: 360px;
+}
+.emote-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin: 14px 0 18px;
+}
+.emote-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 10px 4px;
+  border-radius: 14px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+}
+.emote-cell .emote-emoji {
+  font-size: 26px;
+}
+.emote-cell .emote-label {
+  font-size: 10px;
+  color: var(--ink-2);
+}
+.emote-cell.locked {
+  opacity: 0.55;
+}
+
+/* ---- in-battle emote tray (Clash-Royale-style) ---- */
+.emote-tray {
+  position: fixed;
+  right: 14px;
+  bottom: 16px;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+.emote-toggle {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--paper-2);
+  box-shadow: var(--shadow-sm);
+  font-size: 22px;
+  cursor: pointer;
+  transition: transform 0.12s var(--ease);
+}
+.emote-toggle:active {
+  transform: scale(0.94);
+}
+.emote-toggle.open {
+  background: var(--apple);
+}
+.emote-popup {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+  max-width: 232px;
+  padding: 8px;
+  border-radius: 16px;
+  background: var(--paper-2);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  animation: rise 0.18s var(--ease) both;
+}
+.emote-opt {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  font-size: 22px;
+  cursor: pointer;
+  transition: transform 0.1s var(--ease);
+}
+.emote-opt:hover {
+  transform: translateY(-2px);
+}
+
+/* ---- floating emote bubbles ---- */
+.emote-bubbles {
+  position: fixed;
+  z-index: 4;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 4px;
+}
+.emote-bubbles.me {
+  left: 16px;
+  bottom: 84px;
+  align-items: flex-start;
+}
+.emote-bubbles.opp {
+  right: 16px;
+  top: 92px;
+  align-items: flex-end;
+}
+.emote-bubble {
+  font-size: 40px;
+  filter: drop-shadow(0 4px 10px rgba(120, 80, 40, 0.25));
+  animation: emoteFloat 1.8s var(--ease) forwards;
+}
+@keyframes emoteFloat {
+  0% {
+    transform: translateY(10px) scale(0.4);
+    opacity: 0;
+  }
+  18% {
+    transform: translateY(0) scale(1.1);
+    opacity: 1;
+  }
+  30% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  75% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-46px) scale(0.9);
+    opacity: 0;
+  }
+}
+
+/* ---- versus result: rival line + emote reward reveal ---- */
+.vs-level-line {
+  margin: 2px 0 6px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.reward-pop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  margin: 4px auto 16px;
+  padding: 12px 16px;
+  width: fit-content;
+  border-radius: 16px;
+  background: var(--gold-bg);
+  border: 1px solid var(--gold-soft);
+  animation: rise 0.3s var(--ease) both;
+}
+.reward-cap {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--gold-2);
+  letter-spacing: 0.5px;
+}
+.reward-emoji {
+  font-size: 44px;
+  animation: emotePulse 1.4s var(--ease) infinite;
+}
+.reward-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+}
+@keyframes emotePulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.12);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .emote-bubble,
+  .reward-emoji {
+    animation: none;
+  }
+}
 /* On phones the 1-up pick cards become compact rows (crest left, text right)
    so three augments still fit a short viewport without scrolling. */
 @media (max-width: 560px) {

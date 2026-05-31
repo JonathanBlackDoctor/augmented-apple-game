@@ -10,12 +10,13 @@ import { createMonotonicClock, type PausableClock } from './clock';
 import { sfx } from './sound';
 import { useGameStore } from './store';
 import { useVersusStore } from './versusStore';
-import { getSettings, useSettingsStore } from './settingsStore';
+import { getSettings, useSettingsStore, BOARD_COLS, BOARD_ROWS } from './settingsStore';
 import { VersusMatch, type VersusSnapshot, type VersusPhase } from './VersusMatch';
 import { playActivation, playClear, updateAmbient } from './augmentFx';
 import { LocalProfileService, browserKV } from '../profile';
 import { StandardRankingService, InMemoryRankingStore } from '../ranking';
-import { difficultyForMmr, type Difficulty } from '../bot';
+import { levelInfo, levelTuning } from '../bot';
+import { useProgressStore } from './progressStore';
 
 const TARGET = 10;
 const ROUNDS = 5;
@@ -34,9 +35,11 @@ export class VersusController {
   private cols = 17;
   private rows = 10;
   private durationMs = 30_000;
+  private level = 1; // chosen AI level (1..10), read from progress at match start
 
   // AI mini board (picture-in-picture)
   private miniHost: HTMLDivElement | null = null;
+  private miniNameEl: HTMLElement | null = null;
   private miniScoreEl: HTMLElement | null = null;
   private botView: BoardView | null = null;
   private miniLayout: BoardLayout | null = null;
@@ -52,6 +55,7 @@ export class VersusController {
   private resolved = false;
   private lastPhase: VersusPhase | null = null;
   private prevBotScore = 0;
+  private lastOppEmoteAt = 0; // throttle for the rival's in-round taunt emotes
   private pendingActivation: string | null = null;
   private activationTimer = 0;
 
@@ -62,8 +66,8 @@ export class VersusController {
   async mount(parent: HTMLElement): Promise<void> {
     this.parent = parent;
     const s = getSettings();
-    this.cols = s.boardCols;
-    this.rows = s.boardRows;
+    this.cols = BOARD_COLS;
+    this.rows = BOARD_ROWS;
     this.durationMs = s.roundDurationMs;
     this.layout = this.calcLayout();
     await this.board.mount(parent, this.layout);
@@ -85,6 +89,7 @@ export class VersusController {
     const name = document.createElement('span');
     name.className = 'ai-mini-name';
     name.textContent = 'AI';
+    this.miniNameEl = name;
     this.miniScoreEl = document.createElement('span');
     this.miniScoreEl.className = 'ai-mini-score';
     this.miniScoreEl.textContent = '0';
@@ -99,18 +104,19 @@ export class VersusController {
 
   startVersus(): void {
     const s = getSettings();
-    this.cols = s.boardCols;
-    this.rows = s.boardRows;
+    this.cols = BOARD_COLS;
+    this.rows = BOARD_ROWS;
     this.durationMs = s.roundDurationMs;
-    const mmr = this.profile?.mmr ?? 1000;
-    const diff: Difficulty = s.aiDifficulty === 'auto' ? difficultyForMmr(mmr) : s.aiDifficulty;
-    const tierLabel = diff === 'hard' ? 'Gold' : diff === 'normal' ? 'Silver' : 'Bronze';
+    const prog = useProgressStore.getState();
+    prog.clearReward(); // drop any reward reveal from a previous match
+    this.level = prog.selectedLevel;
+    const info = levelInfo(this.level);
     // Settings (apple count/size) may have changed since mount → re-fit the boards.
     this.layout = this.calcLayout();
     this.board.setLayout(this.layout);
     this.match = new VersusMatch({
-      seedBase: `versus:${Date.now()}`,
-      difficulty: diff,
+      seedBase: `versus:lv${this.level}:${Date.now()}`,
+      tuning: levelTuning(this.level),
       rounds: ROUNDS,
       cols: this.cols,
       rows: this.rows,
@@ -125,8 +131,12 @@ export class VersusController {
     this.lastBotSeq = -1;
     this.lastPhase = null;
     this.prevBotScore = 0;
+    this.lastOppEmoteAt = 0;
     useGameStore.getState().startVersus(ROUNDS, this.durationMs);
-    useVersusStore.getState().setOpponent(`AI 봇 · ${this.diffLabel(diff)}`, '🤖', tierLabel, false);
+    useVersusStore
+      .getState()
+      .setOpponent(`Lv.${this.level} ${info.name}`, info.avatar, info.title, false);
+    if (this.miniNameEl) this.miniNameEl.textContent = `${info.avatar} ${info.name}`;
     this.board.setBoard(this.match.myBoard());
     this.board.showSelection(null, false);
     if (this.botView) {
@@ -136,10 +146,6 @@ export class VersusController {
     }
     cancelAnimationFrame(this.raf); // avoid a double loop on restart
     this.loop();
-  }
-
-  private diffLabel(d: Difficulty): string {
-    return d === 'hard' ? '어려움' : d === 'normal' ? '보통' : '쉬움';
   }
 
   restart(): void {
@@ -255,9 +261,22 @@ export class VersusController {
     // frame-to-frame delta is a fresh clear (round reset → 0 yields a negative
     // delta we ignore).
     const delta = s.botScore - this.prevBotScore;
-    if (delta > 0) useVersusStore.getState().bumpOppGain(delta);
+    if (delta > 0) {
+      useVersusStore.getState().bumpOppGain(delta);
+      this.maybeBotEmote(); // the rival taunts as it scores (Clash-Royale flavor)
+    }
     this.prevBotScore = s.botScore;
     this.syncMini(s);
+  }
+
+  /** Occasionally fire a rival emote when the bot scores (throttled, cosmetic). */
+  private maybeBotEmote(): void {
+    const now = this.clock.now();
+    if (now - this.lastOppEmoteAt < 5000) return;
+    if (Math.random() > 0.35) return;
+    this.lastOppEmoteAt = now;
+    const pool = ['smug', 'cool', 'lol', 'fire', 'nice', 'wink'];
+    useVersusStore.getState().sendOppEmote(pool[Math.floor(Math.random() * pool.length)]);
   }
 
   /** Mirror the AI's board into the mini-view and briefly flash its last move. */
@@ -289,6 +308,8 @@ export class VersusController {
     this.resolved = true;
     const s = m.snapshot();
     const winner = s.winner === 'me' ? 'me' : s.winner === 'bot' ? 'opp' : 'draw';
+    // Beating the level unlocks the next one + its emote reward (first clear only).
+    if (winner === 'me') useProgressStore.getState().recordClear(this.level);
     let mmrDelta: number | null = 0;
     if (this.profile) {
       const opp: PublicProfile = {

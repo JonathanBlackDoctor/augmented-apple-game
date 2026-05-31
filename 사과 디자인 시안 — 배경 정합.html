@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>사과 디자인 시안 — 배경 정합 (낮밤 순환)</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css" />
+<style>
+/* ──────────────────────────────────────────────────────────────────────────
+   사과 디자인 시안 — 배경 정합판
+   목표: 햇살 과수원 "낮밤 순환" 배경과 조화. 아침/한낮/해질녘/밤 하늘 위에서
+   사과가 어떻게 읽히는지 같은 조건으로 비교한다.
+   반영한 게임 디자인 변경:
+   - 실루엣: 배경(본편)이 쓰는 갱신 path 채택 (더 둥글고 통통)
+   - 숫자: 더 작게(셀의 0.40) + "시각적 중앙"으로 살짝 위로 보정
+   - 색/하늘 키프레임: 배경의 day→night 키프레임에서 샘플링
+   ────────────────────────────────────────────────────────────────────────── */
+
+:root{
+  /* 갱신된 실루엣 (배경 본편과 동일) */
+  --silhouette: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M44 15C47 18 53 18 56 15C67 11 90 24 90 50C90 73 72 89 50 89C28 89 10 73 10 50C10 24 33 11 44 15Z' fill='black'/%3E%3C/svg%3E");
+  --num-ratio:.40;   /* 숫자 크기 = 셀 × ratio (이전 0.47 → 0.40) */
+  --num-shift:-5%;   /* 시각적 중앙 보정: 위로 살짝 */
+}
+*{box-sizing:border-box;}
+html,body{margin:0;}
+body{
+  font-family:'Pretendard Variable',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  color:#3A2A1E;background:#efe9dd;-webkit-font-smoothing:antialiased;
+  background:radial-gradient(130% 60% at 50% -10%,#fffdf7,transparent 55%),linear-gradient(180deg,#F7F1E5,#ECE3D2);
+}
+.page{max-width:1200px;margin:0 auto;padding:46px 26px 80px;}
+.kick{font-size:11px;font-weight:800;letter-spacing:.24em;text-transform:uppercase;color:#E04A36;margin:0 0 12px;}
+h1{font-family:'Gowun Batang',serif;font-weight:700;font-size:clamp(28px,4vw,42px);letter-spacing:-.01em;margin:0 0 12px;}
+.lede{font-size:15px;line-height:1.7;color:#7a6552;max-width:66ch;margin:0;text-wrap:pretty;}
+.lede b{color:#3A2A1E;}
+.legend{display:flex;flex-wrap:wrap;gap:9px;margin-top:20px;}
+.chip{font-size:12px;font-weight:600;color:#6f5b48;background:#fffdf7;border:1px solid #e7dac4;border-radius:999px;padding:6px 13px;}
+.chip b{color:#3A2A1E;}
+
+/* ── apple primitive ── */
+.ap-wrap{position:relative;flex:0 0 auto;width:var(--s,54px);height:var(--s,54px);}
+.halo{position:absolute;inset:-9%;-webkit-mask:var(--silhouette) center/100% 100% no-repeat;mask:var(--silhouette) center/100% 100% no-repeat;
+  background:radial-gradient(closest-side,rgba(255,245,230,.95),rgba(255,240,222,.35) 66%,transparent 80%);
+  filter:blur(2.5px);opacity:0;transition:opacity .3s;}
+.ap{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  -webkit-mask:var(--silhouette) center/100% 100% no-repeat;mask:var(--silhouette) center/100% 100% no-repeat;
+  filter:drop-shadow(0 calc(var(--s,54px)*.03) calc(var(--s,54px)*.055) rgba(40,16,10,.32));}
+.ap::before{content:"";position:absolute;inset:0;-webkit-mask:var(--silhouette) center/100% 100% no-repeat;mask:var(--silhouette) center/100% 100% no-repeat;}
+.ap::after{content:"";position:absolute;inset:0;-webkit-mask:var(--silhouette) center/100% 100% no-repeat;mask:var(--silhouette) center/100% 100% no-repeat;
+  background:radial-gradient(120% 95% at 82% 80%,var(--rim,#fff) 0%,transparent 38%),radial-gradient(90% 30% at 50% 3%,var(--rim,#fff) 0%,transparent 56%);
+  mix-blend-mode:screen;opacity:var(--rim-a,0);}
+.ap .n{position:relative;z-index:2;font-family:'Quicksand',sans-serif;font-weight:600;
+  font-size:calc(var(--s,54px)*var(--num-ratio));line-height:1;color:#FFF4EC;
+  font-variant-numeric:tabular-nums;text-shadow:0 1px 1.5px rgba(120,28,14,.42);
+  transform:translateY(var(--num-shift));}
+.ap-wrap .stem{position:absolute;z-index:1;top:-4%;left:46%;width:8%;height:22%;border-radius:40%;
+  background:#7a4a2a;transform:rotate(13deg);transform-origin:bottom center;}
+.ap-wrap .leaf{position:absolute;z-index:1;top:-10%;left:51%;width:33%;height:30%;
+  background:linear-gradient(135deg,#8fc873,#5E9A4E);border-radius:0 100% 0 100%;
+  transform:rotate(-30deg);box-shadow:inset -1px -1px 1.5px rgba(0,0,0,.16);}
+
+/* ── number-placement study ── */
+.study{margin-top:34px;background:#fffdf7;border:1px solid #ecdfc9;border-radius:18px;padding:22px 24px 26px;
+  box-shadow:0 10px 30px -20px rgba(80,50,30,.4);}
+.study h2{font-size:16px;font-weight:800;margin:0 0 3px;}
+.study .sub{font-size:13px;color:#7a6552;margin:0 0 18px;}
+.study .row{display:flex;gap:34px;flex-wrap:wrap;}
+.study .cell{display:flex;flex-direction:column;align-items:center;gap:9px;}
+.study .cap{font-size:12px;font-weight:700;color:#6f5b48;}
+.study .cap small{display:block;font-weight:500;color:#a8957f;font-style:italic;margin-top:1px;}
+.demoap .ap{background:radial-gradient(86% 78% at 50% 2%,rgba(255,239,225,.85),transparent 60%),
+  radial-gradient(54% 36% at 50% 100%,rgba(70,16,8,.4),transparent 68%),linear-gradient(176deg,#e8705a 4%,#d4513a 54%,#9c3a2a 100%);}
+
+/* ── options ── */
+.opt{margin-top:30px;}
+.opt-head{display:flex;align-items:baseline;gap:10px;margin:0 0 4px;flex-wrap:wrap;}
+.opt-head .no{font-family:'Gowun Batang',serif;font-size:22px;font-weight:700;color:#E04A36;line-height:1;}
+.opt-head b{font-size:18px;font-weight:800;letter-spacing:-.01em;}
+.opt-head .en{font-size:12px;color:#a8957f;font-style:italic;}
+.opt p.desc{font-size:13px;line-height:1.55;color:#7a6552;margin:0 0 14px;max-width:74ch;text-wrap:pretty;}
+.opt .tags{display:inline-flex;gap:6px;margin-left:4px;}
+.opt .tag{font-size:10.5px;font-weight:700;color:#9a8472;background:#f1e8d8;border-radius:6px;padding:2px 7px;}
+
+.scenes{display:grid;gap:14px;grid-template-columns:repeat(4,1fr);}
+@media(max-width:880px){.scenes{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:520px){.scenes{grid-template-columns:1fr;}}
+.scene{position:relative;height:172px;border-radius:16px;overflow:hidden;border:1px solid rgba(120,90,60,.18);
+  box-shadow:0 8px 22px -16px rgba(40,30,20,.6);}
+.scene .sky{position:absolute;inset:0;background:linear-gradient(180deg,var(--sky-top) 0%,var(--sky-mid) 46%,var(--sky-hor) 72%);}
+.scene .hill{position:absolute;left:-15%;right:-15%;bottom:-12%;height:46%;border-radius:50% 50% 0 0/100% 100% 0 0;
+  background:radial-gradient(120% 100% at 42% 100%,var(--ground),transparent 76%);}
+.scene .label{position:absolute;top:8px;left:10px;z-index:5;font-size:11px;font-weight:700;color:var(--lab,#3A2A1E);
+  background:rgba(255,253,247,.66);border:1px solid rgba(255,255,255,.5);border-radius:999px;padding:3px 9px;backdrop-filter:blur(3px);}
+.scene .stars i{position:absolute;width:2px;height:2px;border-radius:50%;background:#fff;opacity:0;}
+.s-night .stars i{opacity:.85;}
+.scene .row{position:absolute;left:0;right:0;bottom:30px;z-index:3;display:flex;align-items:flex-end;justify-content:center;gap:13px;}
+
+/* scene time tokens (sampled from background day→night keyframes) */
+.s-morning{--sky-top:#A9C8E4;--sky-mid:#FCE6CB;--sky-hor:#F8CF9E;--ground:#6E9F52;--rim:#FFF1CC;--rim-a:.16;--sky-tint:#dcebf7;--lab:#3A2A1E;}
+.s-noon   {--sky-top:#8FBFE9;--sky-mid:#EAF3F7;--sky-hor:#FCF4DE;--ground:#73A655;--rim:#FFFEF6;--rim-a:.10;--sky-tint:#eef5f8;--lab:#33271C;}
+.s-sunset {--sky-top:#7E6CA6;--sky-mid:#FF9C76;--sky-hor:#FFC062;--ground:#54693F;--rim:#FF865A;--rim-a:.42;--sky-tint:#ffc2a0;--lab:#46301f;}
+.s-night  {--sky-top:#10173A;--sky-mid:#1E2A52;--sky-hor:#34375F;--ground:#1a2f3c;--rim:#DCE4FF;--rim-a:.62;--sky-tint:#7d8bc4;--lab:#eee6d6;}
+
+/* ===== body finishes per option ===== */
+/* O1 오차드 림 — 확정 캔디 보디 + 시간 반응 림라이트 */
+.o-rim .ap{background:radial-gradient(86% 78% at 50% 2%,rgba(255,239,225,.82),transparent 60%),
+  radial-gradient(54% 36% at 50% 100%,rgba(70,16,8,.4),transparent 68%),linear-gradient(176deg,#e8705a 4%,#d4513a 54%,#9c3a2a 100%);}
+.o-rim .ap::before{background:none;}
+
+/* O2 크림 헤일로 — O1 + 밤에 크림 외곽 글로우로 가독성 */
+.o-halo .ap{background:radial-gradient(86% 78% at 50% 2%,rgba(255,239,225,.82),transparent 60%),
+  radial-gradient(54% 36% at 50% 100%,rgba(70,16,8,.4),transparent 68%),linear-gradient(176deg,#e8705a 4%,#d4513a 54%,#9c3a2a 100%);}
+.o-halo .ap::before{background:none;}
+.o-halo .s-sunset .halo{opacity:.4;}
+.o-halo .s-night .halo{opacity:.95;}
+
+/* O3 딥 잼 — 진한 잼레드 + 하늘색 반사 시트(정합) */
+.o-jam .ap{background:radial-gradient(56% 40% at 50% 100%,rgba(60,8,6,.5),transparent 66%),
+  linear-gradient(176deg,#e05642 4%,#bb3320 54%,#7c1f12 100%);}
+.o-jam .ap::before{background:radial-gradient(90% 66% at 50% 3%,var(--sky-tint),transparent 56%);opacity:.62;}
+
+/* O4 페인터리 무광 — 그림책 톤, 무광 + 부드러운 음영 */
+.o-matte .ap{background:radial-gradient(34% 28% at 32% 20%,rgba(255,224,206,.85),transparent 60%),
+  radial-gradient(82% 86% at 66% 82%,#9c2716,transparent 60%),linear-gradient(168deg,#ec5640,#bf3320);
+  filter:drop-shadow(0 2px 3px rgba(120,42,22,.24));}
+.o-matte .ap::before{background:none;}
+.o-matte .ap::after{mix-blend-mode:screen;}
+.o-matte .s-night .halo{opacity:.5;}
+
+/* O5 글로우 젬 — 또렷한 하이라이트 + 밤 네온 글로우 */
+.o-gem .ap{background:radial-gradient(40% 30% at 35% 18%,rgba(255,255,255,.92),transparent 58%),
+  radial-gradient(86% 78% at 50% 4%,rgba(255,180,160,.7),transparent 58%),
+  radial-gradient(56% 40% at 52% 102%,rgba(70,8,6,.5),transparent 66%),linear-gradient(176deg,#ef5c45 4%,#c5331f 52%,#7e2014 100%);}
+.o-gem .ap::before{background:none;}
+.o-gem .s-night .ap{filter:drop-shadow(0 0 9px rgba(255,130,100,.6)) drop-shadow(0 3px 5px rgba(0,0,0,.5));}
+.o-gem .s-sunset .ap{filter:drop-shadow(0 0 6px rgba(255,150,90,.45)) drop-shadow(0 2px 4px rgba(80,30,10,.4));}
+
+/* gold variant (shown once per option in the night scene) */
+.v-gold .ap{background:radial-gradient(86% 78% at 50% 2%,#ffe9a8,transparent 60%),
+  radial-gradient(54% 36% at 50% 100%,rgba(90,60,8,.45),transparent 68%),linear-gradient(176deg,#f4c659 4%,#dca21f 54%,#ad7d13 100%)!important;}
+.v-gold .ap .n{color:#5a3c08;text-shadow:0 1px 1px rgba(255,255,255,.4);}
+.v-gold .ap-wrap .leaf,.v-gold .leaf{background:linear-gradient(135deg,#cdd07a,#9aa24e);}
+
+footer{margin-top:46px;text-align:center;font-size:12px;color:#a8957f;}
+footer code{background:#f1e8d8;padding:2px 6px;border-radius:5px;font-size:11px;color:#7a6552;}
+</style>
+</head>
+<body>
+<div class="page">
+  <p class="kick">Augmented Apple · 배경 정합 시안</p>
+  <h1>사과 × 낮밤 순환 배경</h1>
+  <p class="lede">
+    이번엔 사과를 따로 보지 않고 <b>실제 ‘햇살 과수원’ 배경 위</b>에 얹어 비교합니다.
+    가장 중요한 건 <b>아침·한낮·해질녘·밤</b> 하늘이 바뀌어도 사과가 또렷하고 분위기와 어우러지는 것.
+    함께 반영한 변경: <b>본편과 동일한 갱신 실루엣</b>, <b>더 작아진 숫자(0.40)</b>,
+    그리고 사과는 위가 통통하므로 숫자를 <b>시각적 중앙(살짝 위)</b>으로 보정했습니다.
+  </p>
+  <div class="legend">
+    <span class="chip">실루엣 <b>본편 갱신 path</b></span>
+    <span class="chip">숫자 <b>×0.40 · 위로 5% 보정</b></span>
+    <span class="chip">하늘 <b>배경 키프레임 샘플</b></span>
+    <span class="chip">림라이트 <b>시간대별 색 반응</b></span>
+  </div>
+
+  <!-- number placement study -->
+  <div class="study">
+    <h2>먼저: 숫자 크기 · 시각적 중앙 보정</h2>
+    <p class="sub">사과는 위가 통통하고 아래 꼭지가 들어가 있어, 기하학적 중앙에 숫자를 두면 “아래로 처져” 보입니다. 위로 살짝 올리면 시각적으로 중앙에 옵니다.</p>
+    <div class="row demoap">
+      <div class="cell"><div class="ap-wrap" style="--s:84px;--num-ratio:.47;--num-shift:0%;"><div class="ap"><span class="n">7</span></div></div><div class="cap">이전 기준<small>0.47 · 정중앙</small></div></div>
+      <div class="cell"><div class="ap-wrap" style="--s:84px;--num-ratio:.40;--num-shift:0%;"><div class="ap"><span class="n">7</span></div></div><div class="cap">작게만<small>0.40 · 정중앙</small></div></div>
+      <div class="cell"><div class="ap-wrap" style="--s:84px;--num-ratio:.40;--num-shift:-5%;"><div class="ap"><span class="n">7</span></div></div><div class="cap">권장<small>0.40 · 위로 5%(시각중앙)</small></div></div>
+      <div class="cell"><div class="ap-wrap" style="--s:84px;--num-ratio:.36;--num-shift:-6%;"><div class="ap"><span class="n">7</span></div></div><div class="cap">더 작게<small>0.36 · 위로 6%</small></div></div>
+    </div>
+  </div>
+
+  <!-- OPTION 1 -->
+  <div class="opt o-rim">
+    <div class="opt-head"><span class="no">1</span><b>오차드 림</b><span class="en">Orchard Rim</span>
+      <span class="tags"><span class="tag">확정 보디</span><span class="tag">시간 반응 림</span><span class="tag">가독성 ★★★</span></span></div>
+    <p class="desc">확정 캔디 보디 그대로, 가장자리에 닿는 빛(림라이트)만 시간대에 따라 바꿉니다 — 낮은 따뜻한 햇빛, 밤은 차가운 달빛. 배경 광원과 같은 규칙이라 가장 자연스럽고 안전한 기준안.</p>
+    <div class="scenes" id="sc1"></div>
+  </div>
+
+  <!-- OPTION 2 -->
+  <div class="opt o-halo">
+    <div class="opt-head"><span class="no">2</span><b>크림 헤일로</b><span class="en">Cream Halo</span>
+      <span class="tags"><span class="tag">동화풍</span><span class="tag">밤 가독성 ★★★</span></span></div>
+    <p class="desc">1안에 더해, 어두운 밤 하늘에서 사과 뒤로 부드러운 크림빛 외곽 글로우가 살짝 퍼집니다. 딥 네이비 배경에서도 사과가 “둥실” 떠올라 가장 또렷. Gowun Batang 동화 톤과 잘 맞음.</p>
+    <div class="scenes" id="sc2"></div>
+  </div>
+
+  <!-- OPTION 3 -->
+  <div class="opt o-jam">
+    <div class="opt-head"><span class="no">3</span><b>딥 잼 글로스</b><span class="en">Deep Jam</span>
+      <span class="tags"><span class="tag">하늘 반사</span><span class="tag">고채도</span></span></div>
+    <p class="desc">더 진한 잼레드 보디에, 상단 시트가 <b>그 시간대 하늘색을 반사</b>합니다 — 아침엔 푸른 기, 노을엔 주황 기. 사과와 하늘의 색이 이어져 정합감이 가장 높고 콘트라스트가 또렷.</p>
+    <div class="scenes" id="sc3"></div>
+  </div>
+
+  <!-- OPTION 4 -->
+  <div class="opt o-matte">
+    <div class="opt-head"><span class="no">4</span><b>페인터리 무광</b><span class="en">Painterly Matte</span>
+      <span class="tags"><span class="tag">그림책</span><span class="tag">무광</span></span></div>
+    <p class="desc">광택을 줄인 붓터치 무광. 배경의 부드러운 언덕·구름·꽃잎 같은 페인터리 무드와 가장 자연스럽게 녹아듭니다. 밤엔 옅은 헤일로로 최소한의 가독성만 보강.</p>
+    <div class="scenes" id="sc4"></div>
+  </div>
+
+  <!-- OPTION 5 -->
+  <div class="opt o-gem">
+    <div class="opt-head"><span class="no">5</span><b>글로우 젬</b><span class="en">Glow Gem</span>
+      <span class="tags"><span class="tag">화려</span><span class="tag">밤 네온 글로우</span></span></div>
+    <p class="desc">또렷한 하이라이트로 보석처럼 반짝이고, 해질녘·밤엔 사과 자체가 은은히 발광합니다. 가장 게임적이고 화려한 안 — 콤보·이펙트가 많은 화면에서 시선을 끕니다.</p>
+    <div class="scenes" id="sc5"></div>
+  </div>
+
+  <footer>
+    실루엣·하늘 키프레임 출처 <code>배경 - 낮밤 순환.html</code> · 토큰 <code>apple_design_handoff/assets/apple-spec.json</code> · 비교 조건(실루엣·숫자) 고정
+  </footer>
+</div>
+
+<script>
+// 각 옵션 컨테이너에 4개 시간대 씬을 생성. 씬마다 숫자 사과 3개 + 밤엔 골드 1개.
+(function(){
+  const TIMES = [
+    {cls:'s-morning', name:'아침'},
+    {cls:'s-noon',    name:'한낮'},
+    {cls:'s-sunset',  name:'해질녘'},
+    {cls:'s-night',   name:'밤'},
+  ];
+  const SETS = [ [3,7,'g'], [4,6,'g'], [8,2,'g'], [5,5,'g'] ]; // per-time apple numbers; 'g' = gold(밤만)
+  function rnd(s){const x=Math.sin(s)*10000;return x-Math.floor(x);}
+
+  function appleHTML(n, gold){
+    const cls = gold ? 'ap-wrap v-gold' : 'ap-wrap';
+    return `<div class="${cls}" style="--s:50px;">${gold?'':'<span class="halo"></span>'}<span class="stem"></span><span class="leaf"></span><div class="ap"><span class="n">${n}</span></div></div>`;
+  }
+
+  TIMES.forEach((t,ti)=>{ /* noop, placeholder for clarity */ });
+
+  for(let oi=1; oi<=5; oi++){
+    const host = document.getElementById('sc'+oi);
+    TIMES.forEach((t,ti)=>{
+      const sc = document.createElement('div');
+      sc.className = 'scene '+t.cls;
+      // stars for night
+      let stars='';
+      if(t.cls==='s-night'){
+        let dots='';
+        for(let i=0;i<16;i++){dots+=`<i style="left:${(rnd(i+oi*7+1)*100).toFixed(1)}%;top:${(rnd(i+oi*7+2)*52).toFixed(1)}%"></i>`;}
+        stars=`<div class="stars">${dots}</div>`;
+      }
+      // apples: 3 numbered; night also gets a gold
+      const set = SETS[ti];
+      let apples = appleHTML(set[0],false)+appleHTML(set[1],false);
+      if(t.cls==='s-night'){ apples += appleHTML(9,true); } else { apples += appleHTML(ti+2,false); }
+      sc.innerHTML =
+        `<div class="sky"></div><div class="hill"></div>${stars}`+
+        `<span class="label">${t.name}</span>`+
+        `<div class="row">${apples}</div>`;
+      host.appendChild(sc);
+    });
+  }
+})();
+</script>
+</body>
+</html>

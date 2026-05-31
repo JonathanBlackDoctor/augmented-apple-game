@@ -19,7 +19,7 @@ import type {
 } from '../contracts';
 import { versusOfferTiers, rollOfferTiers, buildHookBusFor } from '../augments/runtime';
 
-export type OnlinePhase = 'lobby' | 'countdown' | 'round' | 'augment' | 'matchResult';
+export type OnlinePhase = 'lobby' | 'countdown' | 'round' | 'roundCheck' | 'augment' | 'matchResult';
 export type Role = 'host' | 'guest';
 
 export interface OnlineOptions {
@@ -37,9 +37,11 @@ export interface OnlineOptions {
   rerolls?: number; // reroll tokens for the whole match
   countdownMs?: number;
   augmentMs?: number;
+  roundCheckMs?: number; // mid-round review screen before the next pick
   hbIntervalMs?: number;
   disconnectMs?: number;
   lobbyTimeoutMs?: number;
+  suspendGapMs?: number; // inter-tick gap above which we treat the stall as a suspended tab
 }
 
 export interface OnlineSnapshot {
@@ -47,6 +49,8 @@ export interface OnlineSnapshot {
   round: number;
   rounds: number;
   remainingMs: number;
+  // countdown for the timed augment / roundCheck overlays (schedule-driven)
+  phaseRemainingMs: number;
   myScore: number;
   oppScore: number;
   myTotal: number;
@@ -54,10 +58,13 @@ export interface OnlineSnapshot {
   roundWins: { me: number; opp: number };
   // completed rounds so far (oldest→newest), for the result round strip
   roundHistory: { my: number; opp: number; winner: 'me' | 'opp' | 'draw' }[];
+  // the just-finished round (for the mid-round review screen), null until one ends
+  lastRound: { myScore: number; oppScore: number; winner: 'me' | 'opp' | 'draw'; bonus: number } | null;
   offers: string[];
   offerTier: AugTier | null;
   rerollsLeft: number;
   myOwned: string[];
+  oppOwned: string[];
   winner: 'me' | 'opp' | 'draw' | null;
   oppName: string;
   oppPresent: boolean;
@@ -89,9 +96,11 @@ export class OnlineMatch {
   private readonly winnerBonusStep: number;
   private readonly countdownMs: number;
   private readonly augmentMs: number;
+  private readonly roundCheckMs: number;
   private readonly hbIntervalMs: number;
   private readonly disconnectMs: number;
   private readonly lobbyTimeoutMs: number;
+  private readonly suspendGapMs: number;
 
   private readonly engine: CoreEngine = createEngine();
   private readonly schedule: Seg[];
@@ -103,18 +112,21 @@ export class OnlineMatch {
   private matchStart: number | null = null;
   private lobbyStart: number | null = null;
   private nowMs = 0;
+  private lastTickMs: number | null = null;
   private mySeq = 0;
   private lastHbSent = 0;
   private lastOppSeen: number | null = null;
 
   private round = 0;
   private remainingMs = 0;
+  private phaseRemainingMs = 0;
   private myRound = 0;
   private oppRound = 0;
   private myTotal = 0;
   private oppTotal = 0;
   private roundWins = { me: 0, opp: 0 };
   private roundHistory: { my: number; opp: number; winner: 'me' | 'opp' | 'draw' }[] = [];
+  private lastRound: { myScore: number; oppScore: number; winner: 'me' | 'opp' | 'draw'; bonus: number } | null = null;
   private readonly tallied = new Set<number>();
 
   private myOwned: string[] = [];
@@ -148,6 +160,7 @@ export class OnlineMatch {
     this.rerollsLeft = o.rerolls ?? 1;
     this.countdownMs = o.countdownMs ?? 3000;
     this.augmentMs = o.augmentMs ?? 12_000;
+    this.roundCheckMs = o.roundCheckMs ?? 3_500;
     this.hbIntervalMs = o.hbIntervalMs ?? 2000;
     // Generous grace window: comfortably longer than the augment phase (12s) and
     // tolerant of a backgrounded tab / suspended RAF, so a brief heartbeat gap is
@@ -155,6 +168,7 @@ export class OnlineMatch {
     // each declare as a self-win → bogus double bye).
     this.disconnectMs = o.disconnectMs ?? 30_000;
     this.lobbyTimeoutMs = o.lobbyTimeoutMs ?? 15_000;
+    this.suspendGapMs = o.suspendGapMs ?? 4_000;
     this.schedule = this.buildSchedule();
     this.totalMs = this.schedule.reduce((a, s) => Math.max(a, s.start + s.dur), 0);
   }
@@ -169,6 +183,11 @@ export class OnlineMatch {
       t += this.augmentMs;
       segs.push({ phase: 'round', round: r, start: t, dur: this.durationMs });
       t += this.durationMs;
+      // Mid-round review (라운드 점검), mirroring versus: both players see the round
+      // verdict + running totals before the next pick. Schedule-driven, so the two
+      // clients enter/leave it in lockstep.
+      segs.push({ phase: 'roundCheck', round: r, start: t, dur: this.roundCheckMs });
+      t += this.roundCheckMs;
     }
     return segs;
   }
@@ -241,6 +260,20 @@ export class OnlineMatch {
   }
 
   tick(nowMs: number): OnlineSnapshot {
+    // Backgrounded / suspended tab: rAF (and thus tick) stalls while the
+    // performance.now()-based clock keeps advancing, so the next tick lands with a
+    // large jump. That silent span is OUR stall, not the opponent leaving — without
+    // this the disconnect check would fire on resume and hand a bogus forfeit "win".
+    // Shift their last-seen forward by the gap so the grace window restarts from
+    // resume. We deliberately do NOT shift matchStart: the schedule is wall-clock
+    // anchored and shared, so we still catch up to the opponent's round.
+    if (this.lastTickMs !== null) {
+      const gap = nowMs - this.lastTickMs;
+      if (gap > this.suspendGapMs && this.lastOppSeen !== null) {
+        this.lastOppSeen += gap;
+      }
+    }
+    this.lastTickMs = nowMs;
     this.nowMs = nowMs;
     if (this.matchStart === null) {
       if (this.lobbyStart === null) this.lobbyStart = nowMs;
@@ -255,7 +288,13 @@ export class OnlineMatch {
           rows: this.rows,
         });
       } else {
-        if (this.role === 'host' && !this.oppReadyLobby && nowMs - this.lobbyStart > this.lobbyTimeoutMs) {
+        // Give up waiting after the lobby timeout. Host: nobody ever readied.
+        // Guest: never heard from the host at all (dead / mistyped room code) —
+        // without this the guest spins on "connecting" forever with no escape.
+        const idleTooLong = nowMs - this.lobbyStart > this.lobbyTimeoutMs;
+        const hostStuck = this.role === 'host' && !this.oppReadyLobby;
+        const guestStuck = this.role === 'guest' && this.lastOppSeen === null;
+        if (idleTooLong && (hostStuck || guestStuck)) {
           this.noOpponent = true;
         }
         return this.snapshot();
@@ -280,6 +319,8 @@ export class OnlineMatch {
     const seg = this.segAt(elapsed);
     const key = `${seg.phase}:${seg.round}`;
     if (key !== this.appliedKey) this.enterPhase(seg);
+    // Schedule-driven countdown for the timed overlays (augment + roundCheck).
+    this.phaseRemainingMs = Math.max(0, seg.start + seg.dur - elapsed);
     if (this.phase === 'round') {
       const t = this.engine.tick(nowMs);
       this.remainingMs = t.remainingMs;
@@ -365,6 +406,8 @@ export class OnlineMatch {
       this.roundWins.opp++;
     }
     this.roundHistory.push({ my: this.myRound, opp: this.oppRound, winner });
+    // Snapshot the verdict for the mid-round review screen (라운드 점검).
+    this.lastRound = { myScore: this.myRound, oppScore: this.oppRound, winner, bonus };
   }
 
   myBoard(): Readonly<Board> {
@@ -417,16 +460,19 @@ export class OnlineMatch {
       round: this.round,
       rounds: this.rounds,
       remainingMs: this.remainingMs,
+      phaseRemainingMs: this.phaseRemainingMs,
       myScore: this.phase === 'round' ? this.engine.getScore() : this.myRound,
       oppScore: this.oppRound,
       myTotal: this.myTotal,
       oppTotal: this.oppTotal,
       roundWins: { ...this.roundWins },
       roundHistory: this.roundHistory.map((h) => ({ ...h })),
+      lastRound: this.lastRound ? { ...this.lastRound } : null,
       offers: [...this.offers],
       offerTier: this.offerTier,
       rerollsLeft: this.rerollsLeft,
       myOwned: [...this.myOwned],
+      oppOwned: [...this.oppOwned],
       winner: this.winner,
       oppName: this.oppName,
       oppPresent: this.oppPresent,

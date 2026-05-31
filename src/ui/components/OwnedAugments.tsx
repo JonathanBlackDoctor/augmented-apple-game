@@ -39,12 +39,14 @@ function AugmentCardRow({ ids, side }: { ids: string[]; side: 'left' | 'right' }
   );
 }
 
-export function OwnedAugments() {
+// `ids` lets online pass its own build (kept in onlineStore); omitted → versus
+// reads the shared game store / versus store as before.
+export function OwnedAugments({ ids }: { ids?: string[] } = {}) {
   const owned = useGameStore((s) => s.owned);
-  return <AugmentCardRow ids={owned} side="left" />;
+  return <AugmentCardRow ids={ids ?? owned} side="left" />;
 }
 
-export function OpponentAugments() {
+export function OpponentAugments({ ids }: { ids?: string[] } = {}) {
   const oppOwned = useVersusStore((s) => s.oppOwned);
-  return <AugmentCardRow ids={oppOwned} side="right" />;
+  return <AugmentCardRow ids={ids ?? oppOwned} side="right" />;
 }

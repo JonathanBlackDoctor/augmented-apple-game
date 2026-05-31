@@ -8,7 +8,7 @@ import type { PublicProfile } from '../src/contracts';
 const A: PublicProfile = { uid: 'A', nickname: 'A', avatar: '🍎', tier: 'Silver', mmr: 1000 };
 const B: PublicProfile = { uid: 'B', nickname: 'B', avatar: '🍏', tier: 'Silver', mmr: 1000 };
 const C: PublicProfile = { uid: 'C', nickname: 'C', avatar: '🍊', tier: 'Silver', mmr: 1000 };
-const FAST = { durationMs: 2000, countdownMs: 500, augmentMs: 800 };
+const FAST = { durationMs: 2000, countdownMs: 500, augmentMs: 800, roundCheckMs: 600 };
 
 async function simulate(room: string) {
   const backend = new InMemoryNetBackend();
@@ -53,6 +53,49 @@ describe('OnlineMatch — 2-client in-memory full match', () => {
     expect(host.winner ? mirror[host.winner] : null).toBe(guest.winner);
     expect(host.roundWins.me).toBe(guest.roundWins.opp);
     expect(host.oppLeft).toBe(false);
+  });
+});
+
+describe('OnlineMatch — mid-round review (roundCheck)', () => {
+  it('runs a roundCheck phase after each round, exposing the verdict + opponent build', async () => {
+    const backend = new InMemoryNetBackend();
+    const sa = new BackendNetSession(backend);
+    const sb = new BackendNetSession(backend);
+    await sa.join('ROOMRC', A);
+    await sb.join('ROOMRC', B);
+    const host = new OnlineMatch({ session: sa, role: 'host', self: A, roomId: 'ROOMRC', ...FAST });
+    const guest = new OnlineMatch({ session: sb, role: 'guest', self: B, roomId: 'ROOMRC', ...FAST });
+    await host.start();
+    await guest.start();
+    let now = 0;
+    let sawRoundCheck = false;
+    let checkSnap = null as ReturnType<OnlineMatch['snapshot']> | null;
+    const autoplay = (m: OnlineMatch): void => {
+      if (m.snapshot().phase === 'round' && now % 150 === 0) {
+        const moves = findMoves(m.myBoard(), 10);
+        if (moves.length > 0) m.myCommit(moves[0].rect);
+      }
+    };
+    for (let i = 0; i < 100000; i++) {
+      host.tick(now);
+      guest.tick(now);
+      autoplay(host);
+      autoplay(guest);
+      const hs = host.snapshot();
+      if (hs.phase === 'roundCheck' && !sawRoundCheck) {
+        sawRoundCheck = true;
+        checkSnap = hs;
+      }
+      if (hs.phase === 'matchResult' && guest.snapshot().phase === 'matchResult') break;
+      now += 50;
+    }
+    expect(sawRoundCheck).toBe(true);
+    expect(checkSnap!.lastRound).not.toBeNull();
+    expect(checkSnap!.phaseRemainingMs).toBeGreaterThan(0);
+    // After at least one pick on each side, builds are tracked + exposed.
+    const fin = host.snapshot();
+    expect(fin.myOwned.length).toBe(5);
+    expect(fin.oppOwned.length).toBe(5);
   });
 });
 
@@ -175,6 +218,32 @@ describe('OnlineMatch — robustness', () => {
     expect(host.snapshot().phase).not.toBe('matchResult');
   });
 
+  it('does not falsely forfeit after a suspended-tab clock jump', async () => {
+    // Backgrounded tab: rAF stalls, so the next tick lands seconds later. That gap
+    // is our stall, not the opponent leaving — it must not trigger a forfeit "win".
+    const backend = new InMemoryNetBackend();
+    const sa = new BackendNetSession(backend);
+    const sb = new BackendNetSession(backend);
+    await sa.join('ROOMSUS', A);
+    await sb.join('ROOMSUS', B);
+    const opts = { roomId: 'ROOMSUS', ...FAST, hbIntervalMs: 300, disconnectMs: 1500, suspendGapMs: 1000 };
+    const host = new OnlineMatch({ session: sa, role: 'host', self: A, ...opts });
+    const guest = new OnlineMatch({ session: sb, role: 'guest', self: B, ...opts });
+    await host.start();
+    await guest.start();
+    let now = 0;
+    for (let i = 0; i < 20; i++) {
+      host.tick(now);
+      guest.tick(now);
+      now += 50;
+    }
+    expect(host.snapshot().oppLeft).toBe(false);
+    // One tick lands 5s later (gap >> disconnectMs). Pre-fix this forfeit-won.
+    host.tick(now + 5000);
+    expect(host.snapshot().oppLeft).toBe(false);
+    expect(host.snapshot().winner).not.toBe('me');
+  });
+
   it('a reused room with stale events does not corrupt a fresh match (host resets)', async () => {
     const backend = new InMemoryNetBackend();
     // Leftover events from a previous match on the same (reusable) code.
@@ -227,6 +296,30 @@ describe('OnlineMatch — robustness', () => {
     }
     expect(host.snapshot().noOpponent).toBe(true);
     expect(host.snapshot().phase).toBe('lobby');
+  });
+
+  it('flags no-opponent for a guest who never hears from the host', async () => {
+    // Guest joins a dead/mistyped room: no host events ever arrive. Without a
+    // guest-side timeout the guest would spin on "connecting" forever.
+    const backend = new InMemoryNetBackend();
+    const sb = new BackendNetSession(backend);
+    const guest = new OnlineMatch({
+      session: sb,
+      role: 'guest',
+      self: B,
+      roomId: 'ROOMGO',
+      lobbyTimeoutMs: 1000,
+    });
+    await sb.join('ROOMGO', B);
+    await guest.start();
+    let now = 0;
+    for (let i = 0; i < 40; i++) {
+      guest.tick(now);
+      now += 50;
+    }
+    expect(guest.snapshot().noOpponent).toBe(true);
+    expect(guest.snapshot().phase).toBe('lobby');
+    expect(guest.snapshot().oppLeft).toBe(false); // never a forfeit "win"
   });
 
   it('ignores a third party joining the room (2-player cap)', async () => {

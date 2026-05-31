@@ -3,25 +3,7 @@ import { useGameStore } from '../../app/store';
 import { useVersusStore } from '../../app/versusStore';
 import { hudTimerState } from './hudTimer';
 import { AnimNum } from './AnimNum';
-
-/** best-of-N pip strip: filled for finished rounds (W/L tint), hollow ahead. */
-export function SeriesPips({
-  history,
-  total,
-}: {
-  history: { winner: 'me' | 'opp' | 'draw' }[];
-  total: number;
-}) {
-  return (
-    <div className="series-pips">
-      {Array.from({ length: total }).map((_, i) => {
-        const r = history[i];
-        const cls = !r ? '' : r.winner === 'me' ? 'me' : r.winner === 'opp' ? 'opp' : 'draw';
-        return <span key={i} className={`pip ${cls}`} />;
-      })}
-    </div>
-  );
-}
+import { SeriesPips } from './SeriesPips';
 
 interface Pop {
   seq: number;

@@ -5,9 +5,19 @@
 // only — the pure core is untouched; reduced-motion snaps every stage to final.
 import { useEffect, useState } from 'react';
 import { useGameStore } from '../../app/store';
-import { useVersusStore } from '../../app/versusStore';
+import { useVersusStore, type RoundResult } from '../../app/versusStore';
 import { ROUND_CHECK_MS } from '../../app/VersusController';
 import { AnimNum } from './AnimNum';
+
+interface RoundCheckOverlayProps {
+  // Online mode supplies its own review data (from onlineStore); omitted → versus.
+  result?: RoundResult | null;
+  wins?: { me: number; opp: number };
+  oppName?: string;
+  remaining?: number;
+  totalRounds?: number;
+  roundCheckMs?: number;
+}
 
 function prefersReducedMotion(): boolean {
   try {
@@ -22,12 +32,26 @@ function prefersReducedMotion(): boolean {
 // per-stage delays (ms): 0 scores → 1 bonus chip → 2 totals rollup → 3 pips
 const STAGE_DELAYS = [700, 300, 450];
 
-export function RoundCheckOverlay() {
-  const r = useVersusStore((s) => s.roundResult);
-  const wins = useVersusStore((s) => s.roundWins);
-  const oppName = useVersusStore((s) => s.oppName);
-  const remaining = useVersusStore((s) => s.overlayRemainingMs);
-  const totalRounds = useGameStore((s) => s.totalRounds);
+export function RoundCheckOverlay({
+  result,
+  wins: winsProp,
+  oppName: oppNameProp,
+  remaining: remainingProp,
+  totalRounds: totalRoundsProp,
+  roundCheckMs,
+}: RoundCheckOverlayProps = {}) {
+  const rStore = useVersusStore((s) => s.roundResult);
+  const winsStore = useVersusStore((s) => s.roundWins);
+  const oppNameStore = useVersusStore((s) => s.oppName);
+  const remainingStore = useVersusStore((s) => s.overlayRemainingMs);
+  const totalRoundsStore = useGameStore((s) => s.totalRounds);
+  // `result` can legitimately be null (no round yet), so distinguish "not passed".
+  const r = result !== undefined ? result : rStore;
+  const wins = winsProp ?? winsStore;
+  const oppName = oppNameProp ?? oppNameStore;
+  const remaining = remainingProp ?? remainingStore;
+  const totalRounds = totalRoundsProp ?? totalRoundsStore;
+  const checkMs = roundCheckMs ?? ROUND_CHECK_MS;
 
   const reduce = prefersReducedMotion();
   const [step, setStep] = useState(reduce ? STAGE_DELAYS.length : 0);
@@ -49,7 +73,7 @@ export function RoundCheckOverlay() {
   }, [r?.round, reduce]);
 
   if (!r) return null;
-  const pct = Math.max(0, Math.min(1, remaining / ROUND_CHECK_MS));
+  const pct = Math.max(0, Math.min(1, remaining / checkMs));
   const verdict =
     r.winner === 'me' ? '내가 이긴 라운드!' : r.winner === 'opp' ? '상대가 이긴 라운드' : '비긴 라운드';
   const dur = (ms: number): number => (reduce ? 0 : ms);

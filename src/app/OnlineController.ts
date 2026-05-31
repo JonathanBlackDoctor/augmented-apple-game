@@ -11,7 +11,8 @@ import { createMonotonicClock } from './clock';
 import { START_MMR } from '../ranking/elo';
 import { sfx } from './sound';
 import { playActivation, playClear, updateAmbient } from './augmentFx';
-import { useOnlineStore } from './onlineStore';
+import { useOnlineStore, ONLINE_AUGMENT_MS, ONLINE_ROUND_CHECK_MS } from './onlineStore';
+import type { RoundResult } from './versusStore';
 import { useGameStore } from './store';
 import { getSettings } from './settingsStore';
 import { OnlineMatch, type OnlineSnapshot, type Role } from './OnlineMatch';
@@ -35,6 +36,7 @@ export class OnlineController {
 
   private raf = 0;
   private comboStreak = 0;
+  private prevOppScore = 0; // tracks the opponent's per-round score for "+N" pulses
   private match: OnlineMatch | null = null;
   private backend: NetBackend | null = null;
   private lobby: PublicLobby = NO_LOBBY;
@@ -166,12 +168,15 @@ export class OnlineController {
       self: this.pub(),
       roomId: code,
       durationMs: DURATION,
+      augmentMs: ONLINE_AUGMENT_MS,
+      roundCheckMs: ONLINE_ROUND_CHECK_MS,
       cols: dims?.cols,
       rows: dims?.rows,
     });
     this.resolved = false;
     this.started = false;
     this.comboStreak = 0;
+    this.prevOppScore = 0;
     this.lastRound = -1;
     this.lastPhase = '';
     await this.match.start(this.clock.now());
@@ -220,6 +225,32 @@ export class OnlineController {
       this.board.resetFx();
     }
     if (s.phase === 'round') updateAmbient(this.board, s.myOwned, s.remainingMs, DURATION);
+
+    // Opponent "+N" popup: their per-round score is cumulative within a round, so a
+    // positive frame-to-frame delta is a fresh clear (round reset → 0 yields a
+    // negative delta we ignore). Mirrors VersusController.sync.
+    const oppDelta = s.oppScore - this.prevOppScore;
+    if (oppDelta > 0) {
+      useOnlineStore.setState((c) => ({ oppGainSeq: c.oppGainSeq + 1, oppGainAmount: oppDelta }));
+    }
+    this.prevOppScore = s.oppScore;
+
+    // Build the mid-round review payload while the roundCheck overlay is up; keep
+    // the previous one otherwise so the overlay's staged animation stays stable.
+    let roundResult: RoundResult | null = st.roundResult;
+    if (s.phase === 'roundCheck' && s.lastRound) {
+      roundResult = {
+        my: s.lastRound.myScore,
+        opp: s.lastRound.oppScore,
+        winner: s.lastRound.winner,
+        round: s.round,
+        bonus: s.lastRound.bonus,
+        myTotal: s.myTotal,
+        oppTotal: s.oppTotal,
+        history: s.roundHistory.map((h) => ({ ...h })),
+      };
+    }
+
     this.lastRound = s.round;
     this.lastPhase = s.phase;
     st.set({
@@ -228,11 +259,13 @@ export class OnlineController {
       rounds: s.rounds,
       remainingMs: s.remainingMs,
       durationMs: DURATION,
+      overlayRemainingMs: s.phaseRemainingMs,
       myScore: s.myScore,
       oppScore: s.oppScore,
       myTotal: s.myTotal,
       oppTotal: s.oppTotal,
       roundWins: s.roundWins,
+      roundResult,
       offers: s.offers,
       offerTier: s.offerTier,
       rerollsLeft: s.rerollsLeft,
@@ -243,6 +276,7 @@ export class OnlineController {
       noOpponent: s.noOpponent,
       combo: this.comboStreak,
       owned: s.myOwned,
+      oppOwned: s.oppOwned,
     });
   }
 
@@ -328,6 +362,9 @@ export class OnlineController {
       this.board.showSelection(null, false);
       if (!rect) return;
       const evalBefore = m.evalDetail(rect);
+      // Stray single-cell tap can't be a valid move — silent no-op (keep combo),
+      // mirroring VersusController so a mistap never breaks the streak or fails.
+      if (rect.x0 === rect.x1 && rect.y0 === rect.y1 && !evalBefore.valid) return;
       const preTags = m.myBoard().tags?.slice() ?? [];
       const res = m.myCommit(rect);
       if (!res || 'rejected' in res) {

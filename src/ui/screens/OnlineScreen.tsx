@@ -1,14 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { useGameStore } from '../../app/store';
-import { useOnlineStore } from '../../app/onlineStore';
+import { useOnlineStore, ONLINE_AUGMENT_MS, ONLINE_ROUND_CHECK_MS } from '../../app/onlineStore';
 import { OnlineController } from '../../app/OnlineController';
-import { byId } from '../../augments';
 import { OnlineHud } from '../components/OnlineHud';
+import { AugmentOverlay } from '../components/AugmentOverlay';
+import { RoundCheckOverlay } from '../components/RoundCheckOverlay';
+import { OwnedAugments, OpponentAugments } from '../components/OwnedAugments';
+import { Countdown } from '../components/Countdown';
 import { AnimNum } from '../components/AnimNum';
 import { RankBand } from '../components/RankBand';
 import { RoundStrip } from '../components/RoundStrip';
-
-const TIER_LABEL: Record<string, string> = { silver: '실버', gold: '골드', prismatic: '프리즘' };
 
 export function OnlineScreen() {
   const hostRef = useRef<HTMLDivElement>(null);
@@ -59,6 +60,8 @@ export function OnlineScreen() {
     <div className="screen game online">
       <div className="board-host" ref={hostRef} />
       {s.stage === 'playing' && <OnlineHud />}
+      {s.stage === 'playing' && <OwnedAugments ids={s.owned} />}
+      {s.stage === 'playing' && <OpponentAugments ids={s.oppOwned} />}
 
       {s.stage === 'menu' && (
         <div className="overlay">
@@ -161,52 +164,51 @@ export function OnlineScreen() {
       {s.stage === 'connecting' && (
         <div className="overlay">
           <div className="lobby-card">
-            <h2>연결 중…</h2>
-            <div className="spinner" />
+            {s.noOpponent ? (
+              <>
+                <h2>상대를 찾을 수 없어요</h2>
+                <p className="aug-sub">방 코드를 확인하거나 다시 시도해 주세요.</p>
+              </>
+            ) : (
+              <>
+                <h2>연결 중…</h2>
+                <div className="spinner" />
+              </>
+            )}
+            <button className="btn ghost" onClick={goHome}>
+              {s.noOpponent ? '돌아가기' : '취소'}
+            </button>
           </div>
         </div>
       )}
 
-      {s.stage === 'playing' && s.phase === 'countdown' && (
-        <div className="overlay light">
-          <div className="countdown">곧 시작!</div>
-        </div>
-      )}
+      {/* Animated 3·2·1 intro (parity with versus). The schedule drives the real
+          round start, so onDone is a no-op here. */}
+      {s.stage === 'playing' && s.phase === 'countdown' && <Countdown onDone={() => {}} />}
 
       {s.stage === 'playing' && s.phase === 'augment' && (
-        <div className="overlay">
-          <div className="augment-panel">
-            <div className="aug-head">
-              {s.offerTier && <span className={`tier-badge ${s.offerTier}`}>{TIER_LABEL[s.offerTier]}</span>}
-              <h2>증강 선택</h2>
-              <p className="aug-sub">하나를 골라 빌드를 쌓으세요</p>
-              <button
-                className="aug-reroll"
-                onClick={() => ctrlRef.current?.reroll()}
-                disabled={s.rerollsLeft <= 0}
-                title={s.rerollsLeft > 0 ? '새로운 증강 3개로 다시 뽑기' : '리롤권을 모두 사용했습니다'}
-              >
-                🎲 리롤 ({s.rerollsLeft})
-              </button>
-            </div>
-            <div className="aug-grid">
-              {s.offers.map((id) => {
-                const a = byId(id);
-                if (!a) return null;
-                return (
-                  <button
-                    key={id}
-                    className={`aug-card ${a.tier}`}
-                    onClick={() => ctrlRef.current?.pick(id)}
-                  >
-                    <span className="aug-name">{a.name}</span>
-                    <span className="aug-desc">{a.desc}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        </div>
+        <AugmentOverlay
+          onPick={(id) => ctrlRef.current?.pick(id)}
+          onReroll={() => ctrlRef.current?.reroll()}
+          remainingMs={s.overlayRemainingMs}
+          totalMs={ONLINE_AUGMENT_MS}
+          offers={s.offers}
+          offerTier={s.offerTier}
+          roundIndex={s.round}
+          rerollsLeft={s.rerollsLeft}
+          owned={s.owned}
+        />
+      )}
+
+      {s.stage === 'playing' && s.phase === 'roundCheck' && (
+        <RoundCheckOverlay
+          result={s.roundResult}
+          wins={s.roundWins}
+          oppName={s.oppName}
+          remaining={s.overlayRemainingMs}
+          totalRounds={s.rounds}
+          roundCheckMs={ONLINE_ROUND_CHECK_MS}
+        />
       )}
 
       {s.stage === 'result' && (

@@ -1,6 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import { createEngine, makeRng } from '../src/core';
-import { buildHookBusFor, rollOffer, tierForRound, CATALOG } from '../src/augments';
+import {
+  buildHookBusFor,
+  rollOffer,
+  rollOfferTiers,
+  tierForRound,
+  versusOfferTiers,
+  CATALOG,
+} from '../src/augments';
 import type { RoundConfig, ClearAction, Rect, Board, AugmentHookBus } from '../src/contracts';
 
 function cfg(seed: string, owned: string[], over: Partial<RoundConfig> = {}): RoundConfig {
@@ -55,6 +62,37 @@ describe('rollOffer (3-pick, no reroll)', () => {
     const owned = ['time.relief'];
     const ids = rollOffer('silver', makeRng('x'), owned);
     expect(ids).not.toContain('time.relief');
+  });
+});
+
+describe('versus offer schedule (5 picks, mixed tiers)', () => {
+  it('R1 silver, R2 silver+gold, R3 gold, R4 gold+prismatic, R5 prismatic', () => {
+    expect(versusOfferTiers(0)).toEqual(['silver']);
+    expect(versusOfferTiers(1)).toEqual(['silver', 'gold']);
+    expect(versusOfferTiers(2)).toEqual(['gold']);
+    expect(versusOfferTiers(3)).toEqual(['gold', 'prismatic']);
+    expect(versusOfferTiers(4)).toEqual(['prismatic']);
+  });
+
+  it('rollOfferTiers draws only from the requested tiers', () => {
+    const ids = rollOfferTiers(['silver', 'gold'], makeRng('mix:1'), []);
+    expect(ids).toHaveLength(3);
+    expect(new Set(ids).size).toBe(3);
+    for (const id of ids) {
+      const t = CATALOG.find((a) => a.id === id)?.tier;
+      expect(['silver', 'gold']).toContain(t);
+    }
+  });
+
+  it('a mixed pool can surface both tiers across seeds', () => {
+    const tiers = new Set<string>();
+    for (let i = 0; i < 20; i++) {
+      for (const id of rollOfferTiers(['silver', 'gold'], makeRng(`mix:${i}`), [])) {
+        tiers.add(CATALOG.find((a) => a.id === id)!.tier);
+      }
+    }
+    expect(tiers.has('silver')).toBe(true);
+    expect(tiers.has('gold')).toBe(true);
   });
 });
 

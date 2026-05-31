@@ -18,22 +18,38 @@ interface AugmentOverlayProps {
   // When provided (versus mode), render a pick-countdown that auto-selects on 0.
   remainingMs?: number;
   totalMs?: number;
+  // When provided (versus mode), render a reroll control wired to this handler.
+  onReroll?: () => void;
 }
 
-export function AugmentOverlay({ onPick, remainingMs, totalMs }: AugmentOverlayProps) {
+export function AugmentOverlay({ onPick, remainingMs, totalMs, onReroll }: AugmentOverlayProps) {
   const offers = useGameStore((s) => s.offers);
   const tier = useGameStore((s) => s.offerTier);
   const roundIndex = useGameStore((s) => s.roundIndex);
+  const rerollsLeft = useGameStore((s) => s.rerollsLeft);
   const timed = remainingMs !== undefined && totalMs !== undefined && totalMs > 0;
   const pct = timed ? Math.max(0, Math.min(1, remainingMs / totalMs)) : 0;
   const secs = timed ? Math.max(0, Math.ceil(remainingMs / 1000)) : 0;
+  const canReroll = onReroll !== undefined;
   return (
     <div className="overlay">
       <div className="augment-panel">
         <div className="aug-head">
           {tier && <span className={`tier-badge ${tier}`}>{TIER_LABEL[tier]}</span>}
           <h2>라운드 {roundIndex + 1} · 증강 선택</h2>
-          <p className="aug-sub">하나를 골라 빌드를 쌓으세요 · 리롤 없음</p>
+          <p className="aug-sub">
+            {canReroll ? '하나를 골라 빌드를 쌓으세요' : '하나를 골라 빌드를 쌓으세요 · 리롤 없음'}
+          </p>
+          {canReroll && (
+            <button
+              className="aug-reroll"
+              onClick={onReroll}
+              disabled={rerollsLeft <= 0}
+              title={rerollsLeft > 0 ? '새로운 증강 3개로 다시 뽑기' : '리롤권을 모두 사용했습니다'}
+            >
+              🎲 리롤 ({rerollsLeft})
+            </button>
+          )}
           {timed && (
             <div className="aug-timer">
               <div className={`time-bar${secs <= 3 ? ' low' : ''}`}>

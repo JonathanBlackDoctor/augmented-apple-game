@@ -34,7 +34,7 @@ describe('VersusMatch — you vs AI, full headless match', () => {
     expect(['me', 'bot', 'draw']).toContain(s.winner);
     expect(s.roundWins.me + s.roundWins.bot).toBeLessThanOrEqual(5);
     expect(s.myTotal + s.botTotal).toBeGreaterThan(0);
-    expect(s.myOwned.length).toBe(4); // one augment pick before rounds 2..5
+    expect(s.myOwned.length).toBe(5); // one pick before each of the 5 rounds (incl. start)
   });
 
   it('is deterministic for the same seed + same auto-play', () => {
@@ -49,12 +49,36 @@ describe('VersusMatch — you vs AI, full headless match', () => {
   it('enters a mid-round review (roundCheck) once a round ends', () => {
     const m = new VersusMatch({ seedBase: 'check:1', difficulty: 'normal', durationMs: 1000 });
     let now = 0;
+    // The match opens on the start-of-match augment pick; take it to reach round 1.
+    if (m.snapshot().phase === 'augment') m.pickAugment(m.snapshot().offers[0], now);
     while (m.snapshot().phase === 'round' && now < 5000) now = (m.tick(now), now + 50);
     const snap = m.snapshot();
     expect(snap.phase).toBe('roundCheck');
     expect(snap.lastRound).not.toBeNull();
     expect(['me', 'bot', 'draw']).toContain(snap.lastRound!.winner);
     expect(snap.phaseRemainingMs).toBeGreaterThan(0);
+  });
+
+  it('opens on a start-of-match augment pick before round 1', () => {
+    const m = new VersusMatch({ seedBase: 'start:1', difficulty: 'normal', durationMs: 1000 });
+    const snap = m.snapshot();
+    expect(snap.phase).toBe('augment');
+    expect(snap.round).toBe(0); // the pick precedes round 1 (0-based round 0)
+    expect(snap.offers.length).toBe(3);
+    expect(snap.myOwned.length).toBe(0); // nothing owned until this pick is made
+    expect(snap.rerollsLeft).toBe(1); // one reroll token per match
+  });
+
+  it('reroll spends a token and draws a fresh offer; second reroll is a no-op', () => {
+    const m = new VersusMatch({ seedBase: 'reroll:1', difficulty: 'normal', durationMs: 1000 });
+    const before = m.snapshot().offers.slice();
+    expect(m.reroll()).toBe(true);
+    const after = m.snapshot();
+    expect(after.rerollsLeft).toBe(0);
+    expect(after.offers).not.toEqual(before); // a different draw
+    expect(after.offers.length).toBe(3);
+    expect(m.reroll()).toBe(false); // out of tokens
+    expect(m.snapshot().rerollsLeft).toBe(0);
   });
 
   it('auto-picks the first offer when the augment timer elapses', () => {

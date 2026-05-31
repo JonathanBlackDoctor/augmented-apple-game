@@ -16,11 +16,11 @@ function playFullMatch(seedBase: string): VersusMatch {
         if (moves.length > 0) m.myCommit(moves[0].rect, now);
       }
       now += 50;
-    } else if (snap.phase === 'roundCheck') {
-      // mid-round review is timer-driven: just advance the clock past it
-      now += 50;
     } else if (snap.phase === 'augment') {
       m.pickAugment(snap.offers[0], now);
+      now += 50;
+    } else {
+      // mid-round review is timer-driven: just advance the clock past it
       now += 50;
     }
   }
@@ -35,7 +35,7 @@ describe('VersusMatch — you vs AI, full headless match', () => {
     expect(['me', 'bot', 'draw']).toContain(s.winner);
     expect(s.roundWins.me + s.roundWins.bot).toBeLessThanOrEqual(5);
     expect(s.myTotal + s.botTotal).toBeGreaterThan(0);
-    expect(s.myOwned.length).toBe(4); // one augment pick before rounds 2..5
+    expect(s.myOwned.length).toBe(5); // one pick before each of the 5 rounds (incl. start)
   });
 
   it('is deterministic for the same seed + same auto-play', () => {
@@ -50,6 +50,8 @@ describe('VersusMatch — you vs AI, full headless match', () => {
   it('enters a mid-round review (roundCheck) once a round ends', () => {
     const m = new VersusMatch({ seedBase: 'check:1', tuning: levelTuning(5), durationMs: 1000 });
     let now = 0;
+    // The match opens on the start-of-match augment pick; take it to reach round 1.
+    if (m.snapshot().phase === 'augment') m.pickAugment(m.snapshot().offers[0], now);
     while (m.snapshot().phase === 'round' && now < 5000) now = (m.tick(now), now + 50);
     const snap = m.snapshot();
     expect(snap.phase).toBe('roundCheck');
@@ -76,5 +78,25 @@ describe('VersusMatch — you vs AI, full headless match', () => {
     const snap = m.snapshot();
     expect(snap.phase).toBe('round'); // advanced into round 2
     expect(snap.myOwned).toContain(expected);
+  });
+});
+
+describe('VersusMatch — start-of-match pick + reroll', () => {
+  it('opens on a start pick (round 0) and reroll spends the one token', () => {
+    const m = new VersusMatch({ seedBase: 'start:1', tuning: levelTuning(5), durationMs: 1000 });
+    const before = m.snapshot();
+    expect(before.phase).toBe('augment');
+    expect(before.round).toBe(0); // the pick precedes round 1 (0-based round 0)
+    expect(before.offers.length).toBe(3);
+    expect(before.myOwned.length).toBe(0); // nothing owned until this pick is made
+    expect(before.rerollsLeft).toBe(1); // one reroll token per match
+    const beforeOffers = before.offers.slice();
+    expect(m.reroll()).toBe(true);
+    const after = m.snapshot();
+    expect(after.rerollsLeft).toBe(0);
+    expect(after.offers).not.toEqual(beforeOffers);
+    expect(after.offers.length).toBe(3);
+    expect(m.reroll()).toBe(false); // out of tokens
+    expect(m.snapshot().rerollsLeft).toBe(0);
   });
 });

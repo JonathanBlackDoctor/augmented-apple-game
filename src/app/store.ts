@@ -35,6 +35,7 @@ export interface GameStore {
   bestTotal: number;
   offers: string[];
   offerTier: AugTier | null;
+  rerollsLeft: number;
   owned: string[];
 
   startSolo(): void;
@@ -52,6 +53,7 @@ export interface GameStore {
   setCombo(c: number, lastClearCount?: number): void;
   commitRound(score: number): void;
   setOffers(ids: string[], tier: AugTier): void;
+  setRerollsLeft(n: number): void;
   addOwned(id: string): void;
   finishMatch(): void;
   goHome(): void;
@@ -69,6 +71,7 @@ function resetRound(totalRounds: number, durationMs: number) {
     lastClearCount: 0,
     offers: [] as string[],
     offerTier: null as AugTier | null,
+    rerollsLeft: 0,
     owned: [] as string[],
   };
 }
@@ -87,6 +90,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   bestTotal: loadBest(),
   offers: [],
   offerTier: null,
+  rerollsLeft: 0,
   owned: [],
 
   startSolo: () => set({ mode: 'solo', phase: 'round' }),
@@ -107,6 +111,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set((s) => ({ combo, lastClearCount: lastClearCount ?? s.lastClearCount })),
   commitRound: (score) => set((s) => ({ totalScore: s.totalScore + score, roundScore: 0 })),
   setOffers: (offers, offerTier) => set({ offers, offerTier }),
+  setRerollsLeft: (rerollsLeft) => set({ rerollsLeft }),
   addOwned: (id) => set((s) => ({ owned: [...s.owned, id] })),
   finishMatch: () => {
     const total = get().totalScore;

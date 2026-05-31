@@ -17,7 +17,7 @@ import type {
   PublicProfile,
   Rect,
 } from '../contracts';
-import { tierForRound, rollOffer, buildHookBusFor } from '../augments/runtime';
+import { versusOfferTiers, rollOfferTiers, buildHookBusFor } from '../augments/runtime';
 
 export type OnlinePhase = 'lobby' | 'countdown' | 'round' | 'augment' | 'matchResult';
 export type Role = 'host' | 'guest';
@@ -33,7 +33,8 @@ export interface OnlineOptions {
   rows?: number;
   durationMs?: number;
   targetSum?: number;
-  winnerBonus?: number;
+  winnerBonusStep?: number; // per-round winner bonus = round * step (10/20/30/40/50)
+  rerolls?: number; // reroll tokens for the whole match
   countdownMs?: number;
   augmentMs?: number;
   hbIntervalMs?: number;
@@ -53,6 +54,7 @@ export interface OnlineSnapshot {
   roundWins: { me: number; opp: number };
   offers: string[];
   offerTier: AugTier | null;
+  rerollsLeft: number;
   myOwned: string[];
   winner: 'me' | 'opp' | 'draw' | null;
   oppName: string;
@@ -82,7 +84,7 @@ export class OnlineMatch {
   private rows: number;
   private readonly durationMs: number;
   private readonly targetSum: number;
-  private readonly winnerBonus: number;
+  private readonly winnerBonusStep: number;
   private readonly countdownMs: number;
   private readonly augmentMs: number;
   private readonly hbIntervalMs: number;
@@ -116,6 +118,8 @@ export class OnlineMatch {
   private oppOwned: string[] = [];
   private offers: string[] = [];
   private offerTier: AugTier | null = null;
+  private offerSalt = 0; // bumped on reroll to re-draw the current offer
+  private rerollsLeft = 0; // reroll tokens left for the whole match
   private myPicked = false;
 
   private oppUid: string | null = null;
@@ -137,7 +141,8 @@ export class OnlineMatch {
     this.rows = o.rows ?? 10;
     this.durationMs = o.durationMs ?? 30_000;
     this.targetSum = o.targetSum ?? 10;
-    this.winnerBonus = o.winnerBonus ?? 50;
+    this.winnerBonusStep = o.winnerBonusStep ?? 10;
+    this.rerollsLeft = o.rerolls ?? 1;
     this.countdownMs = o.countdownMs ?? 3000;
     this.augmentMs = o.augmentMs ?? 12_000;
     this.hbIntervalMs = o.hbIntervalMs ?? 2000;
@@ -151,12 +156,12 @@ export class OnlineMatch {
     const segs: Seg[] = [{ phase: 'countdown', round: 0, start: 0, dur: this.countdownMs }];
     let t = this.countdownMs;
     for (let r = 0; r < this.rounds; r++) {
+      // An augment pick precedes every round (incl. a start-of-match pick before
+      // round 0): 5 picks total. The seg's `round` is the round it precedes.
+      segs.push({ phase: 'augment', round: r, start: t, dur: this.augmentMs });
+      t += this.augmentMs;
       segs.push({ phase: 'round', round: r, start: t, dur: this.durationMs });
       t += this.durationMs;
-      if (r < this.rounds - 1) {
-        segs.push({ phase: 'augment', round: r, start: t, dur: this.augmentMs });
-        t += this.augmentMs;
-      }
     }
     return segs;
   }
@@ -288,13 +293,31 @@ export class OnlineMatch {
       if (prevPhase === 'augment' && !this.myPicked && this.offers.length > 0) this.pickAugment(this.offers[0]);
       this.beginRound(seg.round);
     } else if (seg.phase === 'augment') {
-      const tier = tierForRound(seg.round + 1);
-      this.offerTier = tier;
-      this.offers = rollOffer(tier, makeRng(`${this.roundSeed(seg.round + 1)}:offer:${this.uid}`), this.myOwned);
+      this.offerSalt = 0;
+      this.rollMyOffer(seg.round); // seg.round is the round this pick precedes
       this.myPicked = false;
     } else if (seg.phase === 'matchResult') {
       this.winner = this.myTotal > this.oppTotal ? 'me' : this.oppTotal > this.myTotal ? 'opp' : 'draw';
     }
+  }
+
+  /** (Re)draw this client's offer for the pick preceding `forRound`. */
+  private rollMyOffer(forRound: number): void {
+    const tiers = versusOfferTiers(forRound);
+    this.offerTier = tiers[tiers.length - 1]; // badge shows the strongest tier on offer
+    const seed = `${this.roundSeed(forRound)}:offer:${this.uid}:s${this.offerSalt}`;
+    this.offers = rollOfferTiers(tiers, makeRng(seed), this.myOwned);
+  }
+
+  /** Spend a reroll token to re-draw the current offer (local only — the network
+   *  only ever carries the final pick). No-op outside augment / once picked /
+   *  when out of tokens. */
+  reroll(): boolean {
+    if (this.phase !== 'augment' || this.myPicked || this.rerollsLeft <= 0) return false;
+    this.rerollsLeft--;
+    this.offerSalt++;
+    this.rollMyOffer(this.round);
+    return true;
   }
 
   private beginRound(r: number): void {
@@ -322,11 +345,14 @@ export class OnlineMatch {
     void this.session.send({ t: 'round-result', player: this.uid, round: r, score: this.myRound });
     this.myTotal += this.myRound;
     this.oppTotal += this.oppRound;
+    // Bonus scales with the round number (R1=step … R5=5·step), weighting the late
+    // rounds where the strong augments are online.
+    const bonus = (r + 1) * this.winnerBonusStep;
     if (this.myRound > this.oppRound) {
-      this.myTotal += this.winnerBonus;
+      this.myTotal += bonus;
       this.roundWins.me++;
     } else if (this.oppRound > this.myRound) {
-      this.oppTotal += this.winnerBonus;
+      this.oppTotal += bonus;
       this.roundWins.opp++;
     }
   }
@@ -370,7 +396,7 @@ export class OnlineMatch {
     if (this.myPicked) return;
     this.myPicked = true;
     this.myOwned.push(id);
-    void this.session.send({ t: 'augment-pick', player: this.uid, round: this.round + 1, augId: id });
+    void this.session.send({ t: 'augment-pick', player: this.uid, round: this.round, augId: id });
   }
 
   snapshot(): OnlineSnapshot {
@@ -388,6 +414,7 @@ export class OnlineMatch {
       roundWins: { ...this.roundWins },
       offers: [...this.offers],
       offerTier: this.offerTier,
+      rerollsLeft: this.rerollsLeft,
       myOwned: [...this.myOwned],
       winner: this.winner,
       oppName: this.oppName,

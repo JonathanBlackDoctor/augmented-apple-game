@@ -198,6 +198,7 @@ export class OnlineController {
       roundWins: s.roundWins,
       offers: s.offers,
       offerTier: s.offerTier,
+      rerollsLeft: s.rerollsLeft,
       oppName: s.oppName,
       oppPresent: s.oppPresent,
       oppConnected: s.oppConnected,
@@ -212,6 +213,19 @@ export class OnlineController {
     this.match?.pickAugment(id);
     this.pendingActivation = id; // activation FX plays when the next round opens
     sfx.pick();
+  }
+
+  /** Spend a reroll token on the current augment offer (no-op if none left). */
+  reroll(): void {
+    if (this.match?.reroll()) {
+      const s = this.match.snapshot();
+      useOnlineStore.getState().set({
+        offers: s.offers,
+        offerTier: s.offerTier,
+        rerollsLeft: s.rerollsLeft,
+      });
+      sfx.pick();
+    }
   }
 
   private async finish(): Promise<void> {

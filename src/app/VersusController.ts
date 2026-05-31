@@ -150,7 +150,12 @@ export class VersusController {
   resume(): void {
     if (!this.clock.paused) return;
     this.clock.resume();
-    if (this.match && useGameStore.getState().phase === 'round') this.loop();
+    // The versus loop is a single continuous driver: it powers the round timer
+    // *and* the timed roundCheck/augment overlays (their countdowns + auto-pick),
+    // and it's what applies phase transitions after a pick. Re-arm it for any
+    // live phase — restricting to 'round' froze the start-of-match augment pick
+    // after the intro countdown (timer stuck, clicks registered but never advanced).
+    if (this.match && useGameStore.getState().phase !== 'result') this.loop();
   }
 
   destroy(): void {

@@ -25,7 +25,7 @@ export const ROUND_CHECK_MS = 3_500; // mid-round review screen duration
 // Each rival's emote tone + frequency lives on its AiLevel.emote persona
 // (see bot/levels.ts). The throttle just prevents back-to-back spam; how often a
 // rival actually emotes is gated by its `chattiness`.
-const EMOTE_THROTTLE_MS = 2500;
+const EMOTE_THROTTLE_MS = 1800;
 
 export class VersusController {
   private readonly board = new BoardView();
@@ -199,7 +199,7 @@ export class VersusController {
         }
         if (this.persona)
           this.botEmote(this.botAhead(snap) ? this.persona.ahead : this.persona.even, {
-            chance: 0.85,
+            chance: 0.95,
           });
       }
       updateAmbient(this.board, snap.myOwned, snap.remainingMs, this.durationMs);
@@ -214,6 +214,16 @@ export class VersusController {
           snap.round,
           snap.phaseRemainingMs,
         );
+        // React to the round result the moment the review screen opens.
+        if (this.lastPhase !== 'roundCheck' && this.persona) {
+          const pool =
+            r.winner === 'bot'
+              ? this.persona.roundWin
+              : r.winner === 'me'
+                ? this.persona.roundLoss
+                : this.persona.even;
+          this.botEmote(pool, { chance: 0.9, ignoreThrottle: true });
+        }
       } else {
         vs.setOverlayRemaining(snap.phaseRemainingMs);
       }
@@ -222,6 +232,9 @@ export class VersusController {
       st.setOffers(snap.offers, snap.offerTier ?? 'silver');
       st.setRerollsLeft(snap.rerollsLeft);
       vs.setOverlayRemaining(snap.phaseRemainingMs);
+      // Muse aloud while the augment picker is up (once, on phase entry).
+      if (this.lastPhase !== 'augment' && this.persona)
+        this.botEmote(this.persona.augment, { chance: 0.85, ignoreThrottle: true });
       st.setPhase('augment');
     }
     this.lastPhase = snap.phase;
@@ -247,22 +260,27 @@ export class VersusController {
       useVersusStore.getState().bumpOppGain(botDelta);
       // Reacts to its own clear: gloat when ahead, stay breezy when even/behind.
       if (this.persona)
-        this.botEmote(this.botAhead(s) ? this.persona.ahead : this.persona.even, { chance: 0.55 });
+        this.botEmote(this.botAhead(s) ? this.persona.ahead : this.persona.even, { chance: 0.72 });
     } else if (myDelta > 0 && !this.botAhead(s)) {
       // The player just scored and is (still) ahead → the rival looks rattled.
-      if (this.persona) this.botEmote(this.persona.behind, { chance: 0.4 });
+      if (this.persona) this.botEmote(this.persona.behind, { chance: 0.6 });
     }
     this.prevBotScore = s.botScore;
     this.prevMyScore = s.myScore;
   }
 
   /** Fire a rival emote from `pool`; throttled + probabilistic (scaled by the
-   *  rival's chattiness) unless `force`. */
-  private botEmote(pool: string[], opts?: { force?: boolean; chance?: number }): void {
+   *  rival's chattiness) unless `force`. `ignoreThrottle` keeps the chance gate
+   *  but skips the back-to-back cooldown — used for phase-transition reactions
+   *  (round check / augment pick) that are naturally spaced from in-round chatter. */
+  private botEmote(
+    pool: string[],
+    opts?: { force?: boolean; chance?: number; ignoreThrottle?: boolean },
+  ): void {
     if (pool.length === 0) return;
     const now = this.clock.now();
     if (!opts?.force) {
-      if (now - this.lastOppEmoteAt < EMOTE_THROTTLE_MS) return;
+      if (!opts?.ignoreThrottle && now - this.lastOppEmoteAt < EMOTE_THROTTLE_MS) return;
       const chattiness = this.persona?.chattiness ?? 1;
       if (Math.random() > (opts?.chance ?? 0.5) * chattiness) return;
     }

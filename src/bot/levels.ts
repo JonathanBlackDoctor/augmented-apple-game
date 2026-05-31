@@ -19,6 +19,9 @@ export interface EmotePersona {
   ahead: string[]; // taunt while leading (new round / on its own clear)
   even: string[]; // breezy reaction while even or behind (on its own clear)
   behind: string[]; // rattled when the player pulls ahead
+  roundWin: string[]; // celebrates on the round-check screen after taking the round
+  roundLoss: string[]; // reacts on the round-check screen after dropping the round
+  augment: string[]; // muses while picking an augment between rounds
 }
 
 export interface AiLevel {
@@ -41,8 +44,8 @@ export const AI_LEVELS: AiLevel[] = [
     avatar: '🌱',
     taunt: '흙냄새… 좋다…',
     tuning: { minDelayMs: 6500, maxDelayMs: 9500, pickTop: 1, blunderChance: 1 },
-    // Shy & innocent: hardly emotes, only soft reactions.
-    emote: { chattiness: 0.15, greet: ['hi'], ahead: ['nice', 'apple'], even: ['apple'], behind: ['shock'] },
+    // Shy & innocent: soft, wide-eyed reactions — now a touch more talkative.
+    emote: { chattiness: 0.34, greet: ['hi', 'apple'], ahead: ['nice', 'apple'], even: ['apple'], behind: ['shock'], roundWin: ['nice', 'apple'], roundLoss: ['shock'], augment: ['apple', 'hi'] },
   },
   {
     level: 2,
@@ -51,8 +54,8 @@ export const AI_LEVELS: AiLevel[] = [
     avatar: '🍏',
     taunt: '나… 아직 시큼해…',
     tuning: { minDelayMs: 5200, maxDelayMs: 7800, pickTop: 1, blunderChance: 1 },
-    // Timid and a touch sour: quiet, easily startled.
-    emote: { chattiness: 0.22, greet: ['hi', 'apple'], ahead: ['nice', 'wink'], even: ['apple'], behind: ['shock'] },
+    // Timid and a touch sour: easily startled, but warming up to the chatter.
+    emote: { chattiness: 0.42, greet: ['hi', 'apple'], ahead: ['nice', 'wink'], even: ['apple', 'nice'], behind: ['shock'], roundWin: ['nice', 'wink'], roundLoss: ['shock', 'apple'], augment: ['apple', 'hi'] },
   },
   {
     level: 3,
@@ -61,8 +64,8 @@ export const AI_LEVELS: AiLevel[] = [
     avatar: '🍎',
     taunt: '한 입 깨물어 볼래?',
     tuning: { minDelayMs: 4200, maxDelayMs: 6400, pickTop: 8, blunderChance: 0.8 },
-    // Cheeky and playful: giggles and winks a fair bit.
-    emote: { chattiness: 0.5, greet: ['hi', 'wink'], ahead: ['lol', 'wink', 'nice'], even: ['wink', 'nice'], behind: ['shock'] },
+    // Cheeky and playful: giggles and winks constantly.
+    emote: { chattiness: 0.68, greet: ['hi', 'wink'], ahead: ['lol', 'wink', 'nice'], even: ['wink', 'nice'], behind: ['shock', 'angry'], roundWin: ['lol', 'wink'], roundLoss: ['shock', 'angry'], augment: ['wink', 'cool', 'nice'] },
   },
   {
     level: 4,
@@ -71,8 +74,8 @@ export const AI_LEVELS: AiLevel[] = [
     avatar: '🍯',
     taunt: '달콤하게 이겨주지.',
     tuning: { minDelayMs: 3400, maxDelayMs: 5200, pickTop: 7, blunderChance: 0.58 },
-    // Sweet and friendly: warm, encouraging reactions.
-    emote: { chattiness: 0.44, greet: ['hi', 'nice'], ahead: ['cool', 'nice', 'wink'], even: ['nice', 'wink'], behind: ['shock'] },
+    // Sweet and friendly: warm, encouraging reactions all round long.
+    emote: { chattiness: 0.62, greet: ['hi', 'nice'], ahead: ['cool', 'nice', 'wink'], even: ['nice', 'wink'], behind: ['shock'], roundWin: ['nice', 'cool'], roundLoss: ['shock', 'nice'], augment: ['nice', 'wink', 'cool'] },
   },
   {
     level: 5,
@@ -82,7 +85,7 @@ export const AI_LEVELS: AiLevel[] = [
     taunt: '갓 구운 맛을 보여줄게!',
     tuning: { minDelayMs: 2700, maxDelayMs: 4200, pickTop: 6, blunderChance: 0.42 },
     // Hearty & jovial: laughs loudly, the most cheerful of the bunch.
-    emote: { chattiness: 0.62, greet: ['hi', 'lol'], ahead: ['lol', 'fire', 'cool'], even: ['lol', 'nice'], behind: ['shock', 'angry'] },
+    emote: { chattiness: 0.82, greet: ['hi', 'lol'], ahead: ['lol', 'fire', 'cool'], even: ['lol', 'nice'], behind: ['shock', 'angry'], roundWin: ['lol', 'fire'], roundLoss: ['shock', 'angry'], augment: ['lol', 'cool', 'fire'] },
   },
   {
     level: 6,
@@ -91,8 +94,8 @@ export const AI_LEVELS: AiLevel[] = [
     avatar: '❤️',
     taunt: '품격의 차이를 보여주마.',
     tuning: { minDelayMs: 2050, maxDelayMs: 3300, pickTop: 5, blunderChance: 0.3 },
-    // Proud & elegant: composed, faintly haughty smirks.
-    emote: { chattiness: 0.46, greet: ['cool'], ahead: ['smug', 'cool'], even: ['cool', 'wink'], behind: ['shock'] },
+    // Proud & elegant: composed, faintly haughty smirks — and more of them.
+    emote: { chattiness: 0.64, greet: ['cool'], ahead: ['smug', 'cool'], even: ['cool', 'wink'], behind: ['shock', 'angry'], roundWin: ['smug', 'cool'], roundLoss: ['shock'], augment: ['cool', 'smug'] },
   },
   {
     level: 7,
@@ -102,7 +105,7 @@ export const AI_LEVELS: AiLevel[] = [
     taunt: '황금빛 실력 차이다.',
     tuning: { minDelayMs: 1450, maxDelayMs: 2450, pickTop: 4, blunderChance: 0.19 },
     // Boastful show-off: emotes the most, loves to flaunt trophies.
-    emote: { chattiness: 0.8, greet: ['cool', 'trophy'], ahead: ['trophy', 'smug', 'bolt', 'cool'], even: ['cool', 'smug'], behind: ['angry', 'shock'] },
+    emote: { chattiness: 0.95, greet: ['cool', 'trophy'], ahead: ['trophy', 'smug', 'bolt', 'cool'], even: ['cool', 'smug'], behind: ['angry', 'shock'], roundWin: ['trophy', 'smug', 'bolt'], roundLoss: ['angry', 'shock'], augment: ['cool', 'trophy', 'smug'] },
   },
   {
     level: 8,
@@ -111,8 +114,8 @@ export const AI_LEVELS: AiLevel[] = [
     avatar: '🧪',
     taunt: '달콤한 함정에 빠졌군.',
     tuning: { minDelayMs: 1050, maxDelayMs: 1850, pickTop: 3, blunderChance: 0.11 },
-    // Sly & sinister: mocking smirks, cold when crossed.
-    emote: { chattiness: 0.52, greet: ['smug'], ahead: ['smug', 'lol'], even: ['smug', 'wink'], behind: ['angry'] },
+    // Sly & sinister: mocking smirks, cold when crossed — relishes every moment.
+    emote: { chattiness: 0.72, greet: ['smug'], ahead: ['smug', 'lol'], even: ['smug', 'wink'], behind: ['angry'], roundWin: ['smug', 'lol'], roundLoss: ['angry'], augment: ['smug', 'wink'] },
   },
   {
     level: 9,
@@ -121,8 +124,8 @@ export const AI_LEVELS: AiLevel[] = [
     avatar: '🌳',
     taunt: '모든 수가 내 손바닥 안이다.',
     tuning: { minDelayMs: 700, maxDelayMs: 1250, pickTop: 2, blunderChance: 0.04 },
-    // Calm & cryptic: speaks rarely, every reaction deliberate.
-    emote: { chattiness: 0.3, greet: ['cool'], ahead: ['smug', 'bolt'], even: ['cool'], behind: ['shock'] },
+    // Calm & cryptic: every reaction deliberate, but it lets more of them show.
+    emote: { chattiness: 0.5, greet: ['cool'], ahead: ['smug', 'bolt'], even: ['cool'], behind: ['shock', 'angry'], roundWin: ['smug', 'bolt'], roundLoss: ['shock'], augment: ['cool', 'smug'] },
   },
   {
     level: 10,
@@ -131,8 +134,8 @@ export const AI_LEVELS: AiLevel[] = [
     avatar: '👑',
     taunt: '내가 곧 사과의 전부다.',
     tuning: { minDelayMs: 320, maxDelayMs: 640, pickTop: 1, blunderChance: 0 },
-    // Regal & commanding: sparing but impactful — fury only when challenged.
-    emote: { chattiness: 0.34, greet: ['cool'], ahead: ['trophy', 'smug', 'bolt'], even: ['cool'], behind: ['angry'] },
+    // Regal & commanding: impactful — and now holds court more freely.
+    emote: { chattiness: 0.56, greet: ['cool', 'trophy'], ahead: ['trophy', 'smug', 'bolt'], even: ['cool'], behind: ['angry'], roundWin: ['trophy', 'bolt', 'smug'], roundLoss: ['angry'], augment: ['cool', 'smug'] },
   },
 ];
 

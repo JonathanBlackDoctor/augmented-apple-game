@@ -45,7 +45,7 @@ describe('rival emote personas', () => {
       const p = lv.emote;
       expect(p.chattiness).toBeGreaterThan(0);
       expect(p.chattiness).toBeLessThanOrEqual(1);
-      const pools = [p.greet, p.ahead, p.even, p.behind];
+      const pools = [p.greet, p.ahead, p.even, p.behind, p.roundWin, p.roundLoss, p.augment];
       for (const pool of pools) {
         expect(pool.length).toBeGreaterThan(0);
         for (const id of pool) expect(getEmote(id), `${lv.name}: unknown emote "${id}"`).toBeTruthy();

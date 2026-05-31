@@ -1863,10 +1863,12 @@ body {
   transform: translateY(-2px);
 }
 
-/* ---- floating emote bubbles ---- */
+/* ---- floating emote bubbles ----
+   z-index sits above the round-check / augment overlay scrim (.overlay = 5) so
+   the rival's reactions stay visible during those between-round screens too. */
 .emote-bubbles {
   position: fixed;
-  z-index: 4;
+  z-index: 6;
   pointer-events: none;
   display: flex;
   flex-direction: column-reverse;

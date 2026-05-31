@@ -218,6 +218,32 @@ describe('OnlineMatch — robustness', () => {
     expect(host.snapshot().phase).not.toBe('matchResult');
   });
 
+  it('does not falsely forfeit after a suspended-tab clock jump', async () => {
+    // Backgrounded tab: rAF stalls, so the next tick lands seconds later. That gap
+    // is our stall, not the opponent leaving — it must not trigger a forfeit "win".
+    const backend = new InMemoryNetBackend();
+    const sa = new BackendNetSession(backend);
+    const sb = new BackendNetSession(backend);
+    await sa.join('ROOMSUS', A);
+    await sb.join('ROOMSUS', B);
+    const opts = { roomId: 'ROOMSUS', ...FAST, hbIntervalMs: 300, disconnectMs: 1500, suspendGapMs: 1000 };
+    const host = new OnlineMatch({ session: sa, role: 'host', self: A, ...opts });
+    const guest = new OnlineMatch({ session: sb, role: 'guest', self: B, ...opts });
+    await host.start();
+    await guest.start();
+    let now = 0;
+    for (let i = 0; i < 20; i++) {
+      host.tick(now);
+      guest.tick(now);
+      now += 50;
+    }
+    expect(host.snapshot().oppLeft).toBe(false);
+    // One tick lands 5s later (gap >> disconnectMs). Pre-fix this forfeit-won.
+    host.tick(now + 5000);
+    expect(host.snapshot().oppLeft).toBe(false);
+    expect(host.snapshot().winner).not.toBe('me');
+  });
+
   it('a reused room with stale events does not corrupt a fresh match (host resets)', async () => {
     const backend = new InMemoryNetBackend();
     // Leftover events from a previous match on the same (reusable) code.

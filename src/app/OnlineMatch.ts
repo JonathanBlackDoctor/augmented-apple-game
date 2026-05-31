@@ -41,6 +41,7 @@ export interface OnlineOptions {
   hbIntervalMs?: number;
   disconnectMs?: number;
   lobbyTimeoutMs?: number;
+  suspendGapMs?: number; // inter-tick gap above which we treat the stall as a suspended tab
 }
 
 export interface OnlineSnapshot {
@@ -99,6 +100,7 @@ export class OnlineMatch {
   private readonly hbIntervalMs: number;
   private readonly disconnectMs: number;
   private readonly lobbyTimeoutMs: number;
+  private readonly suspendGapMs: number;
 
   private readonly engine: CoreEngine = createEngine();
   private readonly schedule: Seg[];
@@ -110,6 +112,7 @@ export class OnlineMatch {
   private matchStart: number | null = null;
   private lobbyStart: number | null = null;
   private nowMs = 0;
+  private lastTickMs: number | null = null;
   private mySeq = 0;
   private lastHbSent = 0;
   private lastOppSeen: number | null = null;
@@ -165,6 +168,7 @@ export class OnlineMatch {
     // each declare as a self-win → bogus double bye).
     this.disconnectMs = o.disconnectMs ?? 30_000;
     this.lobbyTimeoutMs = o.lobbyTimeoutMs ?? 15_000;
+    this.suspendGapMs = o.suspendGapMs ?? 4_000;
     this.schedule = this.buildSchedule();
     this.totalMs = this.schedule.reduce((a, s) => Math.max(a, s.start + s.dur), 0);
   }
@@ -256,6 +260,20 @@ export class OnlineMatch {
   }
 
   tick(nowMs: number): OnlineSnapshot {
+    // Backgrounded / suspended tab: rAF (and thus tick) stalls while the
+    // performance.now()-based clock keeps advancing, so the next tick lands with a
+    // large jump. That silent span is OUR stall, not the opponent leaving — without
+    // this the disconnect check would fire on resume and hand a bogus forfeit "win".
+    // Shift their last-seen forward by the gap so the grace window restarts from
+    // resume. We deliberately do NOT shift matchStart: the schedule is wall-clock
+    // anchored and shared, so we still catch up to the opponent's round.
+    if (this.lastTickMs !== null) {
+      const gap = nowMs - this.lastTickMs;
+      if (gap > this.suspendGapMs && this.lastOppSeen !== null) {
+        this.lastOppSeen += gap;
+      }
+    }
+    this.lastTickMs = nowMs;
     this.nowMs = nowMs;
     if (this.matchStart === null) {
       if (this.lobbyStart === null) this.lobbyStart = nowMs;

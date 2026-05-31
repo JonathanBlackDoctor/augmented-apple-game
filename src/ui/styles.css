@@ -480,6 +480,7 @@ body {
 .board-host > canvas {
   display: block;
   border-radius: var(--radius);
+  transition: filter 0.35s var(--ease);
 }
 
 /* ---------- HUD ---------- */
@@ -543,8 +544,26 @@ body {
   background: var(--valid);
   transition: width 0.12s linear;
 }
-.time-bar.low .time-fill {
-  background: var(--apple);
+/* augment / urgency states — warn (last ~8s), danger (≤5s, pulsing),
+   prism (glasscannon: timer races at 2×). */
+.time-fill.warn {
+  background: linear-gradient(90deg, #e0762a, #f0a23a);
+}
+.time-fill.danger {
+  background: linear-gradient(90deg, #d8392a, #f0603a);
+  animation: aag-tpulse 1s ease-in-out infinite;
+}
+.time-fill.prism {
+  background: linear-gradient(90deg, #7a6ae0, #6ad7d0);
+}
+@keyframes aag-tpulse {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.25);
+  }
 }
 .time-num {
   font-size: 14px;
@@ -754,6 +773,232 @@ body {
   font-size: 13px;
   color: var(--ink-2);
   line-height: 1.45;
+}
+
+/* ============================================================
+   AUGMENT EMBLEMS — per-augment glossy SVG crests, ported from the
+   "증강 쇼케이스" catalog. Rendered by <AugmentEmblem/> on the pick cards
+   (art box) and the owned-build sidebar (small chip). Idle micro-motions
+   are scoped under .emblem so the generic class names can't leak out.
+   ============================================================ */
+.emblem {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.emblem.silver {
+  filter: drop-shadow(0 7px 9px rgba(40, 60, 90, 0.18));
+}
+.emblem.gold {
+  filter: drop-shadow(0 7px 11px rgba(150, 95, 12, 0.26))
+    drop-shadow(0 0 14px rgba(255, 200, 90, 0.28));
+}
+.emblem.prism {
+  filter: drop-shadow(0 7px 12px rgba(110, 80, 180, 0.24))
+    drop-shadow(0 0 16px rgba(140, 120, 255, 0.22));
+}
+.emblem .anim {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.emblem .twinkle {
+  animation: aag-em-twinkle 2.6s ease-in-out infinite;
+}
+.emblem .spin-slow {
+  animation: aag-em-spin 14s linear infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.emblem .spin-med {
+  animation: aag-em-spin 9s linear infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.emblem .beat {
+  animation: aag-em-beat 2.4s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.emblem .bob {
+  animation: aag-em-bob 4s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.emblem .freeze-pulse {
+  animation: aag-em-fpulse 3.4s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.emblem .sheen-rect {
+  animation: aag-em-sheen 5.2s ease-in-out infinite;
+}
+.emblem .spin-arrows {
+  animation: aag-em-fadepulse 3s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.emblem .sway {
+  animation: aag-em-sway 3.6s ease-in-out infinite;
+  transform-box: fill-box;
+}
+.emblem .dice-tumble {
+  animation: aag-em-dice 4.4s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+@keyframes aag-em-twinkle {
+  0%,
+  100% {
+    opacity: 0.4;
+    transform: scale(0.82);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+}
+@keyframes aag-em-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes aag-em-beat {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  14% {
+    transform: scale(1.07);
+  }
+  28% {
+    transform: scale(1);
+  }
+  42% {
+    transform: scale(1.04);
+  }
+}
+@keyframes aag-em-bob {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0);
+  }
+  50% {
+    transform: translateY(-2.5px) rotate(-1.5deg);
+  }
+}
+@keyframes aag-em-fpulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+@keyframes aag-em-sheen {
+  0% {
+    transform: translateX(-46px);
+  }
+  36% {
+    transform: translateX(150px);
+  }
+  100% {
+    transform: translateX(150px);
+  }
+}
+@keyframes aag-em-fadepulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+@keyframes aag-em-sway {
+  0%,
+  100% {
+    transform: rotate(-3.5deg);
+  }
+  50% {
+    transform: rotate(3.5deg);
+  }
+}
+@keyframes aag-em-dice {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0);
+  }
+  50% {
+    transform: translateY(-2px) rotate(3deg);
+  }
+}
+
+/* pick-card art box — tier-tinted stage holding the crest, with a slow sheen */
+.aug-art {
+  position: relative;
+  width: 100%;
+  height: 96px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  box-shadow:
+    inset 0 1px 2px rgba(255, 255, 255, 0.6),
+    inset 0 -8px 20px -10px rgba(40, 40, 60, 0.12);
+}
+.aug-card.silver .aug-art {
+  background: radial-gradient(120% 100% at 50% 32%, #f7fafd 0%, #e3eaf2 55%, #d3dde9 100%);
+}
+.aug-card.gold .aug-art {
+  background: radial-gradient(120% 100% at 50% 30%, #fef4d6 0%, #f8dd9a 55%, #f0cd76 100%);
+}
+.aug-card.prismatic .aug-art {
+  background: radial-gradient(120% 100% at 50% 30%, #f6f1ff 0%, #eaf2fb 55%, #dbf0fb 100%);
+}
+.aug-art .emblem-host {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 80px;
+  height: 80px;
+}
+.aug-art::after {
+  content: '';
+  position: absolute;
+  inset: -20%;
+  z-index: 2;
+  pointer-events: none;
+  background: linear-gradient(
+    112deg,
+    transparent 38%,
+    rgba(255, 255, 255, 0.55) 50%,
+    transparent 62%
+  );
+  transform: translateX(-130%);
+  animation: aag-art-sweep 6s ease-in-out infinite;
+}
+@keyframes aag-art-sweep {
+  0% {
+    transform: translateX(-130%);
+  }
+  22% {
+    transform: translateX(130%);
+  }
+  100% {
+    transform: translateX(130%);
+  }
+}
+.aug-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+  text-align: left;
+  width: 100%;
+  min-width: 0;
 }
 
 /* ---------- Motion ---------- */
@@ -974,9 +1219,17 @@ body {
     linear-gradient(var(--paper-2), var(--paper-2)) padding-box,
     linear-gradient(125deg, #8a7dff, #6ad7d0, #ffd97a) border-box;
 }
-.owned-aug-icon {
-  font-size: 14px;
+.owned-aug-emblem {
+  display: block;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 auto;
+  font-size: 14px; /* fallback emoji size for crest-less families */
   line-height: 1;
+}
+/* Crisp at chip scale: drop the per-tier glow the full-size crest uses. */
+.owned-aug-emblem .emblem {
+  filter: drop-shadow(0 1px 1px rgba(80, 60, 30, 0.18));
 }
 .owned-aug-name {
   font-size: 11px;
@@ -1351,3 +1604,399 @@ body {
 .lb-nick { text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lb-tier { font-size: 12px; color: var(--ink-2); }
 .lb-mmr { font-weight: 700; font-variant-numeric: tabular-nums; color: var(--ink); }
+
+/* On phones the 1-up pick cards become compact rows (crest left, text right)
+   so three augments still fit a short viewport without scrolling. */
+@media (max-width: 560px) {
+  .aug-card {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    padding: 14px;
+  }
+  .aug-art {
+    width: 66px;
+    height: 66px;
+    flex: 0 0 auto;
+    border-radius: 13px;
+  }
+  .aug-art .emblem-host {
+    width: 54px;
+    height: 54px;
+  }
+}
+
+/* Honor reduced-motion: hold the crests and sheens still. */
+@media (prefers-reduced-motion: reduce) {
+  .emblem .anim,
+  .emblem .twinkle,
+  .emblem .spin-slow,
+  .emblem .spin-med,
+  .emblem .beat,
+  .emblem .bob,
+  .emblem .freeze-pulse,
+  .emblem .sheen-rect,
+  .emblem .spin-arrows,
+  .emblem .sway,
+  .emblem .dice-tumble,
+  .aug-art::after {
+    animation: none !important;
+  }
+}
+
+/* ============================================================
+   BOARD FX OVERLAY — augment activation / clear effects + running-sum bubble.
+   A pointer-transparent DOM layer (board/BoardFx.ts) sized over the Pixi canvas
+   by the conductor. Ported from the "증강 쇼케이스" in-game FX; all class and
+   keyframe names are bfx- prefixed to stay isolated from the rest of the UI.
+   ============================================================ */
+.board-fx {
+  position: absolute;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 2;
+  border-radius: var(--radius);
+}
+
+/* sustain-augment ambience (toggled via .on): time.lord/glasscannon = prism,
+   time.warmup = warm, time.spurt last 7s = red pulse */
+.bfx-vig {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  border-radius: var(--radius);
+  transition: opacity 0.5s;
+}
+.bfx-vig.on {
+  opacity: 1;
+}
+.bfx-vig.red {
+  box-shadow: inset 0 0 60px 6px rgba(216, 57, 42, 0.42);
+  animation: bfx-vigpulse 1.4s ease-in-out infinite;
+}
+.bfx-vig.prism {
+  box-shadow: inset 0 0 60px 8px rgba(138, 125, 255, 0.4);
+}
+.bfx-vig.green {
+  box-shadow: inset 0 0 55px 6px rgba(94, 154, 78, 0.36);
+}
+.bfx-vig.warm {
+  box-shadow: inset 0 0 60px 8px rgba(227, 161, 42, 0.38);
+  animation: bfx-vigpulse 2s ease-in-out infinite;
+}
+@keyframes bfx-vigpulse {
+  0%,
+  100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* score / activation popup (gained points + contributing tags) */
+.bfx-pop {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  z-index: 8;
+  animation: bfx-popup 1.4s ease-out forwards;
+}
+.bfx-big {
+  font: 800 22px var(--font);
+  display: block;
+}
+.bfx-tags {
+  display: block;
+  font-size: 10.5px;
+  font-weight: 700;
+  opacity: 0.92;
+  margin-top: 2px;
+  line-height: 1.4;
+}
+@keyframes bfx-popup {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -25%) scale(0.6);
+  }
+  16% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.12);
+  }
+  28% {
+    transform: translate(-50%, -55%) scale(1);
+  }
+  78% {
+    opacity: 1;
+    transform: translate(-50%, -95%);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -120%);
+  }
+}
+
+.bfx-ring {
+  position: absolute;
+  transform: translate(-50%, -50%) scale(0.3);
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--c, #fff);
+  border-radius: 50%;
+  opacity: 0.9;
+  z-index: 6;
+  animation: bfx-ring 0.8s ease-out forwards;
+}
+@keyframes bfx-ring {
+  to {
+    transform: translate(-50%, -50%) scale(4);
+    opacity: 0;
+  }
+}
+
+.bfx-flash {
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  opacity: 0;
+  z-index: 7;
+  border-radius: var(--radius);
+  animation: bfx-flash 0.5s ease-out forwards;
+}
+@keyframes bfx-flash {
+  0% {
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.7;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.bfx-particle {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  z-index: 7;
+  background: radial-gradient(circle, #fff, var(--c) 70%);
+  opacity: 0;
+  animation: bfx-part 0.8s ease-out forwards;
+}
+@keyframes bfx-part {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.4);
+  }
+  18% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1);
+  }
+}
+
+.bfx-spark {
+  position: absolute;
+  transform: translate(-50%, -50%) scale(0);
+  z-index: 7;
+  color: var(--c, #fff);
+  font-size: 20px;
+  animation: bfx-spark 0.7s ease-out forwards;
+}
+@keyframes bfx-spark {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0) rotate(0);
+  }
+  40% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.2) rotate(40deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.9) rotate(80deg);
+  }
+}
+
+.bfx-stamp {
+  position: absolute;
+  transform: translate(-50%, -50%) rotate(-9deg);
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border: 2.5px solid var(--bd);
+  border-radius: 9px;
+  color: var(--fg);
+  font: 800 13px var(--font);
+  background: rgba(255, 253, 246, 0.96);
+  white-space: nowrap;
+  opacity: 0;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.14);
+  animation: bfx-stamp 1.25s ease-out forwards;
+}
+@keyframes bfx-stamp {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -30%) rotate(-9deg) scale(1.5);
+  }
+  16% {
+    opacity: 1;
+    transform: translate(-50%, -50%) rotate(-9deg) scale(0.95);
+  }
+  38% {
+    transform: translate(-50%, -58%) rotate(-9deg) scale(1);
+  }
+  70% {
+    opacity: 1;
+    transform: translate(-50%, -150%) rotate(-9deg) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -225%) rotate(-9deg) scale(0.96);
+  }
+}
+.bfx-check {
+  font-size: 14px;
+}
+
+.bfx-dice {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 46px;
+  height: 46px;
+  border-radius: 10px;
+  z-index: 8;
+  background: linear-gradient(135deg, #fff, #e6e0ff);
+  border: 2px solid #cfc6ff;
+  box-shadow: 0 6px 14px rgba(80, 60, 140, 0.3);
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  padding: 7px;
+  animation: bfx-diceroll 1s ease-out forwards;
+}
+.bfx-pip {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #6f63c8;
+  align-self: center;
+  justify-self: center;
+  opacity: 0;
+}
+.bfx-pip:nth-child(1) {
+  grid-area: 1 / 1;
+}
+.bfx-pip:nth-child(2) {
+  grid-area: 1 / 3;
+}
+.bfx-pip:nth-child(3) {
+  grid-area: 2 / 2;
+}
+.bfx-pip:nth-child(4) {
+  grid-area: 3 / 1;
+}
+.bfx-pip:nth-child(5) {
+  grid-area: 3 / 3;
+}
+.bfx-dice.settled .bfx-pip {
+  opacity: 1;
+}
+@keyframes bfx-diceroll {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(0) scale(0.6);
+  }
+  15% {
+    opacity: 1;
+  }
+  45% {
+    transform: translate(-50%, -50%) rotate(230deg) scale(1.1);
+  }
+  100% {
+    transform: translate(-50%, -50%) rotate(360deg) scale(1);
+  }
+}
+
+.bfx-timefloat {
+  position: absolute;
+  z-index: 9;
+  font: 800 16px var(--font);
+  animation: bfx-popup 1.4s ease-out forwards;
+}
+
+/* running-sum bubble above the live selection (neutral honey, green when valid) */
+.bfx-sum {
+  position: absolute;
+  transform: translate(-50%, -130%);
+  font: 800 13px var(--font);
+  color: #fff;
+  background: var(--gold-2);
+  padding: 2px 8px;
+  border-radius: 999px;
+  z-index: 9;
+  white-space: nowrap;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
+}
+.bfx-sum.ok {
+  background: var(--valid);
+}
+
+/* board-state classes applied to the canvas element itself */
+.bfx-shake {
+  animation: bfx-shake 0.5s;
+}
+@keyframes bfx-shake {
+  0%,
+  100% {
+    transform: translate(0);
+  }
+  15% {
+    transform: translate(-5px, 3px);
+  }
+  35% {
+    transform: translate(5px, -3px);
+  }
+  55% {
+    transform: translate(-4px, 2px);
+  }
+  75% {
+    transform: translate(4px, -2px);
+  }
+}
+.bfx-tilt {
+  animation: bfx-tilt 0.65s ease-in-out;
+}
+@keyframes bfx-tilt {
+  0%,
+  100% {
+    transform: rotate(0) translateX(0);
+  }
+  22% {
+    transform: rotate(-1.4deg) translateX(-4px);
+  }
+  64% {
+    transform: rotate(1.4deg) translateX(4px);
+  }
+}
+.bfx-desat {
+  filter: saturate(0.34) brightness(1.05);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bfx-vig.red,
+  .bfx-vig.warm,
+  .time-fill.danger {
+    animation: none;
+  }
+  .bfx-shake,
+  .bfx-tilt {
+    animation: none;
+  }
+}

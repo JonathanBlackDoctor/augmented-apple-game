@@ -21,6 +21,7 @@ export interface OnlineStore {
   oppTotal: number;
   roundWins: { me: number; opp: number };
   combo: number;
+  owned: string[];
   offers: string[];
   offerTier: AugTier | null;
   winner: 'me' | 'opp' | 'draw' | null;
@@ -51,6 +52,7 @@ const INIT = {
   oppTotal: 0,
   roundWins: { me: 0, opp: 0 },
   combo: 0,
+  owned: [] as string[],
   offers: [] as string[],
   offerTier: null as AugTier | null,
   winner: null as 'me' | 'opp' | 'draw' | null,

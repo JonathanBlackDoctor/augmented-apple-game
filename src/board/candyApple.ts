@@ -151,6 +151,10 @@ interface VariantSpec {
   specular?: number;
   /** 와일드 이리데센트 글린트 */
   iridescent?: boolean;
+  /** 무지개(와일드) 베이스 — palette 대신 5색 분광 그라데이션 */
+  rainbow?: boolean;
+  /** 폭탄 — 잎 대신 도화선 + 불꽃 스파클 */
+  fuse?: boolean;
   /** 잎 그라데이션 (leaf1 → leaf2) */
   leaf: [string, string];
   /** 꼭지 그라데이션 (top → bot) */
@@ -180,9 +184,9 @@ const VARIANTS: Record<AppleVariant, VariantSpec> = {
     palette: ['#9e92ff', '#7d6df0', '#5f4cd6'],
     amb: [40, 24, 90],
     number: '#ffffff',
-    sheen: '#c8c0ff',
+    sheen: '#fdeaff',
     specular: 0.5,
-    iridescent: true,
+    rainbow: true,
     leaf: ['#9fe6c4', '#56b78c'],
     stem: ['#6a5cc0', '#473a90'],
   },
@@ -200,6 +204,7 @@ const VARIANTS: Record<AppleVariant, VariantSpec> = {
     amb: [20, 20, 44],
     number: '#f2f2f6',
     sheen: 'sky',
+    fuse: true,
     leaf: ['#9bbf7e', '#6f9a52'],
     stem: ['#5a5060', '#3a3340'],
   },
@@ -273,9 +278,18 @@ export function drawApple(ctx: CanvasRenderingContext2D, opt: DrawAppleOptions):
   const dx = Math.cos(rad);
   const dy = Math.sin(rad);
   const g1 = ctx.createLinearGradient(50 - dx * 50, 50 - dy * 50, 50 + dx * 50, 50 + dy * 50);
-  g1.addColorStop(0.04, v.palette[0]);
-  g1.addColorStop(0.54, v.palette[1]);
-  g1.addColorStop(1, v.palette[2]);
+  if (v.rainbow) {
+    // wild matches any value → a glossy 5-colour prism along the same 176° axis.
+    g1.addColorStop(0, '#ff9ec4');
+    g1.addColorStop(0.25, '#ffe08a');
+    g1.addColorStop(0.5, '#8fe6c8');
+    g1.addColorStop(0.72, '#7fc4f0');
+    g1.addColorStop(1, '#b3a8ff');
+  } else {
+    g1.addColorStop(0.04, v.palette[0]);
+    g1.addColorStop(0.54, v.palette[1]);
+    g1.addColorStop(1, v.palette[2]);
+  }
   ctx.fillStyle = g1;
   ctx.fillRect(0, 0, 100, 100);
 
@@ -340,10 +354,17 @@ export function drawApple(ctx: CanvasRenderingContext2D, opt: DrawAppleOptions):
   }
 }
 
-/** 꼭지(stem) + 잎(leaf). 0..100 정규 좌표를 s 로 스케일해 그린다. */
+/** 꼭지(stem) + 잎(leaf). 0..100 정규 좌표를 s 로 스케일해 그린다.
+ *  폭탄(fuse)은 잎/꼭지 대신 타들어가는 도화선 + 불꽃을 그린다. */
 function drawStemLeaf(ctx: CanvasRenderingContext2D, v: VariantSpec, s: number): void {
   ctx.save();
   ctx.scale(s, s);
+
+  if (v.fuse) {
+    drawFuse(ctx);
+    ctx.restore();
+    return;
+  }
 
   // 잎 — 상단 우측, -30° 기운 페탈 (geometry.leaf)
   ctx.save();
@@ -382,6 +403,49 @@ function drawStemLeaf(ctx: CanvasRenderingContext2D, v: VariantSpec, s: number):
   ctx.restore();
 
   ctx.restore();
+}
+
+/** 폭탄 도화선 + 끝의 불꽃 스파클. 0..100 좌표(호출부에서 이미 스케일됨). */
+function drawFuse(ctx: CanvasRenderingContext2D): void {
+  // 도화선 — 딤플에서 우상단으로 살짝 휘어 올라간다
+  ctx.strokeStyle = '#8a6a40';
+  ctx.lineWidth = 3.4;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(50, 14);
+  ctx.quadraticCurveTo(54, 6, 62, 8);
+  ctx.stroke();
+
+  const tx = 62;
+  const ty = 8;
+  // 불꽃 글로우
+  const gg = ctx.createRadialGradient(tx, ty, 0, tx, ty, 7);
+  gg.addColorStop(0, 'rgba(255,255,255,0.95)');
+  gg.addColorStop(0.5, 'rgba(255,181,58,0.7)');
+  gg.addColorStop(1, 'rgba(255,181,58,0)');
+  ctx.fillStyle = gg;
+  ctx.beginPath();
+  ctx.arc(tx, ty, 7, 0, Math.PI * 2);
+  ctx.fill();
+  // 4갈래 스파클 + 흰 코어
+  ctx.fillStyle = '#fff3c4';
+  const r = 6;
+  ctx.beginPath();
+  ctx.moveTo(tx, ty - r);
+  ctx.lineTo(tx + r * 0.3, ty);
+  ctx.lineTo(tx, ty + r);
+  ctx.lineTo(tx - r * 0.3, ty);
+  ctx.closePath();
+  ctx.moveTo(tx - r, ty);
+  ctx.lineTo(tx, ty - r * 0.3);
+  ctx.lineTo(tx + r, ty);
+  ctx.lineTo(tx, ty + r * 0.3);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  ctx.arc(tx, ty, 1.8, 0, Math.PI * 2);
+  ctx.fill();
 }
 
 /**

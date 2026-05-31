@@ -160,6 +160,12 @@ export class VersusMatch {
     return this.myEngine.evaluate(rect).valid;
   }
 
+  /** Preview validity + running sum for the drag UI (no mutation). */
+  evalDetail(rect: Rect): { valid: boolean; sum: number } {
+    const e = this.myEngine.evaluate(rect);
+    return { valid: e.valid, sum: e.sum };
+  }
+
   setDragging(d: boolean): void {
     this.myEngine.setDragging(d);
   }

@@ -12,6 +12,7 @@ import { START_MMR } from '../ranking/elo';
 import { sfx } from './sound';
 import { playActivation, playClear, updateAmbient } from './augmentFx';
 import { useOnlineStore } from './onlineStore';
+import { useGameStore } from './store';
 import { getSettings } from './settingsStore';
 import { OnlineMatch, type OnlineSnapshot, type Role } from './OnlineMatch';
 import { InMemoryNetBackend } from '../net/memoryBackend';
@@ -250,9 +251,19 @@ export class OnlineController {
       await this.persistProfile();
     }
     this.board.showSelection(null, false);
-    useOnlineStore
-      .getState()
-      .set({ stage: 'result', winner, mmrDelta, mmr: this.profile?.mmr ?? START_MMR });
+    // New personal-best total (shared across modes)? Capture before finishMatch().
+    const gs = useGameStore.getState();
+    const newRecord = s.myTotal > gs.bestTotal;
+    gs.setTotalScore(s.myTotal);
+    gs.finishMatch();
+    useOnlineStore.getState().set({
+      stage: 'result',
+      winner,
+      mmrDelta,
+      mmr: this.profile?.mmr ?? START_MMR,
+      newRecord,
+      roundHistory: s.roundHistory,
+    });
   }
 
   private handlers: DragHandlers = {

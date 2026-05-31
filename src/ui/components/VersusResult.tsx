@@ -4,6 +4,7 @@ import { useProgressStore } from '../../app/progressStore';
 import { getEmote } from '../../emotes';
 import { MAX_LEVEL } from '../../bot';
 import { AnimNum } from './AnimNum';
+import { RoundStrip } from './RoundStrip';
 
 export function VersusResult({
   onReplay,
@@ -27,6 +28,7 @@ export function VersusResult({
   return (
     <div className="overlay">
       <div className={`result-card versus ${cls}`}>
+        {v.newRecord && win && <div className="newrec-badge">★ 신기록</div>}
         <h2 className="result-title">{title}</h2>
         <p className="vs-level-line">
           {v.oppAvatar} {v.oppName}
@@ -49,6 +51,7 @@ export function VersusResult({
         <p className="best-line">
           라운드 {v.roundWins.me} : {v.roundWins.opp}
         </p>
+        {v.roundHistory.length > 0 && <RoundStrip history={v.roundHistory} />}
         {win && rewardEmote && (
           <div className="reward-pop">
             <span className="reward-cap">새 감정표현 획득!</span>

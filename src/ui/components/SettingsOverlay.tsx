@@ -3,6 +3,7 @@
 // Reused by the home screen and the pause menu. (AI difficulty is chosen
 // per-match on the level-select screen; apple count is fixed to medium.)
 import { useSettingsStore, DURATION_OPTIONS, APPLE_SIZE_PRESETS } from '../../app/settingsStore';
+import { toast } from '../../app/toastStore';
 
 function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
   return (
@@ -73,10 +74,22 @@ export function SettingsOverlay({ onClose }: { onClose: () => void }) {
         </div>
         <p className="set-note">라운드 시간·사과 크기는 다음 게임부터 적용돼요.</p>
         <div className="btn-row">
-          <button className="btn ghost" onClick={() => s.reset()}>
+          <button
+            className="btn ghost"
+            onClick={() => {
+              s.reset();
+              toast('기본값으로 되돌렸어요');
+            }}
+          >
             기본값
           </button>
-          <button className="btn primary" onClick={onClose}>
+          <button
+            className="btn primary"
+            onClick={() => {
+              toast('설정을 저장했어요');
+              onClose();
+            }}
+          >
             완료
           </button>
         </div>

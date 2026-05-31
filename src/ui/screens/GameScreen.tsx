@@ -21,6 +21,7 @@ import { EmoteOverlay } from '../components/EmoteOverlay';
 import { SettingsOverlay } from '../components/SettingsOverlay';
 import { HelpOverlay } from '../components/HelpOverlay';
 import { PauseOverlay } from '../components/PauseOverlay';
+import { Countdown } from '../components/Countdown';
 
 function buildPlan(mode: 'solo' | 'augment'): MatchPlan {
   const seedBase = `${mode}:${Date.now()}`;
@@ -57,6 +58,7 @@ export function GameScreen() {
   const overlayRemainingMs = useVersusStore((s) => s.overlayRemainingMs);
   const isVersus = mode === 'versus';
   const [paused, setPaused] = useState(false);
+  const [intro, setIntro] = useState(false);
   const [overlay, setOverlay] = useState<'settings' | 'help' | null>(null);
 
   useEffect(() => {
@@ -73,6 +75,8 @@ export function GameScreen() {
           return;
         }
         ctrl.startVersus();
+        ctrl.pause(); // hold the clock until the 3·2·1 intro finishes
+        setIntro(true);
       })();
       return () => {
         disposed = true;
@@ -91,6 +95,8 @@ export function GameScreen() {
         return;
       }
       ctrl.startMatch(buildPlan(mode === 'augment' ? 'augment' : 'solo'));
+      ctrl.pause(); // hold the clock until the 3·2·1 intro finishes
+      setIntro(true);
     })();
     return () => {
       disposed = true;
@@ -99,6 +105,18 @@ export function GameScreen() {
     };
   }, [isVersus, mode]);
 
+  const activeCtrl = (): MatchController | VersusController | null =>
+    isVersus ? versusRef.current : soloRef.current;
+  // Restart paths re-arm the clock immediately; re-hold it for a fresh intro.
+  const armIntro = (): void => {
+    activeCtrl()?.pause();
+    setIntro(true);
+  };
+  const endIntro = (): void => {
+    activeCtrl()?.resume();
+    setIntro(false);
+  };
+
   const onPick = (id: string): void => {
     if (isVersus) versusRef.current?.pick(id);
     else soloRef.current?.pick(id);
@@ -106,6 +124,7 @@ export function GameScreen() {
   const onReplay = (): void => {
     if (isVersus) versusRef.current?.restart();
     else soloRef.current?.restart();
+    armIntro();
   };
   const onHome = (): void => useGameStore.getState().goHome();
   const onLevels = (): void => useGameStore.setState({ mode: 'levels', phase: 'home' });
@@ -113,10 +132,8 @@ export function GameScreen() {
     const p = useProgressStore.getState();
     p.selectLevel(Math.min(MAX_LEVEL, p.selectedLevel + 1));
     versusRef.current?.restart();
+    armIntro();
   };
-
-  const activeCtrl = (): MatchController | VersusController | null =>
-    isVersus ? versusRef.current : soloRef.current;
   const onPause = (): void => {
     activeCtrl()?.pause();
     setPaused(true);
@@ -136,8 +153,8 @@ export function GameScreen() {
     onHome();
   };
 
-  // Pause is only meaningful during an active round.
-  const pauseHandler = phase === 'round' ? onPause : undefined;
+  // Pause is only meaningful during an active round (not during the intro).
+  const pauseHandler = phase === 'round' && !intro ? onPause : undefined;
 
   return (
     <div className="screen game">
@@ -146,7 +163,8 @@ export function GameScreen() {
       {isVersus && <OwnedAugments />}
       {isVersus && <OpponentAugments />}
       {isVersus && <EmoteOverlay />}
-      {isVersus && phase !== 'result' && !paused && <EmoteTray />}
+      {isVersus && phase !== 'result' && !paused && !intro && <EmoteTray />}
+      {intro && <Countdown onDone={endIntro} />}
       {phase === 'roundCheck' && isVersus && <RoundCheckOverlay />}
       {phase === 'augment' &&
         (isVersus ? (

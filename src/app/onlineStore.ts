@@ -21,6 +21,7 @@ export interface OnlineStore {
   myTotal: number;
   oppTotal: number;
   roundWins: { me: number; opp: number };
+  roundHistory: { my: number; opp: number; winner: 'me' | 'opp' | 'draw' }[];
   combo: number;
   owned: string[];
   offers: string[];
@@ -29,6 +30,7 @@ export interface OnlineStore {
   winner: 'me' | 'opp' | 'draw' | null;
   mmrDelta: number | null;
   mmr: number; // my MMR AFTER the ranked result (for the result rank band)
+  newRecord: boolean;
   oppName: string;
   oppPresent: boolean;
   oppConnected: boolean;
@@ -54,6 +56,7 @@ const INIT = {
   myTotal: 0,
   oppTotal: 0,
   roundWins: { me: 0, opp: 0 },
+  roundHistory: [] as { my: number; opp: number; winner: 'me' | 'opp' | 'draw' }[],
   combo: 0,
   owned: [] as string[],
   offers: [] as string[],
@@ -62,6 +65,7 @@ const INIT = {
   winner: null as 'me' | 'opp' | 'draw' | null,
   mmrDelta: null as number | null,
   mmr: START_MMR,
+  newRecord: false,
   oppName: '상대',
   oppPresent: false,
   oppConnected: false,

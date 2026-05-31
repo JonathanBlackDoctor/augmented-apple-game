@@ -6,6 +6,7 @@ import { byId } from '../../augments';
 import { OnlineHud } from '../components/OnlineHud';
 import { AnimNum } from '../components/AnimNum';
 import { RankBand } from '../components/RankBand';
+import { RoundStrip } from '../components/RoundStrip';
 
 const TIER_LABEL: Record<string, string> = { silver: '실버', gold: '골드', prismatic: '프리즘' };
 
@@ -182,6 +183,7 @@ export function OnlineScreen() {
       {s.stage === 'result' && (
         <div className="overlay">
           <div className={`result-card versus ${cls}`}>
+            {s.newRecord && s.winner !== 'opp' && <div className="newrec-badge">★ 신기록</div>}
             <h2 className="result-title">
               {s.winner === 'me' ? '승리!' : s.winner === 'opp' ? '패배' : '무승부'}
             </h2>
@@ -204,6 +206,7 @@ export function OnlineScreen() {
             <p className="best-line">
               라운드 {s.roundWins.me} : {s.roundWins.opp}
             </p>
+            {s.roundHistory.length > 0 && <RoundStrip history={s.roundHistory} />}
             {s.mmrDelta !== null && <RankBand mmrAfter={s.mmr} mmrDelta={s.mmrDelta} />}
             <div className="btn-row">
               <button className="btn ghost" onClick={goHome}>

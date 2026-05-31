@@ -2,6 +2,26 @@ import { useEffect, useState } from 'react';
 import { useGameStore } from '../../app/store';
 import { useVersusStore } from '../../app/versusStore';
 import { hudTimerState } from './hudTimer';
+import { AnimNum } from './AnimNum';
+
+/** best-of-N pip strip: filled for finished rounds (W/L tint), hollow ahead. */
+export function SeriesPips({
+  history,
+  total,
+}: {
+  history: { winner: 'me' | 'opp' | 'draw' }[];
+  total: number;
+}) {
+  return (
+    <div className="series-pips">
+      {Array.from({ length: total }).map((_, i) => {
+        const r = history[i];
+        const cls = !r ? '' : r.winner === 'me' ? 'me' : r.winner === 'opp' ? 'opp' : 'draw';
+        return <span key={i} className={`pip ${cls}`} />;
+      })}
+    </div>
+  );
+}
 
 interface Pop {
   seq: number;
@@ -30,7 +50,9 @@ export function VersusHud({ onPause }: { onPause?: () => void }) {
     <div className="hud versus-hud">
       <div className="vs-side me">
         <span className="vs-label">나</span>
-        <span className="vs-score">{myTotal}</span>
+        <span className="vs-score">
+          <AnimNum to={myTotal} live dur={450} />
+        </span>
         {s.combo > 1 && <span className="combo-chip">{s.combo}콤보</span>}
       </div>
       <div className="hud-center">
@@ -48,6 +70,7 @@ export function VersusHud({ onPause }: { onPause?: () => void }) {
             </button>
           )}
         </div>
+        <SeriesPips history={v.roundHistory} total={s.totalRounds} />
         <div className={`time-bar${low ? ' low' : ''}`}>
           <div className={`time-fill${fill ? ' ' + fill : ''}`} style={{ width: `${pct * 100}%` }} />
         </div>

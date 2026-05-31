@@ -1,12 +1,17 @@
 /**
- * candyApple — 확정된 "캔디 글로스 사과" 렌더 모델 (디자인 핸드오프 이식)
+ * candyApple — 보드 사과 렌더러 (파일명은 과거 모델의 잔재일 뿐, 현재 디자인은 아래와 같다).
  *
- * 출처: apple_design_handoff/ (assets/apple-spec.json, src/scene.js, src/candy.js)
- *  - 광택(스페큘러) 0(기본), 밤 외곽선 미사용, 숫자 폰트 Quicksand.
- *  - 라운드 진행도 t∈[0,1](아침→밤) 하나로 모든 사과가 공유하는 광원 룩을 계산.
- *  - 사과 본체는 실루엣 path 클립 안에서 (apple-spec.json > body.layers 순서)
- *      base(linear 176°) → sheen(radial) → [specular/iridescent] → ambient(radial)
- *    을 아래→위로 합성하고, 그 위에 rim light(screen)을 얹는다.
+ * 현재 룩 = 업로드된 HTML 시안(사과 — 위로+왼쪽 잎) 그대로의 "정적 평면 사과":
+ *   - 본체: border-radius:50% 와 동일한 완전한 원(arc 클립).
+ *   - 색: radial-gradient(72% 60% at 50% 30%, #ED6138 / #E5512C 56% / #DC4824) 한 겹.
+ *   - 그림자: filter:drop-shadow(0 1.5px 2px rgba(40,18,12,.28)) (캔버스 shadow 로 근사).
+ *   - 꼭지: 둥근 막대, 잎: 페탈(0 100% 0 100%) — HTML 의 위치/각도 그대로.
+ *   - 숫자: weight 800, 색 #FFF4EC(변형별).
+ *   ⚠️ 캔디 글로스(sheen/specular/ambient/rim)·낮밤 시간반응은 모두 제거됨(평면).
+ *
+ * 참고: 아래 sceneAt/lookAt/SCENE_KEYS 등 '낮밤 광원' 코드는 현재 렌더에 쓰이지 않는
+ *       잔재다(평면이라 look 무시). BoardView 가 아직 import 하므로 남겨둔 것뿐이며,
+ *       다음 정리에서 제거 예정. 사과 외형은 전적으로 drawApple 만 결정한다.
  *
  * 이 모듈은 board/ 렌더 레이어 전용이며 코어 순수성과 무관하다.
  * (offscreen canvas 2D 사용 → PixiJS 텍스처로 업로드)

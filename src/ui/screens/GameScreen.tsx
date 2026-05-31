@@ -3,7 +3,7 @@ import { makeRng } from '../../core';
 import { useGameStore } from '../../app/store';
 import { useProgressStore } from '../../app/progressStore';
 import { MAX_LEVEL } from '../../bot';
-import { getSettings } from '../../app/settingsStore';
+import { ROUND_DURATION_MS } from '../../app/settingsStore';
 import { MatchController, type MatchPlan } from '../../app/MatchController';
 import { VersusController, AUGMENT_MS } from '../../app/VersusController';
 import { useVersusStore } from '../../app/versusStore';
@@ -25,7 +25,6 @@ import { Countdown } from '../components/Countdown';
 
 function buildPlan(mode: 'solo' | 'augment'): MatchPlan {
   const seedBase = `${mode}:${Date.now()}`;
-  const s = getSettings();
   // Fixed medium board; swap to a tall grid on portrait screens so cells aren't
   // squeezed by the narrow width (bigger, tappable apples on mobile).
   const { cols, rows } = pickGridDims();
@@ -33,7 +32,7 @@ function buildPlan(mode: 'solo' | 'augment'): MatchPlan {
     seedBase,
     cols,
     rows,
-    durationMs: s.roundDurationMs,
+    durationMs: ROUND_DURATION_MS,
     targetSum: 10,
     modeId: 'separate',
   };

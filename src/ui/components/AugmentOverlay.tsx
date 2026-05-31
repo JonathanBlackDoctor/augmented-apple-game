@@ -1,3 +1,4 @@
+import type { AugTier } from '../../contracts';
 import { useGameStore } from '../../app/store';
 import { byId } from '../../augments';
 import { FAMILY_ICON } from './augmentIcons';
@@ -15,19 +16,42 @@ const FAMILY_LABEL: Record<string, string> = {
 
 interface AugmentOverlayProps {
   onPick: (id: string) => void;
-  // When provided (versus mode), render a pick-countdown that auto-selects on 0.
+  // When provided (versus + online), render a pick-countdown that auto-selects on 0.
   remainingMs?: number;
   totalMs?: number;
-  // When provided (versus mode), render a reroll control wired to this handler.
+  // When provided (versus + online), render a reroll control wired to this handler.
   onReroll?: () => void;
+  // Online mode keeps its state in onlineStore, not the shared game store; when
+  // these are supplied they override the store reads so this one component serves
+  // both modes. Omitted → versus/solo reads from useGameStore as before.
+  offers?: string[];
+  offerTier?: AugTier | null;
+  roundIndex?: number;
+  rerollsLeft?: number;
+  owned?: string[];
 }
 
-export function AugmentOverlay({ onPick, remainingMs, totalMs, onReroll }: AugmentOverlayProps) {
-  const offers = useGameStore((s) => s.offers);
-  const tier = useGameStore((s) => s.offerTier);
-  const roundIndex = useGameStore((s) => s.roundIndex);
-  const rerollsLeft = useGameStore((s) => s.rerollsLeft);
-  const owned = useGameStore((s) => s.owned);
+export function AugmentOverlay({
+  onPick,
+  remainingMs,
+  totalMs,
+  onReroll,
+  offers: offersProp,
+  offerTier: tierProp,
+  roundIndex: roundIndexProp,
+  rerollsLeft: rerollsProp,
+  owned: ownedProp,
+}: AugmentOverlayProps) {
+  const offersStore = useGameStore((s) => s.offers);
+  const tierStore = useGameStore((s) => s.offerTier);
+  const roundIndexStore = useGameStore((s) => s.roundIndex);
+  const rerollsStore = useGameStore((s) => s.rerollsLeft);
+  const ownedStore = useGameStore((s) => s.owned);
+  const offers = offersProp ?? offersStore;
+  const tier = tierProp ?? tierStore;
+  const roundIndex = roundIndexProp ?? roundIndexStore;
+  const rerollsLeft = rerollsProp ?? rerollsStore;
+  const owned = ownedProp ?? ownedStore;
   const timed = remainingMs !== undefined && totalMs !== undefined && totalMs > 0;
   const pct = timed ? Math.max(0, Math.min(1, remainingMs / totalMs)) : 0;
   const secs = timed ? Math.max(0, Math.ceil(remainingMs / 1000)) : 0;

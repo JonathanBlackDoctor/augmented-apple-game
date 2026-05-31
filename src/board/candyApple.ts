@@ -164,12 +164,14 @@ interface VariantSpec {
 const VARIANTS: Record<AppleVariant, VariantSpec> = {
   // 확정 베이스 톤(소프트 코럴)
   normal: {
-    palette: ['#e8705a', '#d4513a', '#9c3a2a'],
+    // 사과 시안 v2.html 본체 색 (radial 72% 60% at 50% 30%)
+    palette: ['#ED6138', '#E5512C', '#DC4824'],
     amb: [70, 16, 8],
     number: '#FFF4EC',
     sheen: 'sky',
-    leaf: ['#8fc873', '#5E9A4E'],
-    stem: ['#8a5630', '#5f3a1f'],
+    // v2 이파리/꼭지 그라데이션
+    leaf: ['#69B23A', '#4C9626'],
+    stem: ['#7C4B2B', '#5C3620'],
   },
   golden: {
     palette: ['#f4c659', '#dca21f', '#ad7d13'],
@@ -265,33 +267,32 @@ export function drawApple(ctx: CanvasRenderingContext2D, opt: DrawAppleOptions):
   ctx.fill();
   ctx.restore();
 
-  // 꼭지·잎은 보디 뒤(아래)에 깔아 보디가 밑동을 덮게 한다.
-  if (showDeco) drawStemLeaf(ctx, v, s);
-
   // ── 보디(실루엣 클립 안) ──
   ctx.save();
   ctx.scale(s, s);
   ctx.clip(new Path2D(APPLE_SILHOUETTE));
 
-  // 1) base — linear 176° (top 4% → mid 54% → bot 100%)
-  const rad = (176 * Math.PI) / 180;
-  const dx = Math.cos(rad);
-  const dy = Math.sin(rad);
-  const g1 = ctx.createLinearGradient(50 - dx * 50, 50 - dy * 50, 50 + dx * 50, 50 + dy * 50);
+  // 1) base — 사과 시안 v2.html 본체: radial 72% 60% at 50% 30% (core → mid 56% → edge)
   if (v.rainbow) {
-    // wild matches any value → a glossy 5-colour prism along the same 176° axis.
+    // wild matches any value → a glossy 5-colour prism along a 176° axis.
+    const rad = (176 * Math.PI) / 180;
+    const dx = Math.cos(rad);
+    const dy = Math.sin(rad);
+    const g1 = ctx.createLinearGradient(50 - dx * 50, 50 - dy * 50, 50 + dx * 50, 50 + dy * 50);
     g1.addColorStop(0, '#ff9ec4');
     g1.addColorStop(0.25, '#ffe08a');
     g1.addColorStop(0.5, '#8fe6c8');
     g1.addColorStop(0.72, '#7fc4f0');
     g1.addColorStop(1, '#b3a8ff');
+    ctx.fillStyle = g1;
+    ctx.fillRect(0, 0, 100, 100);
   } else {
-    g1.addColorStop(0.04, v.palette[0]);
-    g1.addColorStop(0.54, v.palette[1]);
-    g1.addColorStop(1, v.palette[2]);
+    radialFill(ctx, 50, 30, 72, 60, [
+      [0, v.palette[0]],
+      [0.56, v.palette[1]],
+      [1, v.palette[2]],
+    ]);
   }
-  ctx.fillStyle = g1;
-  ctx.fillRect(0, 0, 100, 100);
 
   // 2) sheen — radial 86% 78% at 50% 2% (하늘 반사). 색은 동적 hl 또는 변형 고정색.
   const sheenColor = v.sheen === 'sky' ? look.hl : v.sheen;
@@ -339,6 +340,9 @@ export function drawApple(ctx: CanvasRenderingContext2D, opt: DrawAppleOptions):
 
   ctx.restore(); // 보디 클립 해제
 
+  // 꼭지·잎은 보디 위(앞)에 얹는다 (사과 시안 v2: 잎/꼭지 z > 과일).
+  if (showDeco) drawStemLeaf(ctx, v, s);
+
   // ── 숫자 (Quicksand, 셀 0.47배, apple-spec.json > typography) ──
   if (value != null) {
     const small = size <= 24;
@@ -354,8 +358,9 @@ export function drawApple(ctx: CanvasRenderingContext2D, opt: DrawAppleOptions):
   }
 }
 
-/** 꼭지(stem) + 잎(leaf). 0..100 정규 좌표를 s 로 스케일해 그린다.
- *  폭탄(fuse)은 잎/꼭지 대신 타들어가는 도화선 + 불꽃을 그린다. */
+/** 꼭지(stem) + 잎(leaf) — 사과 시안 v2.html 디자인 이식. 0..100 정규 좌표를 s 로
+ *  스케일해 그린다. 폭탄(fuse)은 잎/꼭지 대신 타들어가는 도화선 + 불꽃을 그린다.
+ *  v2 의 DOM/CSS transform 을 그대로 캔버스 좌표로 옮긴다(원점·회전·박스 동일). */
 function drawStemLeaf(ctx: CanvasRenderingContext2D, v: VariantSpec, s: number): void {
   ctx.save();
   ctx.scale(s, s);
@@ -366,40 +371,50 @@ function drawStemLeaf(ctx: CanvasRenderingContext2D, v: VariantSpec, s: number):
     return;
   }
 
-  // 잎 — 상단 우측, -30° 기운 페탈 (geometry.leaf)
+  // ── 꼭지(stem) — v2: 둥근 막대, transform-origin bottom-center 기준 11° 기움 ──
+  //   v2 CSS: top:-10% left:47.5% width:7.5% height:24% border-radius:40% rotate(11deg)
   ctx.save();
-  ctx.translate(63, 10);
-  ctx.rotate((-30 * Math.PI) / 180);
-  const lg = ctx.createLinearGradient(-13, -8, 13, 8);
+  ctx.translate(51.25, 14); // bottom-center = left 47.5% + width/2(3.75), top -10% + height 24%
+  ctx.rotate((11 * Math.PI) / 180);
+  const sw = 7.5;
+  const sh = 24;
+  const sg = ctx.createLinearGradient(0, -sh, 0, 0);
+  sg.addColorStop(0, v.stem[0]);
+  sg.addColorStop(1, v.stem[1]);
+  ctx.fillStyle = sg;
+  ctx.beginPath();
+  ctx.roundRect(-sw / 2, -sh, sw, sh, sw * 0.4);
+  ctx.fill();
+  ctx.restore();
+
+  // ── 잎(leaf) — v2 페탈 모양(border-radius:0 100% 0 100%), 승인된 위치 ──
+  //   top:-26% left:24% width:28% height:28% rotate(-38deg) transform-origin:bottom-right
+  //   → "꼭지에서 왼쪽 위로 돋아나오듯".
+  ctx.save();
+  ctx.translate(52, 2); // bottom-right = left24%+width28%(52), top-26%+height28%(2)
+  ctx.rotate((-38 * Math.PI) / 180);
+  const lw = 28;
+  const lh = 28;
+  // 박스(원점=BR): TL(-lw,-lh) TR(0,-lh) BR(0,0) BL(-lw,0).
+  // 둥근 모서리는 TR·BL(100%), 뾰족한 꼭짓점은 TL·BR(0) → 잎 모양.
+  ctx.beginPath();
+  ctx.moveTo(-lw, -lh);
+  ctx.quadraticCurveTo(0, -lh, 0, 0); // TL → (TR) → BR
+  ctx.quadraticCurveTo(-lw, 0, -lw, -lh); // BR → (BL) → TL
+  ctx.closePath();
+  // v2 linear-gradient(150deg): 우상(밝은 #leaf0) → 좌하(어두운 #leaf1)
+  const lg = ctx.createLinearGradient(0, -lh, -lw, 0);
   lg.addColorStop(0, v.leaf[0]);
   lg.addColorStop(1, v.leaf[1]);
   ctx.fillStyle = lg;
-  ctx.beginPath();
-  ctx.ellipse(0, 0, 13, 6, 0, 0, Math.PI * 2);
   ctx.fill();
-  // 잎맥
-  ctx.strokeStyle = 'rgba(28,60,24,0.32)';
-  ctx.lineWidth = 0.8;
-  ctx.beginPath();
-  ctx.moveTo(-11, 0);
-  ctx.lineTo(11, 0);
-  ctx.stroke();
-  ctx.restore();
-
-  // 꼭지 — 중앙 딤플에서 살짝 기운 두꺼운 막대 (geometry.stem)
-  ctx.save();
-  ctx.translate(50, 15);
-  ctx.rotate((13 * Math.PI) / 180);
-  const sg = ctx.createLinearGradient(0, -13, 0, 2);
-  sg.addColorStop(0, v.stem[0]);
-  sg.addColorStop(1, v.stem[1]);
-  ctx.strokeStyle = sg;
-  ctx.lineWidth = 3.6;
-  ctx.lineCap = 'round';
-  ctx.beginPath();
-  ctx.moveTo(0, 2);
-  ctx.lineTo(0, -13);
-  ctx.stroke();
+  // v2 box-shadow: inset -1px -1px → 우하단(원점쪽) 안쪽 그림자
+  ctx.clip();
+  const ish = ctx.createRadialGradient(0, 0, 0, 0, 0, lw * 0.55);
+  ish.addColorStop(0, 'rgba(0,0,0,0.18)');
+  ish.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = ish;
+  ctx.fillRect(-lw, -lh, lw, lh);
   ctx.restore();
 
   ctx.restore();

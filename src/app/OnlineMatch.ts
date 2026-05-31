@@ -149,7 +149,11 @@ export class OnlineMatch {
     this.countdownMs = o.countdownMs ?? 3000;
     this.augmentMs = o.augmentMs ?? 12_000;
     this.hbIntervalMs = o.hbIntervalMs ?? 2000;
-    this.disconnectMs = o.disconnectMs ?? 8000;
+    // Generous grace window: comfortably longer than the augment phase (12s) and
+    // tolerant of a backgrounded tab / suspended RAF, so a brief heartbeat gap is
+    // never mistaken for the opponent leaving (which both clients would otherwise
+    // each declare as a self-win → bogus double bye).
+    this.disconnectMs = o.disconnectMs ?? 30_000;
     this.lobbyTimeoutMs = o.lobbyTimeoutMs ?? 15_000;
     this.schedule = this.buildSchedule();
     this.totalMs = this.schedule.reduce((a, s) => Math.max(a, s.start + s.dur), 0);

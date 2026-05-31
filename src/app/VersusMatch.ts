@@ -13,7 +13,7 @@ import type {
   RoundConfig,
   SeededRng,
 } from '../contracts';
-import { decide, type Difficulty } from '../bot';
+import { decide, type BotTuning } from '../bot';
 import { tierForRound, rollOffer, buildHookBusFor } from '../augments/runtime';
 
 export type VersusPhase = 'round' | 'roundCheck' | 'augment' | 'matchResult';
@@ -25,7 +25,7 @@ export interface VersusOptions {
   rows: number;
   durationMs: number;
   targetSum: number;
-  difficulty: Difficulty;
+  tuning: BotTuning; // bot strength for this match (from the chosen AI level)
   winnerBonus: number;
   augmentMs: number; // augment-pick window before auto-picking offers[0]
   roundCheckMs: number; // mid-round review screen before advancing
@@ -89,7 +89,7 @@ export class VersusMatch {
   private offerTier: AugTier | null = null;
   private winner: 'me' | 'bot' | 'draw' | null = null;
 
-  constructor(opts: Partial<VersusOptions> & { seedBase: string; difficulty: Difficulty }) {
+  constructor(opts: Partial<VersusOptions> & { seedBase: string; tuning: BotTuning }) {
     this.opts = {
       seedBase: opts.seedBase,
       rounds: opts.rounds ?? DEFAULTS.rounds,
@@ -97,7 +97,7 @@ export class VersusMatch {
       rows: opts.rows ?? DEFAULTS.rows,
       durationMs: opts.durationMs ?? DEFAULTS.durationMs,
       targetSum: opts.targetSum ?? DEFAULTS.targetSum,
-      difficulty: opts.difficulty,
+      tuning: opts.tuning,
       winnerBonus: opts.winnerBonus ?? DEFAULTS.winnerBonus,
       augmentMs: opts.augmentMs ?? DEFAULTS.augmentMs,
       roundCheckMs: opts.roundCheckMs ?? DEFAULTS.roundCheckMs,
@@ -199,7 +199,7 @@ export class VersusMatch {
     const elapsed = nowMs - (this.roundStartMs ?? nowMs);
     let guard = 0;
     while (this.botActive && elapsed >= this.botNextAt && guard++ < 12) {
-      const d = decide(this.botEngine.getBoard(), this.opts.targetSum, this.opts.difficulty, this.botRng);
+      const d = decide(this.botEngine.getBoard(), this.opts.targetSum, this.opts.tuning, this.botRng);
       if (!d) {
         this.botActive = false;
         break;

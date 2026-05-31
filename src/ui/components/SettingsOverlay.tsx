@@ -6,7 +6,6 @@ import {
   DURATION_OPTIONS,
   BOARD_PRESETS,
   APPLE_SIZE_PRESETS,
-  type AiDifficultyPref,
 } from '../../app/settingsStore';
 
 function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
@@ -48,13 +47,6 @@ function Segmented<T extends string | number>({
   );
 }
 
-const DIFF_OPTIONS: { value: AiDifficultyPref; label: string }[] = [
-  { value: 'auto', label: '자동' },
-  { value: 'easy', label: '쉬움' },
-  { value: 'normal', label: '보통' },
-  { value: 'hard', label: '어려움' },
-];
-
 export function SettingsOverlay({ onClose }: { onClose: () => void }) {
   const s = useSettingsStore();
   const boardValue = `${s.boardCols}x${s.boardRows}`;
@@ -70,10 +62,6 @@ export function SettingsOverlay({ onClose }: { onClose: () => void }) {
           <div className="set-row">
             <span className="set-label">AI 미니화면</span>
             <Toggle on={s.showAiMiniboard} onChange={s.setShowAiMiniboard} />
-          </div>
-          <div className="set-row">
-            <span className="set-label">AI 난이도</span>
-            <Segmented value={s.aiDifficulty} options={DIFF_OPTIONS} onChange={s.setAiDifficulty} />
           </div>
           <div className="set-row">
             <span className="set-label">라운드 시간</span>
@@ -103,7 +91,7 @@ export function SettingsOverlay({ onClose }: { onClose: () => void }) {
             />
           </div>
         </div>
-        <p className="set-note">시간·사과 개수·사과 크기·AI 난이도는 다음 게임부터 적용돼요.</p>
+        <p className="set-note">시간·사과 개수·사과 크기는 다음 게임부터 적용돼요.</p>
         <div className="btn-row">
           <button className="btn ghost" onClick={() => s.reset()}>
             기본값

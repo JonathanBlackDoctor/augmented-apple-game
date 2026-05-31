@@ -204,6 +204,7 @@ export class OnlineController {
       oppLeft: s.oppLeft,
       noOpponent: s.noOpponent,
       combo: this.comboStreak,
+      owned: s.myOwned,
     });
   }
 

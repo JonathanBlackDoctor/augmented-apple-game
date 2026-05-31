@@ -1,4 +1,5 @@
 import { useOnlineStore } from '../../app/onlineStore';
+import { hudTimerState } from './hudTimer';
 
 export function OnlineHud() {
   const s = useOnlineStore();
@@ -8,6 +9,7 @@ export function OnlineHud() {
   const pct = Math.max(0, Math.min(1, s.durationMs ? s.remainingMs / s.durationMs : 0));
   const secs = Math.max(0, Math.ceil(s.remainingMs / 1000));
   const low = secs <= 5;
+  const fill = live ? hudTimerState(secs, s.owned) : '';
   return (
     <div className="hud versus-hud">
       <div className="vs-side me">
@@ -26,7 +28,7 @@ export function OnlineHud() {
           </span>
         </div>
         <div className={`time-bar${low ? ' low' : ''}`}>
-          <div className="time-fill" style={{ width: `${pct * 100}%` }} />
+          <div className={`time-fill${fill ? ' ' + fill : ''}`} style={{ width: `${pct * 100}%` }} />
         </div>
         <span className={`time-num${low ? ' low' : ''}`}>{live ? secs : '—'}</span>
       </div>

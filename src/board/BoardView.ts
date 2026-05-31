@@ -1,6 +1,6 @@
 // board/BoardView.ts — PixiJS v8 renderer for the apple grid (plan §4 #5).
 // Owns no game logic: it renders a Board, a selection box, and clear particles.
-import { Application, Container, Graphics, Text } from 'pixi.js';
+import { Application, Container, Graphics, Text, FillGradient } from 'pixi.js';
 import type { Board, Rect, CellTag } from '../contracts';
 import { theme } from './theme';
 import type { BoardLayout } from './layout';
@@ -38,6 +38,8 @@ export class BoardView {
   private badges: (Text | null)[] = [];
   private particles: Particle[] = [];
   private popups: Popup[] = [];
+  // Shared prism gradient for wild apples (size-independent, local 0..1 space).
+  private rainbow: FillGradient | null = null;
 
   private layout: BoardLayout | null = null;
   private board: Board | null = null;
@@ -381,9 +383,15 @@ export class BoardView {
     }
   }
 
-  /** Hide/show the numeric labels (time.lord: numbers vanish while dragging). */
+  /** Mask/reveal the numerals (time.lord: while dragging, numbers become "?"). */
   setLabelsHidden(hidden: boolean): void {
-    for (const label of this.labels) label.visible = !hidden;
+    const b = this.board;
+    for (let i = 0; i < this.labels.length; i++) {
+      const label = this.labels[i];
+      if (!label) continue;
+      if (hidden) label.text = '?';
+      else if (b) label.text = this.labelFor(b.cells[i], b.tags?.[i] ?? 'normal');
+    }
   }
 
   // ---- special-apple readability (showcase board refinements) ---------------
@@ -476,13 +484,24 @@ export class BoardView {
     const { base, edge, top } = palette[tag] ?? palette.normal;
     // body
     this.traceApple(g, size);
-    g.fill(base).stroke({ color: edge, width: Math.max(1, cell * 0.025), alpha: 0.45 });
-    // bottom shading for satin depth
-    g.ellipse(0, rad * 0.46, rad * 0.66, rad * 0.5).fill({ color: edge, alpha: 0.22 });
-    // soft satin top highlight
-    g.ellipse(-rad * 0.16, -rad * 0.4, rad * 0.52, rad * 0.44).fill({ color: top, alpha: 0.6 });
-    // bright gloss
+    if (tag === 'wild') {
+      // wild matches any value — render it as a glossy prism (diagonal rainbow).
+      g.fill(this.rainbowFill()).stroke({ color: 0x6a5cf0, width: Math.max(1, cell * 0.025), alpha: 0.4 });
+    } else {
+      g.fill(base).stroke({ color: edge, width: Math.max(1, cell * 0.025), alpha: 0.45 });
+      // bottom shading for satin depth
+      g.ellipse(0, rad * 0.46, rad * 0.66, rad * 0.5).fill({ color: edge, alpha: 0.22 });
+      // soft satin top highlight
+      g.ellipse(-rad * 0.16, -rad * 0.4, rad * 0.52, rad * 0.44).fill({ color: top, alpha: 0.6 });
+    }
+    // bright gloss (all apples)
     g.ellipse(-rad * 0.2, -rad * 0.46, rad * 0.26, rad * 0.2).fill({ color: 0xfffaf2, alpha: 0.5 });
+
+    // Bomb wears a lit fuse instead of a leaf; everyone else gets a stem + leaf.
+    if (tag === 'bomb') {
+      this.drawFuse(g, rad, cell);
+      return;
+    }
 
     // stem (tilted) — a short thick warm-brown line at the dimple
     g.moveTo(0, -rad * 0.9)
@@ -504,5 +523,41 @@ export class BoardView {
       pts.push(lcx + ex * cos - ey * sin, lcy + ex * sin + ey * cos);
     }
     g.poly(pts).fill({ color: theme.color.leaf });
+  }
+
+  // Lazily-built shared rainbow for wild apples — local 0..1 space so one
+  // instance fits every cell size.
+  private rainbowFill(): FillGradient {
+    if (!this.rainbow) {
+      this.rainbow = new FillGradient({
+        type: 'linear',
+        start: { x: 0, y: 0 },
+        end: { x: 1, y: 1 },
+        textureSpace: 'local',
+        colorStops: [
+          { offset: 0, color: 0xff9ec4 },
+          { offset: 0.25, color: 0xffe08a },
+          { offset: 0.5, color: 0x8fe6c8 },
+          { offset: 0.72, color: 0x7fc4f0 },
+          { offset: 1, color: 0xb3a8ff },
+        ],
+      });
+    }
+    return this.rainbow;
+  }
+
+  // A lit fuse + a sparkle at its tip for bomb apples.
+  private drawFuse(g: Graphics, rad: number, cell: number): void {
+    const tipX = rad * 0.32;
+    const tipY = -rad * 1.42;
+    g.moveTo(0, -rad * 0.86)
+      .quadraticCurveTo(rad * 0.04, -rad * 1.18, tipX, tipY)
+      .stroke({ color: 0x8a6a40, width: Math.max(1.2, cell * 0.05), cap: 'round' });
+    // spark glow + a 4-point sparkle + bright core
+    g.circle(tipX, tipY, rad * 0.24).fill({ color: 0xffb53a, alpha: 0.45 });
+    const s = rad * 0.26;
+    g.poly([tipX, tipY - s, tipX + s * 0.3, tipY, tipX, tipY + s, tipX - s * 0.3, tipY]).fill({ color: 0xfff3c4 });
+    g.poly([tipX - s, tipY, tipX, tipY - s * 0.3, tipX + s, tipY, tipX, tipY + s * 0.3]).fill({ color: 0xfff3c4 });
+    g.circle(tipX, tipY, rad * 0.08).fill({ color: 0xffffff });
   }
 }

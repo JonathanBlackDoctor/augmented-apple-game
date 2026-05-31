@@ -544,8 +544,26 @@ body {
   background: var(--valid);
   transition: width 0.12s linear;
 }
-.time-bar.low .time-fill {
-  background: var(--apple);
+/* augment / urgency states — warn (last ~8s), danger (≤5s, pulsing),
+   prism (glasscannon: timer races at 2×). */
+.time-fill.warn {
+  background: linear-gradient(90deg, #e0762a, #f0a23a);
+}
+.time-fill.danger {
+  background: linear-gradient(90deg, #d8392a, #f0603a);
+  animation: aag-tpulse 1s ease-in-out infinite;
+}
+.time-fill.prism {
+  background: linear-gradient(90deg, #7a6ae0, #6ad7d0);
+}
+@keyframes aag-tpulse {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.25);
+  }
 }
 .time-num {
   font-size: 14px;
@@ -1973,7 +1991,8 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .bfx-vig.red,
-  .bfx-vig.warm {
+  .bfx-vig.warm,
+  .time-fill.danger {
     animation: none;
   }
   .bfx-shake,

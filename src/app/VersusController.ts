@@ -9,7 +9,7 @@ import { createMonotonicClock, type PausableClock } from './clock';
 import { sfx } from './sound';
 import { useGameStore } from './store';
 import { useVersusStore } from './versusStore';
-import { getSettings, BOARD_COLS, BOARD_ROWS } from './settingsStore';
+import { getSettings, BOARD_COLS, BOARD_ROWS, ROUND_DURATION_MS } from './settingsStore';
 import { VersusMatch, type VersusSnapshot, type VersusPhase } from './VersusMatch';
 import { playActivation, playClear, updateAmbient } from './augmentFx';
 import { LocalProfileService, browserKV } from '../profile';
@@ -38,7 +38,7 @@ export class VersusController {
   // active dimensions / timing (read from settings at match start)
   private cols = 17;
   private rows = 10;
-  private durationMs = 30_000;
+  private durationMs = ROUND_DURATION_MS;
   private level = 1; // chosen AI level (1..10), read from progress at match start
   private persona: EmotePersona | null = null; // the chosen rival's emote personality
 
@@ -59,10 +59,9 @@ export class VersusController {
 
   async mount(parent: HTMLElement): Promise<void> {
     this.parent = parent;
-    const s = getSettings();
     this.cols = BOARD_COLS;
     this.rows = BOARD_ROWS;
-    this.durationMs = s.roundDurationMs;
+    this.durationMs = ROUND_DURATION_MS;
     this.layout = this.calcLayout();
     await this.board.mount(parent, this.layout);
     this.input = new InputController(this.board.app.canvas, () => this.layout, this.handlers);
@@ -76,10 +75,9 @@ export class VersusController {
   }
 
   startVersus(): void {
-    const s = getSettings();
     this.cols = BOARD_COLS;
     this.rows = BOARD_ROWS;
-    this.durationMs = s.roundDurationMs;
+    this.durationMs = ROUND_DURATION_MS;
     const prog = useProgressStore.getState();
     prog.clearReward(); // drop any reward reveal from a previous match
     this.level = prog.selectedLevel;

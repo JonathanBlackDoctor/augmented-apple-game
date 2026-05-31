@@ -1,8 +1,8 @@
-// ui/components/SettingsOverlay.tsx — settings modal (sound, round time, apple
-// size). State lives in the settings store and is persisted to localStorage.
-// Reused by the home screen and the pause menu. (AI difficulty is chosen
-// per-match on the level-select screen; apple count is fixed to medium.)
-import { useSettingsStore, DURATION_OPTIONS, APPLE_SIZE_PRESETS } from '../../app/settingsStore';
+// ui/components/SettingsOverlay.tsx — settings modal (sound, apple size). State
+// lives in the settings store and is persisted to localStorage. Reused by the
+// home screen and the pause menu. (AI difficulty is chosen per-match on the
+// level-select screen; apple count is fixed to medium; round time is fixed.)
+import { useSettingsStore, APPLE_SIZE_PRESETS } from '../../app/settingsStore';
 import { toast } from '../../app/toastStore';
 
 function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
@@ -56,14 +56,6 @@ export function SettingsOverlay({ onClose }: { onClose: () => void }) {
             <Toggle on={s.soundEnabled} onChange={s.setSoundEnabled} />
           </div>
           <div className="set-row">
-            <span className="set-label">라운드 시간</span>
-            <Segmented
-              value={s.roundDurationMs}
-              options={DURATION_OPTIONS.map((ms) => ({ value: ms, label: `${ms / 1000}초` }))}
-              onChange={s.setRoundDurationMs}
-            />
-          </div>
-          <div className="set-row">
             <span className="set-label">사과 크기</span>
             <Segmented
               value={s.appleScale}
@@ -72,7 +64,7 @@ export function SettingsOverlay({ onClose }: { onClose: () => void }) {
             />
           </div>
         </div>
-        <p className="set-note">라운드 시간·사과 크기는 다음 게임부터 적용돼요.</p>
+        <p className="set-note">사과 크기는 다음 게임부터 적용돼요.</p>
         <div className="btn-row">
           <button
             className="btn ghost"

@@ -2190,7 +2190,6 @@ body {
 }
 .bfx-vig.red {
   box-shadow: inset 0 0 60px 6px rgba(216, 57, 42, 0.42);
-  animation: bfx-vigpulse 1.4s ease-in-out infinite;
 }
 .bfx-vig.prism {
   box-shadow: inset 0 0 60px 8px rgba(138, 125, 255, 0.4);
@@ -2200,6 +2199,15 @@ body {
 }
 .bfx-vig.warm {
   box-shadow: inset 0 0 60px 8px rgba(227, 161, 42, 0.38);
+}
+/* Pulse only once the vignette is actually activated (.on). Keeping the
+   animation on the bare .red/.warm selectors made bfx-vigpulse override the
+   base `opacity: 0`, so those glows surrounded the board even with no augment
+   owned — the "always-on red box" around the apples. */
+.bfx-vig.red.on {
+  animation: bfx-vigpulse 1.4s ease-in-out infinite;
+}
+.bfx-vig.warm.on {
   animation: bfx-vigpulse 2s ease-in-out infinite;
 }
 @keyframes bfx-vigpulse {
@@ -2515,8 +2523,8 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .bfx-vig.red,
-  .bfx-vig.warm,
+  .bfx-vig.red.on,
+  .bfx-vig.warm.on,
   .time-fill.danger {
     animation: none;
   }

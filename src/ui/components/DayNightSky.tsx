@@ -8,8 +8,10 @@
 // the phase advances WITH the round clock (see skyClock): each round sweeps
 // from its own time of day toward the next and the match breaks into dawn, so
 // it inherits time augments for free and freezes during augment-pick / between
-// rounds; on the home screen it gently auto-cycles. Purely decorative: sits
-// behind all content (aria-hidden) and never changes UI text colour.
+// rounds; on the home screen it gently auto-cycles. Sits behind all content
+// (aria-hidden); its only reach outside the backdrop is to publish adaptive
+// HUD ink CSS vars (--hud-*) each frame from the sky's top-band luminance, so
+// the round HUD stays legible as the background darkens into night.
 import { useEffect, useMemo, useRef } from 'react';
 import { useGameStore } from '../../app/store';
 import { roundTarget } from './skyClock';
@@ -53,6 +55,16 @@ const mix = (a: string, b: string, t: number): string => {
   const x = hx(a);
   const y = hx(b);
   return `rgb(${Math.round(lerp(x[0], y[0], t))},${Math.round(lerp(x[1], y[1], t))},${Math.round(lerp(x[2], y[2], t))})`;
+};
+// Relative luminance (0..1) of an `rgb(r,g,b)` string — used to decide how dark
+// the sky band behind the HUD is, so the HUD ink can flip to stay legible.
+const relLum = (rgb: string): number => {
+  const m = rgb.match(/\d+/g);
+  if (!m) return 1;
+  const r = +m[0],
+    g = +m[1],
+    b = +m[2];
+  return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
 };
 function sample(p: number): Record<keyof Omit<Keyframe, 'p'>, string> {
   let i = 0;
@@ -174,12 +186,48 @@ export function DayNightSky() {
     let cur = 0; // currently displayed phase
     let autoP = 0; // home-screen auto-cycle accumulator
     let last = performance.now();
+    let lastNight = -1; // memo so HUD ink vars only rewrite when they shift
+
+    // Publish adaptive HUD ink. The round HUD floats over the very top of the
+    // sky, so derive its text/track colours from that band's luminance: bright
+    // day → dark ink, deep night → warm-white ink, with a contrasting halo and
+    // an adaptive track so the top UI never washes out across the cycle.
+    const root = document.documentElement.style;
+    const publishHudInk = (night: number): void => {
+      if (Math.abs(night - lastNight) < 0.01) return;
+      lastNight = night;
+      const rgba = (
+        r0: number,
+        g0: number,
+        b0: number,
+        r1: number,
+        g1: number,
+        b1: number,
+        a0: number,
+        a1: number,
+      ): string =>
+        `rgba(${Math.round(lerp(r0, r1, night))},${Math.round(lerp(g0, g1, night))},${Math.round(
+          lerp(b0, b1, night),
+        )},${lerp(a0, a1, night).toFixed(3)})`;
+      root.setProperty('--hud-fg', mix('#3a2a1e', '#fdf6ea', night)); // ink → warm white
+      root.setProperty('--hud-fg-dim', mix('#836a54', '#d9c8b4', night));
+      root.setProperty('--hud-accent', mix('#e04a36', '#ff8a5c', night)); // apple brightens at night
+      root.setProperty('--hud-track', rgba(58, 42, 30, 240, 238, 250, 0.18, 0.26));
+      root.setProperty('--hud-track-line', rgba(58, 42, 30, 255, 255, 255, 0.24, 0.42));
+      root.setProperty('--hud-chip-bg', rgba(255, 253, 247, 26, 30, 56, 0.78, 0.58));
+      root.setProperty(
+        '--hud-text-shadow',
+        night < 0.45 ? '0 1px 2px rgba(255,250,240,0.6)' : '0 1px 4px rgba(0,0,0,0.55)',
+      );
+    };
 
     const render = (p: number): void => {
       const s = sample(p);
       if (skyRef.current) {
         skyRef.current.style.background = `linear-gradient(180deg, ${s.top} 0%, ${s.mid} 46%, ${s.hor} 70%)`;
       }
+      // night-ness of the sky band behind the HUD (0 day → 1 deep night)
+      publishHudInk(clamp((0.55 - relLum(s.top)) / 0.34, 0, 1));
       // Sun rides the daytime half: it rises low on the east (left), climbs to
       // noon, and sets low on the west (right) at 해질녘. Its arc is phase-shifted
       // so the daylight window is contiguous across the p=1→0 wrap (dawn ≈ 0.92,
@@ -261,7 +309,20 @@ export function DayNightSky() {
       raf = requestAnimationFrame(frame);
     };
     raf = requestAnimationFrame(frame);
-    return () => cancelAnimationFrame(raf);
+    return () => {
+      cancelAnimationFrame(raf);
+      // Hand the HUD ink vars back to their :root defaults.
+      for (const v of [
+        '--hud-fg',
+        '--hud-fg-dim',
+        '--hud-accent',
+        '--hud-track',
+        '--hud-track-line',
+        '--hud-chip-bg',
+        '--hud-text-shadow',
+      ])
+        root.removeProperty(v);
+    };
   }, []);
 
   return (

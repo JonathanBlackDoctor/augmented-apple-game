@@ -15,7 +15,7 @@ import { VersusMatch, type VersusSnapshot, type VersusPhase } from './VersusMatc
 import { playActivation, playClear, updateAmbient } from './augmentFx';
 import { LocalProfileService, browserKV } from '../profile';
 import { StandardRankingService, InMemoryRankingStore } from '../ranking';
-import { levelInfo, levelTuning } from '../bot';
+import { levelInfo, levelTuning, type EmotePersona } from '../bot';
 import { useProgressStore } from './progressStore';
 
 const TARGET = 10;
@@ -23,13 +23,10 @@ const ROUNDS = 5;
 export const AUGMENT_MS = 12_000; // augment-pick window before auto-picking
 export const ROUND_CHECK_MS = 3_500; // mid-round review screen duration
 
-// Rival emote reaction pools (Clash-Royale-style). All ids must exist in EMOTES.
-const EMOTE_GREET = ['hi', 'apple', 'wink']; // match start
-const EMOTE_TAUNT = ['smug', 'cool', 'lol', 'fire', 'bolt', 'trophy']; // scoring while ahead
-const EMOTE_RALLY = ['fire', 'bolt', 'angry']; // fired up at a new round
-const EMOTE_NEUTRAL = ['nice', 'cool', 'wink']; // scoring while even/behind
-const EMOTE_FRUSTRATED = ['shock', 'angry']; // the player just pulled ahead
-const EMOTE_THROTTLE_MS = 3000; // min gap between (non-forced) rival emotes
+// Each rival's emote tone + frequency lives on its AiLevel.emote persona
+// (see bot/levels.ts). The throttle just prevents back-to-back spam; how often a
+// rival actually emotes is gated by its `chattiness`.
+const EMOTE_THROTTLE_MS = 2500;
 
 export class VersusController {
   private readonly board = new BoardView();
@@ -44,6 +41,7 @@ export class VersusController {
   private rows = 10;
   private durationMs = 30_000;
   private level = 1; // chosen AI level (1..10), read from progress at match start
+  private persona: EmotePersona | null = null; // the chosen rival's emote personality
 
   // AI mini board (picture-in-picture)
   private miniHost: HTMLDivElement | null = null;
@@ -120,6 +118,7 @@ export class VersusController {
     prog.clearReward(); // drop any reward reveal from a previous match
     this.level = prog.selectedLevel;
     const info = levelInfo(this.level);
+    this.persona = info.emote;
     // Settings (apple count/size) may have changed since mount → re-fit the boards.
     this.layout = this.calcLayout();
     this.board.setLayout(this.layout);
@@ -218,7 +217,8 @@ export class VersusController {
     if (snap.phase !== 'round' && this.lastPhase === 'round') this.board.resetFx();
     if (snap.phase === 'round') {
       if (this.lastPhase === null) {
-        this.botEmote(EMOTE_GREET, { force: true }); // the rival greets at match start
+        // The rival greets at match start (tone set by its persona).
+        if (this.persona) this.botEmote(this.persona.greet, { force: true });
       } else if (this.lastPhase === 'augment') {
         // A fresh round just began (augment → round): refresh the board + combo.
         this.board.resetFx();
@@ -233,7 +233,10 @@ export class VersusController {
             if (useGameStore.getState().phase === 'round') playActivation(this.board, activate);
           }, 140);
         }
-        this.botEmote(this.botAhead(snap) ? EMOTE_TAUNT : EMOTE_RALLY, { chance: 0.85 });
+        if (this.persona)
+          this.botEmote(this.botAhead(snap) ? this.persona.ahead : this.persona.even, {
+            chance: 0.85,
+          });
       }
       updateAmbient(this.board, snap.myOwned, snap.remainingMs, this.durationMs);
       st.setPhase('round');
@@ -278,22 +281,26 @@ export class VersusController {
     if (botDelta > 0) {
       useVersusStore.getState().bumpOppGain(botDelta);
       // Reacts to its own clear: gloat when ahead, stay breezy when even/behind.
-      this.botEmote(this.botAhead(s) ? EMOTE_TAUNT : EMOTE_NEUTRAL, { chance: 0.55 });
+      if (this.persona)
+        this.botEmote(this.botAhead(s) ? this.persona.ahead : this.persona.even, { chance: 0.55 });
     } else if (myDelta > 0 && !this.botAhead(s)) {
       // The player just scored and is (still) ahead → the rival looks rattled.
-      this.botEmote(EMOTE_FRUSTRATED, { chance: 0.4 });
+      if (this.persona) this.botEmote(this.persona.behind, { chance: 0.4 });
     }
     this.prevBotScore = s.botScore;
     this.prevMyScore = s.myScore;
     this.syncMini(s);
   }
 
-  /** Fire a rival emote from `pool`; throttled + probabilistic unless `force`. */
+  /** Fire a rival emote from `pool`; throttled + probabilistic (scaled by the
+   *  rival's chattiness) unless `force`. */
   private botEmote(pool: string[], opts?: { force?: boolean; chance?: number }): void {
+    if (pool.length === 0) return;
     const now = this.clock.now();
     if (!opts?.force) {
       if (now - this.lastOppEmoteAt < EMOTE_THROTTLE_MS) return;
-      if (Math.random() > (opts?.chance ?? 0.5)) return;
+      const chattiness = this.persona?.chattiness ?? 1;
+      if (Math.random() > (opts?.chance ?? 0.5) * chattiness) return;
     }
     this.lastOppEmoteAt = now;
     useVersusStore.getState().sendOppEmote(pool[Math.floor(Math.random() * pool.length)]);

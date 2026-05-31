@@ -39,6 +39,27 @@ describe('AI levels', () => {
   });
 });
 
+describe('rival emote personas', () => {
+  it('each level has a distinct-feeling, valid emote persona', () => {
+    for (const lv of AI_LEVELS) {
+      const p = lv.emote;
+      expect(p.chattiness).toBeGreaterThan(0);
+      expect(p.chattiness).toBeLessThanOrEqual(1);
+      const pools = [p.greet, p.ahead, p.even, p.behind];
+      for (const pool of pools) {
+        expect(pool.length).toBeGreaterThan(0);
+        for (const id of pool) expect(getEmote(id), `${lv.name}: unknown emote "${id}"`).toBeTruthy();
+      }
+    }
+  });
+
+  it('the shy sprout emotes far less than the boastful golden apple', () => {
+    const sprout = levelInfo(1).emote.chattiness;
+    const golden = levelInfo(7).emote.chattiness;
+    expect(sprout).toBeLessThan(golden);
+  });
+});
+
 describe('emote rewards', () => {
   it('maps each level to a distinct, real, non-starter emote', () => {
     const ids = new Set<string>();

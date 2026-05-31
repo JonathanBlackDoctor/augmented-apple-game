@@ -73,9 +73,17 @@ export function OnlineScreen() {
                 저장
               </button>
             </div>
-            <p className="aug-sub">방을 만들어 링크를 공유하거나, 받은 코드로 입장하세요</p>
+            <button className="btn online" onClick={() => void ctrlRef.current?.quickMatch()}>
+              공개 방 · 아무나와 바로 대전
+            </button>
+            <p className="aug-sub">코드 없이 웹에 접속한 누구와도 매칭돼요</p>
+
+            <div className="lobby-divider">
+              <span>또는 친구와 비공개 대결</span>
+            </div>
+
             <button className="btn primary" onClick={() => void ctrlRef.current?.create()}>
-              방 만들기
+              비공개 방 만들기
             </button>
             <div className="join-row">
               <input
@@ -101,22 +109,43 @@ export function OnlineScreen() {
       {s.stage === 'hosting' && (
         <div className="overlay">
           <div className="lobby-card">
-            <h2>방 코드</h2>
-            <div className="room-code">{s.roomCode}</div>
-            <button className="btn primary" onClick={copyLink}>
-              초대 링크 복사
-            </button>
-            {s.noOpponent ? (
+            {s.isPublic ? (
               <>
-                <p className="aug-sub">아직 아무도 안 왔어요.</p>
-                <button className="btn versus" onClick={switchToAI}>
-                  AI와 대결로 전환
-                </button>
+                <h2>상대를 찾는 중…</h2>
+                {s.noOpponent ? (
+                  <>
+                    <p className="aug-sub">지금은 대기 중인 상대가 없어요.</p>
+                    <button className="btn versus" onClick={switchToAI}>
+                      AI와 대결로 전환
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <p className="aug-sub">웹에 접속한 다른 플레이어를 기다리고 있어요…</p>
+                    <div className="spinner" />
+                  </>
+                )}
               </>
             ) : (
               <>
-                <p className="aug-sub">상대가 입장하면 자동으로 시작돼요…</p>
-                <div className="spinner" />
+                <h2>방 코드</h2>
+                <div className="room-code">{s.roomCode}</div>
+                <button className="btn primary" onClick={copyLink}>
+                  초대 링크 복사
+                </button>
+                {s.noOpponent ? (
+                  <>
+                    <p className="aug-sub">아직 아무도 안 왔어요.</p>
+                    <button className="btn versus" onClick={switchToAI}>
+                      AI와 대결로 전환
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <p className="aug-sub">상대가 입장하면 자동으로 시작돼요…</p>
+                    <div className="spinner" />
+                  </>
+                )}
               </>
             )}
             <button className="btn ghost" onClick={goHome}>

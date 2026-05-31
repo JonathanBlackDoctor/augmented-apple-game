@@ -18,6 +18,7 @@ import { BackendNetSession } from '../net/session';
 import type { NetBackend } from '../net/backend';
 import { FIREBASE_CONFIGURED } from '../net/firebaseConfig';
 import { makeRoomCode, isValidRoomCode, buildRoomLink, parseDeepLink } from '../matchmaking';
+import { NO_LOBBY, type PublicLobby } from '../matchmaking/lobby';
 import { StandardRankingService, InMemoryRankingStore } from '../ranking';
 import { LocalProfileService, browserKV } from '../profile';
 
@@ -34,6 +35,8 @@ export class OnlineController {
   private comboStreak = 0;
   private match: OnlineMatch | null = null;
   private backend: NetBackend | null = null;
+  private lobby: PublicLobby = NO_LOBBY;
+  private advertised = false; // currently listed in the public lobby
   private ranking: RankingService = new StandardRankingService(new InMemoryRankingStore());
   private profile: Profile | null = null;
   private profileSvc: ProfileService | null = null;
@@ -57,6 +60,9 @@ export class OnlineController {
     if (FIREBASE_CONFIGURED) {
       const { FirebaseRankingStore } = await import('../ranking/firebaseStore');
       this.ranking = new StandardRankingService(new FirebaseRankingStore());
+      const { getDb } = await import('../net/firebaseApp');
+      const { FirebaseLobby } = await import('../matchmaking/lobby');
+      this.lobby = new FirebaseLobby(getDb());
     }
     useOnlineStore.getState().set({ myName: this.profile.nickname });
     const dl = parseDeepLink(window.location.search);
@@ -102,7 +108,33 @@ export class OnlineController {
     const code = makeRoomCode(makeRng(`${Date.now()}:${Math.random()}`));
     const base = window.location.href.split('?')[0];
     const link = buildRoomLink(base, code, this.profile?.uid);
-    useOnlineStore.getState().set({ stage: 'hosting', roomCode: code, link, error: null });
+    useOnlineStore.getState().set({ stage: 'hosting', roomCode: code, link, error: null, isPublic: false });
+    await this.enter(code, 'host');
+  }
+
+  /** Code-less public match: join whoever is already waiting in the public lobby,
+   *  otherwise host a public room and wait for any web player to be matched in. */
+  async quickMatch(): Promise<void> {
+    const uid = this.profile?.uid ?? '';
+    useOnlineStore.getState().set({ stage: 'connecting', error: null, isPublic: true });
+    let open: string | null = null;
+    try {
+      open = await this.lobby.findOpenRoom(uid);
+    } catch {
+      /* lobby read failed → fall back to hosting a public room */
+    }
+    if (open) {
+      await this.join(open);
+      return;
+    }
+    const code = makeRoomCode(makeRng(`${Date.now()}:${Math.random()}`));
+    try {
+      await this.lobby.advertise(uid, code);
+      this.advertised = true;
+    } catch {
+      /* advertise failed → still host; we just won't be auto-discovered */
+    }
+    useOnlineStore.getState().set({ stage: 'hosting', roomCode: code, link: '', error: null, isPublic: true });
     await this.enter(code, 'host');
   }
 
@@ -158,6 +190,9 @@ export class OnlineController {
 
   private sync(s: OnlineSnapshot): void {
     const st = useOnlineStore.getState();
+    // Once an opponent is matched in, pull our public-lobby advertisement so no
+    // third player can be routed into this room.
+    if (this.advertised && s.oppPresent) this.withdrawLobby();
     if (!this.started && s.phase !== 'lobby') {
       this.started = true;
       st.set({ stage: 'playing' });
@@ -306,7 +341,15 @@ export class OnlineController {
     },
   };
 
+  /** Remove our public-lobby advertisement (matched, cancelled, or screen left). */
+  private withdrawLobby(): void {
+    if (!this.advertised) return;
+    this.advertised = false;
+    void this.lobby.withdraw(this.profile?.uid ?? '');
+  }
+
   destroy(): void {
+    this.withdrawLobby();
     cancelAnimationFrame(this.raf);
     clearTimeout(this.activationTimer);
     window.removeEventListener('resize', this.onResize);

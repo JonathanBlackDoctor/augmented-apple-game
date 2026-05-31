@@ -192,7 +192,7 @@ export const EMBLEM_SVG: Record<string, string> = {
       </g>
       <g transform="translate(76,78)"><circle r="11" fill="#fffdf6"/><circle r="11" fill="none" stroke="#8a7dff" stroke-width="2.2"/><text x="0" y="2.7" text-anchor="middle" font-family="var(--font)" font-size="7.6" font-weight="800" fill="#5b4fb0">+8</text></g>
     </svg>`,
-  "rule.kindness": `<svg class="emblem silver" viewBox="0 0 100 100" role="img" aria-label="친절 하트">
+  "rule.kindness": `<svg class="emblem prism" viewBox="0 0 100 100" role="img" aria-label="친절 하트">
       <defs><radialGradient id="kn-h" cx="38%" cy="30%" r="80%"><stop offset="0" stop-color="#ffc7bb"/><stop offset="45" stop-color="#ef6f57"/><stop offset="100" stop-color="#c93f2c"/></radialGradient></defs>
       <g class="beat">
         <path d="M50 82 C30 66 22 52 22 42 C22 33 28 28 36 28 C43 28 48 33 50 38 C52 33 57 28 64 28 C72 28 78 33 78 42 C78 52 70 66 50 82 Z" fill="none" stroke="#ffd3c9" stroke-width="5" opacity=".5"/>

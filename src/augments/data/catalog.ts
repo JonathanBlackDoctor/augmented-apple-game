@@ -284,7 +284,7 @@ export const CATALOG: Augment[] = [
     id: 'rule.kindness',
     name: '친절',
     desc: '합 9도 인정',
-    tier: 'silver',
+    tier: 'prismatic',
     family: 'rule',
     conflictsWith: ['rule.eleven', 'rule.alchemy'],
     hooks: {

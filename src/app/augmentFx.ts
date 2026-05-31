@@ -55,11 +55,11 @@ export function planClear(owned: string[], ctx: FxClearCtx): FxDir[] {
   }
   if (nBomb) {
     dirs.push({ k: 'spark', cells: cellsTagged('bomb'), color: '#ffb53a' });
-    tags.push({ t: `폭탄 +${nBomb * 10}`, c: c('silver')[1] });
+    tags.push({ t: '폭탄 💥', c: c('silver')[1] });
   }
   if (nGem) {
     dirs.push({ k: 'spark', cells: cellsTagged('gem'), color: c('blue')[0] });
-    tags.push({ t: `보석 +${nGem * 15}`, c: c('blue')[1] });
+    tags.push({ t: `보석 +${nGem * 20}`, c: c('blue')[1] });
   }
   if (nGold) {
     dirs.push({ k: 'spark', cells: cellsTagged('golden'), color: c('gold')[0] });
@@ -81,24 +81,24 @@ export function planClear(owned: string[], ctx: FxClearCtx): FxDir[] {
   // Combo / score augments — fire on their observable trigger condition.
   if (has('combo.massacre') && ctx.count >= 5) {
     dirs.push({ k: 'flash' }, { k: 'shake' }, { k: 'particles', color: c('gold')[0], n: 18 });
-    tags.push({ t: '대량 ×2', c: c('gold')[1] });
+    tags.push({ t: '대량 ×3', c: c('gold')[1] });
   }
-  if (has('combo.training') && ctx.count >= 3) tags.push({ t: '훈련 +10%', c: c('green')[1] });
-  if (has('combo.chain') && ctx.comboStreak >= 2) {
+  if (has('combo.training') && ctx.count >= 3) tags.push({ t: '훈련 +30%', c: c('green')[1] });
+  if (has('combo.chain') && ctx.count >= 4) {
     dirs.push({ k: 'spark', cells: ctx.cells, color: c('gold')[0] });
-    tags.push({ t: '연쇄 ×1.5', c: c('gold')[1] });
+    tags.push({ t: '연쇄 ×2', c: c('gold')[1] });
   }
   if (has('combo.frenzy')) {
     dirs.push({ k: 'particles', color: c('orange')[0], n: Math.min(20, ctx.count * 3) });
-    tags.push({ t: `폭주 ×${(1 + ctx.count * 0.03).toFixed(2)}`, c: c('gold')[1] });
+    tags.push({ t: `폭주 ×${(1 + ctx.count * 0.05).toFixed(2)}`, c: c('gold')[1] });
   }
   if (has('time.spurt') && ctx.remainingMs <= 7000) tags.push({ t: '막판 ×2', c: c('gold')[1] });
-  if (has('risk.glasscannon')) tags.push({ t: '대포 ×3', c: c('prism')[1] });
+  if (has('risk.glasscannon')) tags.push({ t: '대포 ×2', c: c('prism')[1] });
   if (has('risk.tightrope')) tags.push({ t: '외줄 ×1.6', c: c('gold')[1] });
   if (has('risk.gambler')) {
-    // Gambler is the only sub-1 multiplier, so final<base ⇔ the 0.4× roll landed.
+    // Gambler is the only sub-1 multiplier, so final<base ⇔ the 0.5× roll landed.
     const won = ctx.finalScore >= ctx.baseScore;
-    dirs.push({ k: 'dice', text: won ? '3×' : '0.4×', color: won ? c('green')[1] : c('red')[1] });
+    dirs.push({ k: 'dice', text: won ? '2×' : '0.5×', color: won ? c('green')[1] : c('red')[1] });
   }
 
   // Headline: the gained score + contributing tags, tinted by the net multiplier.

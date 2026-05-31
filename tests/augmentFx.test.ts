@@ -26,10 +26,10 @@ describe('planClear (in-game augment FX)', () => {
   });
 
   it("reads the gambler's roll from final vs base score", () => {
-    const win = find(planClear(['risk.gambler'], ctx({ baseScore: 6, finalScore: 18 })), 'dice');
-    const lose = find(planClear(['risk.gambler'], ctx({ baseScore: 6, finalScore: 2 })), 'dice');
-    expect(win?.k === 'dice' && win.text).toBe('3×');
-    expect(lose?.k === 'dice' && lose.text).toBe('0.4×');
+    const win = find(planClear(['risk.gambler'], ctx({ baseScore: 6, finalScore: 12 })), 'dice');
+    const lose = find(planClear(['risk.gambler'], ctx({ baseScore: 6, finalScore: 3 })), 'dice');
+    expect(win?.k === 'dice' && win.text).toBe('2×');
+    expect(lose?.k === 'dice' && lose.text).toBe('0.5×');
   });
 
   it('stamps rule clears keyed off the sum', () => {
@@ -61,7 +61,7 @@ describe('planClear (in-game augment FX)', () => {
     if (pop.k === 'popup') {
       const labels = pop.tags.map((t) => t.t);
       expect(labels).toContain('황금 ×2');
-      expect(labels).toContain('보석 +15');
+      expect(labels).toContain('보석 +20');
     }
   });
 });

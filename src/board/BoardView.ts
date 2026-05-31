@@ -1,11 +1,19 @@
 // board/BoardView.ts — PixiJS v8 renderer for the apple grid (plan §4 #5).
 // Owns no game logic: it renders a Board, a selection box, and clear particles.
-import { Application, Container, Graphics, Text, FillGradient } from 'pixi.js';
+import { Application, Container, Graphics, Sprite, Text, Texture } from 'pixi.js';
 import type { Board, Rect, CellTag } from '../contracts';
+import { useGameStore } from '../app/store';
 import { theme } from './theme';
 import type { BoardLayout } from './layout';
 import { cellRect, cellCenter } from './layout';
+import { type AppleLook, lookAt, numberColor, renderAppleCanvas } from './candyApple';
 import { BoardFx } from './BoardFx';
+
+const APPLE_TAGS: CellTag[] = ['normal', 'golden', 'gem', 'bomb', 'wild'];
+
+// Round the day-night progress into ~48 steps so the shared candy-gloss look is
+// only re-rendered when it visibly changes (textures are shared across cells).
+const LOOK_STEPS = 48;
 
 interface Particle {
   g: Graphics;
@@ -33,13 +41,19 @@ export class BoardView {
   private fxLayer = new Container();
 
   private cells: Container[] = [];
-  private bodies: Graphics[] = [];
+  private bodies: Sprite[] = [];
+  private cellTags: CellTag[] = [];
   private labels: Text[] = [];
   private badges: (Text | null)[] = [];
   private particles: Particle[] = [];
   private popups: Popup[] = [];
-  // Shared prism gradient for wild apples (size-independent, local 0..1 space).
-  private rainbow: FillGradient | null = null;
+
+  // Shared candy-gloss apple textures, one per tag, regenerated when the
+  // day-night look (or the cell size) changes. All cells of a tag share one.
+  private texCache = new Map<CellTag, Texture>();
+  private look: AppleLook = lookAt(0.16);
+  private lookKey = -1;
+  private texCell = 0;
 
   private layout: BoardLayout | null = null;
   private board: Board | null = null;
@@ -218,60 +232,20 @@ export class BoardView {
     } catch {
       /* already torn down */
     }
-  }
-
-  // ---- FX overlay geometry (cell index -> canvas px, for the conductor) ------
-
-  /** Pixel center of a cell within the canvas/overlay box. */
-  cellCenterPx(idx: number): { x: number; y: number } | null {
-    if (!this.layout || !this.board) return null;
-    const col = idx % this.board.cols;
-    const row = Math.floor(idx / this.board.cols);
-    const { cx, cy } = cellCenter(this.layout, col, row);
-    return { x: cx, y: cy };
-  }
-
-  /** Pixel centroid of a set of cells (e.g. a clear). */
-  centroidPx(indices: number[]): { x: number; y: number } | null {
-    let sx = 0;
-    let sy = 0;
-    let n = 0;
-    for (const i of indices) {
-      const p = this.cellCenterPx(i);
-      if (p) {
-        sx += p.x;
-        sy += p.y;
-        n++;
+    for (const tex of this.texCache.values()) {
+      try {
+        tex.destroy(true);
+      } catch {
+        /* already gone */
       }
     }
-    return n ? { x: sx / n, y: sy / n } : null;
-  }
-
-  /** Pixel center of the whole grid (anchor for activation flourishes). */
-  boardCenterPx(): { x: number; y: number } | null {
-    const l = this.layout;
-    if (!l) return null;
-    return { x: l.originX + (l.cols * l.cell) / 2, y: l.originY + (l.rows * l.cell) / 2 };
-  }
-
-  /** Live cell indices currently carrying `tag` (for round-start spawn FX). */
-  cellsWithTag(tag: CellTag): number[] {
-    const tags = this.board?.tags;
-    const b = this.board;
-    if (!tags || !b) return [];
-    const out: number[] = [];
-    for (let i = 0; i < tags.length; i++) if (tags[i] === tag && (b.cells[i] || 0) > 0) out.push(i);
-    return out;
-  }
-
-  /** Clear transient FX + state classes (between rounds / on reset). */
-  resetFx(): void {
-    this.fx?.reset();
+    this.texCache.clear();
   }
 
   // ---- internals ------------------------------------------------------------
 
   private onTick = (): void => {
+    this.updateLook();
     const dt = this.app.ticker.deltaMS;
     if (this.particles.length > 0) {
       const next: Particle[] = [];
@@ -314,39 +288,26 @@ export class BoardView {
     this.gridLayer.removeChildren();
     this.cells = [];
     this.bodies = [];
+    this.cellTags = [];
     this.labels = [];
     this.badges = [];
     if (!this.board || !this.layout) return;
     const l = this.layout;
     const b = this.board;
+    this.ensureTextures(l.cell, true);
     for (let i = 0; i < b.cells.length; i++) {
       const col = i % b.cols;
       const row = Math.floor(i / b.cols);
       const { cx, cy } = cellCenter(l, col, row);
       const cont = new Container();
       cont.position.set(cx, cy);
-      const tag = b.tags?.[i] ?? 'normal';
 
-      const body = new Graphics();
-      const label = new Text({
-        text: this.labelFor(b.cells[i], tag),
-        style: {
-          fontFamily: theme.font,
-          fontSize: Math.round(l.cell * theme.ratio.fontSize),
-          fontWeight: '800',
-          fill: theme.color.text,
-          dropShadow: {
-            color: theme.color.numShadow,
-            alpha: 0.5,
-            blur: 0,
-            distance: 2,
-            angle: Math.PI / 2,
-          },
-        },
-      });
-      label.anchor.set(0.5);
-      label.position.set(0, l.cell * 0.02);
-      this.drawApple(body, l.cell, tag);
+      const tag = b.tags?.[i] ?? 'normal';
+      const body = new Sprite(this.texCache.get(tag));
+      body.anchor.set(0.5);
+      body.setSize(l.cell);
+
+      const label = this.makeLabel(this.labelFor(b.cells[i], tag), l.cell, tag);
 
       cont.addChild(body, label);
       const badge = this.makeBadge(tag, l.cell);
@@ -355,9 +316,34 @@ export class BoardView {
       this.gridLayer.addChild(cont);
       this.cells.push(cont);
       this.bodies.push(body);
+      this.cellTags.push(tag);
       this.labels.push(label);
       this.badges.push(badge);
     }
+  }
+
+  // Quicksand cream numeral, coloured per the candy-gloss variant (apple-spec
+  // > typography). Kept as a crisp Pixi Text so it never re-renders with the look.
+  private makeLabel(text: string, cell: number, tag: CellTag): Text {
+    const label = new Text({
+      text,
+      style: {
+        fontFamily: `Quicksand, ${theme.font}`,
+        fontSize: Math.round(cell * 0.47),
+        fontWeight: '600',
+        fill: numberColor(tag),
+        dropShadow: {
+          color: 0x781c0e, // rgba(120,28,14)
+          alpha: 0.34,
+          blur: 2,
+          distance: 2,
+          angle: Math.PI / 2,
+        },
+      },
+    });
+    label.anchor.set(0.5);
+    label.position.set(0, cell * 0.02);
+    return label;
   }
 
   // Reconcile every cell to the current board: visibility, number and apple
@@ -368,6 +354,7 @@ export class BoardView {
     if (!this.board || !this.layout) return;
     const b = this.board;
     const cell = this.layout.cell;
+    this.ensureTextures(cell);
     for (let i = 0; i < this.cells.length; i++) {
       const c = this.cells[i];
       if (!c) continue;
@@ -376,10 +363,14 @@ export class BoardView {
       if (v <= 0) continue;
       const tag = b.tags?.[i] ?? 'normal';
       const label = this.labels[i];
-      if (label) label.text = this.labelFor(v, tag);
+      if (label) {
+        label.text = this.labelFor(v, tag);
+        if (tag !== this.cellTags[i]) label.style.fill = numberColor(tag);
+      }
       const body = this.bodies[i];
-      if (body) this.drawApple(body, cell, tag);
+      if (body && tag !== this.cellTags[i]) body.texture = this.texCache.get(tag) ?? body.texture;
       this.reconcileBadge(i, tag, cell);
+      this.cellTags[i] = tag;
     }
   }
 
@@ -394,7 +385,7 @@ export class BoardView {
     }
   }
 
-  // ---- special-apple readability (showcase board refinements) ---------------
+  // ---- special-apple readability + FX geometry ------------------------------
 
   /** Wild apples read as ★ (matches any value); others show their number. */
   private labelFor(value: number, tag: CellTag): string {
@@ -447,117 +438,97 @@ export class BoardView {
     }
   }
 
-  // Plump apple silhouette from the design 시안 (viewBox 0..100), centered at
-  // the origin and scaled to the cell. Subtle stem dimple at the top.
-  private traceApple(g: Graphics, size: number): void {
-    const m = (u: number, v: number): [number, number] => [
-      ((u - 50) / 100) * size,
-      ((v - 50) / 100) * size,
-    ];
-    const p0 = m(44, 15);
-    g.moveTo(p0[0], p0[1]);
-    const c = (
-      x1: number, y1: number, x2: number, y2: number, x: number, y: number,
-    ): void => {
-      const a = m(x1, y1), b = m(x2, y2), e = m(x, y);
-      g.bezierCurveTo(a[0], a[1], b[0], b[1], e[0], e[1]);
-    };
-    c(47, 18, 53, 18, 56, 15);
-    c(67, 11, 90, 24, 90, 50);
-    c(90, 73, 72, 89, 50, 89);
-    c(28, 89, 10, 73, 10, 50);
-    c(10, 24, 33, 11, 44, 15);
-    g.closePath();
+  /** Pixel center of a cell within the canvas/overlay box (for the FX overlay). */
+  cellCenterPx(idx: number): { x: number; y: number } | null {
+    if (!this.layout || !this.board) return null;
+    const col = idx % this.board.cols;
+    const row = Math.floor(idx / this.board.cols);
+    const { cx, cy } = cellCenter(this.layout, col, row);
+    return { x: cx, y: cy };
   }
 
-  private drawApple(g: Graphics, cell: number, tag: CellTag): void {
-    g.clear();
-    const rad = cell * theme.ratio.appleRadius;
-    const size = cell * 0.96; // silhouette box edge
-    const palette: Record<CellTag, { base: number; edge: number; top: number }> = {
-      normal: { base: theme.color.apple, edge: theme.color.appleEdge, top: theme.color.appleTop },
-      golden: { base: theme.color.golden, edge: theme.color.goldenEdge, top: theme.color.goldenTop },
-      gem: { base: theme.color.gem, edge: theme.color.gemEdge, top: theme.color.gemTop },
-      bomb: { base: theme.color.bomb, edge: theme.color.bombEdge, top: theme.color.bombTop },
-      wild: { base: theme.color.wild, edge: theme.color.wildEdge, top: theme.color.wildTop },
-    };
-    const { base, edge, top } = palette[tag] ?? palette.normal;
-    // body
-    this.traceApple(g, size);
-    if (tag === 'wild') {
-      // wild matches any value — render it as a glossy prism (diagonal rainbow).
-      g.fill(this.rainbowFill()).stroke({ color: 0x6a5cf0, width: Math.max(1, cell * 0.025), alpha: 0.4 });
-    } else {
-      g.fill(base).stroke({ color: edge, width: Math.max(1, cell * 0.025), alpha: 0.45 });
-      // bottom shading for satin depth
-      g.ellipse(0, rad * 0.46, rad * 0.66, rad * 0.5).fill({ color: edge, alpha: 0.22 });
-      // soft satin top highlight
-      g.ellipse(-rad * 0.16, -rad * 0.4, rad * 0.52, rad * 0.44).fill({ color: top, alpha: 0.6 });
+  /** Pixel centroid of a set of cells (e.g. a clear). */
+  centroidPx(indices: number[]): { x: number; y: number } | null {
+    let sx = 0;
+    let sy = 0;
+    let n = 0;
+    for (const i of indices) {
+      const p = this.cellCenterPx(i);
+      if (p) {
+        sx += p.x;
+        sy += p.y;
+        n++;
+      }
     }
-    // bright gloss (all apples)
-    g.ellipse(-rad * 0.2, -rad * 0.46, rad * 0.26, rad * 0.2).fill({ color: 0xfffaf2, alpha: 0.5 });
-
-    // Bomb wears a lit fuse instead of a leaf; everyone else gets a stem + leaf.
-    if (tag === 'bomb') {
-      this.drawFuse(g, rad, cell);
-      return;
-    }
-
-    // stem (tilted) — a short thick warm-brown line at the dimple
-    g.moveTo(0, -rad * 0.9)
-      .lineTo(rad * 0.13, -rad * 1.16)
-      .stroke({ color: 0x7a4a2a, width: Math.max(1, cell * 0.06), cap: 'round' });
-
-    // leaf — a rotated petal ellipse beside the stem
-    const lcx = rad * 0.34;
-    const lcy = -rad * 1.0;
-    const lw = rad * 0.42;
-    const lh = rad * 0.2;
-    const rot = -0.52; // ≈ -30°
-    const cos = Math.cos(rot), sin = Math.sin(rot);
-    const pts: number[] = [];
-    for (let i = 0; i < 18; i++) {
-      const a = (i / 18) * Math.PI * 2;
-      const ex = Math.cos(a) * lw;
-      const ey = Math.sin(a) * lh;
-      pts.push(lcx + ex * cos - ey * sin, lcy + ex * sin + ey * cos);
-    }
-    g.poly(pts).fill({ color: theme.color.leaf });
+    return n ? { x: sx / n, y: sy / n } : null;
   }
 
-  // Lazily-built shared rainbow for wild apples — local 0..1 space so one
-  // instance fits every cell size.
-  private rainbowFill(): FillGradient {
-    if (!this.rainbow) {
-      this.rainbow = new FillGradient({
-        type: 'linear',
-        start: { x: 0, y: 0 },
-        end: { x: 1, y: 1 },
-        textureSpace: 'local',
-        colorStops: [
-          { offset: 0, color: 0xff9ec4 },
-          { offset: 0.25, color: 0xffe08a },
-          { offset: 0.5, color: 0x8fe6c8 },
-          { offset: 0.72, color: 0x7fc4f0 },
-          { offset: 1, color: 0xb3a8ff },
-        ],
-      });
-    }
-    return this.rainbow;
+  /** Pixel center of the whole grid (anchor for activation flourishes). */
+  boardCenterPx(): { x: number; y: number } | null {
+    const l = this.layout;
+    if (!l) return null;
+    return { x: l.originX + (l.cols * l.cell) / 2, y: l.originY + (l.rows * l.cell) / 2 };
   }
 
-  // A lit fuse + a sparkle at its tip for bomb apples.
-  private drawFuse(g: Graphics, rad: number, cell: number): void {
-    const tipX = rad * 0.32;
-    const tipY = -rad * 1.42;
-    g.moveTo(0, -rad * 0.86)
-      .quadraticCurveTo(rad * 0.04, -rad * 1.18, tipX, tipY)
-      .stroke({ color: 0x8a6a40, width: Math.max(1.2, cell * 0.05), cap: 'round' });
-    // spark glow + a 4-point sparkle + bright core
-    g.circle(tipX, tipY, rad * 0.24).fill({ color: 0xffb53a, alpha: 0.45 });
-    const s = rad * 0.26;
-    g.poly([tipX, tipY - s, tipX + s * 0.3, tipY, tipX, tipY + s, tipX - s * 0.3, tipY]).fill({ color: 0xfff3c4 });
-    g.poly([tipX - s, tipY, tipX, tipY - s * 0.3, tipX + s, tipY, tipX, tipY + s * 0.3]).fill({ color: 0xfff3c4 });
-    g.circle(tipX, tipY, rad * 0.08).fill({ color: 0xffffff });
+  /** Live cell indices currently carrying `tag` (for round-start spawn FX). */
+  cellsWithTag(tag: CellTag): number[] {
+    const tags = this.board?.tags;
+    const b = this.board;
+    if (!tags || !b) return [];
+    const out: number[] = [];
+    for (let i = 0; i < tags.length; i++) if (tags[i] === tag && (b.cells[i] || 0) > 0) out.push(i);
+    return out;
+  }
+
+  /** Clear transient FX + state classes (between rounds / on reset). */
+  resetFx(): void {
+    this.fx?.reset();
+  }
+
+  // ---- day-night candy-gloss look -------------------------------------------
+
+  /** Set the shared candy-gloss look directly from a progress t∈[0,1]. */
+  setLook(t: number): void {
+    const key = Math.round((Math.max(0, Math.min(1, t)) || 0) * LOOK_STEPS);
+    if (key === this.lookKey) return;
+    this.lookKey = key;
+    this.look = lookAt(key / LOOK_STEPS);
+    if (this.texCell > 0) this.ensureTextures(this.texCell, true);
+  }
+
+  // Derive the day-night progress from the live round clock (so apples darken
+  // toward night across a match, matching the orchard sky), then refresh the
+  // shared look. Mirrors the per-frame phase that DayNightSky reads.
+  private updateLook(): void {
+    const st = useGameStore.getState();
+    let t = 0.16; // gentle late-morning default (home / non-round screens)
+    if (st.phase === 'round' || st.phase === 'augment') {
+      const n = Math.max(1, st.totalRounds);
+      const elapsed = st.durationMs > 0 ? 1 - st.remainingMs / st.durationMs : 0;
+      t = (st.roundIndex + Math.max(0, Math.min(1, elapsed))) / n; // 0 → 1 over the match
+    }
+    this.setLook(t);
+  }
+
+  // (Re)build the shared per-tag textures at the current look + cell size, and
+  // hand the fresh texture to every live sprite so they all update at once.
+  private ensureTextures(cell: number, force = false): void {
+    if (cell <= 0) return;
+    if (!force && cell === this.texCell) return;
+    const sizeChanged = cell !== this.texCell;
+    this.texCell = cell;
+    for (const tag of APPLE_TAGS) {
+      const canvas = renderAppleCanvas({ size: cell, look: this.look, variant: tag });
+      const tex = Texture.from(canvas);
+      const old = this.texCache.get(tag);
+      this.texCache.set(tag, tex);
+      old?.destroy(true);
+    }
+    for (let i = 0; i < this.bodies.length; i++) {
+      const body = this.bodies[i];
+      if (!body) continue;
+      body.texture = this.texCache.get(this.cellTags[i]) ?? body.texture;
+      if (sizeChanged) body.setSize(cell);
+    }
   }
 }

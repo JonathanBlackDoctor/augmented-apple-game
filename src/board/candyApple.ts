@@ -430,22 +430,35 @@ function drawFuse(ctx: CanvasRenderingContext2D): void {
 }
 
 /**
+ * 텍스처 여백(셀 크기 대비 비율). 잎(top:-26%)·꼭지(top:-10%)가 본체 위로
+ * 솟아 캔버스 경계에 잘리지 않도록 위쪽에 넉넉히, drop-shadow 가 잘리지 않도록
+ * 아래쪽에 약간 둔다. 좌우는 잎이 본체 안쪽(x≈12.7~34)이라 여백이 필요 없다.
+ * board 레이어(BoardView)가 같은 값으로 스프라이트 앵커·크기를 맞춘다.
+ */
+export const APPLE_TEX_PAD = { top: 0.32, bottom: 0.08 };
+
+/**
  * 사과(보디) 텍스처용 offscreen 캔버스를 만들어 그린다.
  * 반환된 canvas를 PixiJS Texture.from(canvas)로 업로드해 Sprite로 사용.
  * 숫자는 board 레이어가 별도 Text로 얹으므로 기본 value=null(보디만).
+ * 캔버스는 size×size 가 아니라 위/아래 여백을 더한 size×(size·ratio) 이며,
+ * 본체(원형)의 (0,0)~(size,size) 영역은 위쪽 여백만큼 아래로 평행이동돼 그려진다.
  */
 export function renderAppleCanvas(
   opt: Omit<DrawAppleOptions, 'value'> & { value?: number | null; resolution?: number },
 ): HTMLCanvasElement {
   const resolution =
     opt.resolution ?? (typeof window !== 'undefined' ? Math.min(window.devicePixelRatio || 1, 2) : 1);
-  const px = Math.max(1, Math.round(opt.size * resolution));
+  const { size } = opt;
+  const w = size;
+  const h = size * (1 + APPLE_TEX_PAD.top + APPLE_TEX_PAD.bottom);
   const canvas = document.createElement('canvas');
-  canvas.width = px;
-  canvas.height = px;
+  canvas.width = Math.max(1, Math.round(w * resolution));
+  canvas.height = Math.max(1, Math.round(h * resolution));
   const ctx = canvas.getContext('2d');
   if (ctx) {
     ctx.scale(resolution, resolution);
+    ctx.translate(0, size * APPLE_TEX_PAD.top);
     drawApple(ctx, { ...opt, value: opt.value ?? null });
   }
   return canvas;

@@ -6,7 +6,7 @@ import { useGameStore } from '../app/store';
 import { theme } from './theme';
 import type { BoardLayout } from './layout';
 import { cellRect, cellCenter } from './layout';
-import { type AppleLook, lookAt, numberColor, renderAppleCanvas } from './candyApple';
+import { APPLE_TEX_PAD, type AppleLook, lookAt, numberColor, renderAppleCanvas } from './candyApple';
 import { BoardFx } from './BoardFx';
 
 const APPLE_TAGS: CellTag[] = ['normal', 'golden', 'gem', 'bomb', 'wild'];
@@ -306,8 +306,7 @@ export class BoardView {
 
       const tag = b.tags?.[i] ?? 'normal';
       const body = new Sprite(this.texCache.get(tag));
-      body.anchor.set(0.5);
-      body.setSize(l.cell);
+      this.sizeBody(body, l.cell);
 
       const label = this.makeLabel(this.labelFor(b.cells[i], tag), l.cell, tag);
 
@@ -322,6 +321,18 @@ export class BoardView {
       this.labels.push(label);
       this.badges.push(badge);
     }
+  }
+
+  // Size + anchor an apple body sprite. The texture is taller than the cell
+  // (APPLE_TEX_PAD) so the stem/leaf can poke above the body without being
+  // clipped; we scale it uniformly to the cell and anchor it so the circular
+  // BODY (not the padded texture) is centred on the cell. The extra height
+  // overflows upward, exactly like the CSS apple's negative-top decorations.
+  private sizeBody(body: Sprite, cell: number): void {
+    const ratio = 1 + APPLE_TEX_PAD.top + APPLE_TEX_PAD.bottom;
+    body.anchor.set(0.5, (APPLE_TEX_PAD.top + 0.5) / ratio);
+    body.width = cell;
+    body.height = cell * ratio;
   }
 
   // Quicksand cream numeral, coloured per the candy-gloss variant (apple-spec
@@ -530,7 +541,7 @@ export class BoardView {
       const body = this.bodies[i];
       if (!body) continue;
       body.texture = this.texCache.get(this.cellTags[i]) ?? body.texture;
-      if (sizeChanged) body.setSize(cell);
+      if (sizeChanged) this.sizeBody(body, cell);
     }
   }
 }

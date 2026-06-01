@@ -35,6 +35,11 @@ interface Popup {
 }
 
 export class BoardView {
+  // Fraction of each cell left as empty margin around the apple body, so the
+  // stem/leaf of one apple never overlaps the apple in the cell above. Subtle:
+  // the apple still fills most of its cell, only a thin gap shows between them.
+  private static readonly CELL_GAP = 0.12;
+
   readonly app: Application;
   private gridLayer = new Container();
   private selLayer = new Graphics();
@@ -58,6 +63,9 @@ export class BoardView {
   private layout: BoardLayout | null = null;
   private board: Board | null = null;
   private mounted = false;
+  // Set once the Quicksand webfont is confirmed loaded (or unavailable), after
+  // which all numerals rasterize in the same font. See syncWebFont().
+  private fontSynced = false;
 
   // DOM effect overlay (augment activation / clear FX, running-sum bubble).
   // Disabled for the tiny AI mini-view (`new BoardView({ fx: false })`).
@@ -94,7 +102,31 @@ export class BoardView {
       this.fx.mount(parent, this.app.canvas);
       this.fx.setCell(layout.cell);
     }
+    this.syncWebFont();
     if (this.board) this.rebuild();
+  }
+
+  // PixiJS Text bakes its glyphs into a texture the moment it is created, using
+  // whatever font is resolvable *then*. If the board is built before the
+  // Quicksand webfont finishes downloading, those labels bake the fallback font
+  // and Pixi never re-rasterizes them on its own — so a single board can show a
+  // mix of fonts (only labels whose text later changes pick Quicksand up). We
+  // wait for Quicksand (weight 600 — the weight index.html actually loads) and
+  // rebuild once it is ready so every numeral re-renders in the same font.
+  private syncWebFont(): void {
+    if (this.fontSynced) return;
+    const fonts = typeof document !== 'undefined' ? document.fonts : undefined;
+    if (!fonts || fonts.check('600 16px Quicksand')) {
+      this.fontSynced = true;
+      return;
+    }
+    void fonts
+      .load('600 16px Quicksand')
+      .catch(() => undefined)
+      .then(() => {
+        this.fontSynced = true;
+        if (this.mounted && this.board && this.layout) this.rebuild();
+      });
   }
 
   setLayout(layout: BoardLayout): void {
@@ -328,11 +360,17 @@ export class BoardView {
   // clipped; we scale it uniformly to the cell and anchor it so the circular
   // BODY (not the padded texture) is centred on the cell. The extra height
   // overflows upward, exactly like the CSS apple's negative-top decorations.
+  //
+  // We draw the body a hair smaller than the cell (CELL_GAP) so a thin margin
+  // sits on every side. Without it, apples are packed edge-to-edge and a lower
+  // apple's stem/leaf — which overflows upward — collides with the body of the
+  // apple directly above. The margin lets those decorations breathe instead.
   private sizeBody(body: Sprite, cell: number): void {
     const ratio = 1 + APPLE_TEX_PAD.top + APPLE_TEX_PAD.bottom;
+    const draw = cell * (1 - BoardView.CELL_GAP);
     body.anchor.set(0.5, (APPLE_TEX_PAD.top + 0.5) / ratio);
-    body.width = cell;
-    body.height = cell * ratio;
+    body.width = draw;
+    body.height = draw * ratio;
   }
 
   // Quicksand cream numeral, coloured per the candy-gloss variant (apple-spec
@@ -343,7 +381,7 @@ export class BoardView {
       style: {
         fontFamily: `Quicksand, ${theme.font}`,
         fontSize: Math.round(cell * 0.47),
-        fontWeight: '800',
+        fontWeight: '600',
         fill: numberColor(tag),
         dropShadow: {
           color: 0x781c0e, // rgba(120,28,14)

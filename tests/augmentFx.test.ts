@@ -28,7 +28,7 @@ describe('planClear (in-game augment FX)', () => {
   it("reads the gambler's roll from final vs base score", () => {
     const win = find(planClear(['risk.gambler'], ctx({ baseScore: 6, finalScore: 12 })), 'dice');
     const lose = find(planClear(['risk.gambler'], ctx({ baseScore: 6, finalScore: 3 })), 'dice');
-    expect(win?.k === 'dice' && win.text).toBe('2×');
+    expect(win?.k === 'dice' && win.text).toBe('3×');
     expect(lose?.k === 'dice' && lose.text).toBe('0.5×');
   });
 

@@ -256,11 +256,11 @@ export const CATALOG: Augment[] = [
   {
     id: 'board.rainbow',
     name: '무지개 사과',
-    desc: '만능 사과 5개 — 부족분을 채워 합 완성',
+    desc: '만능 사과 8개 — 부족분을 채워 합 완성',
     tier: 'prismatic',
     family: 'board',
     hooks: {
-      onBoardInit: (b, rng) => tagCells(b, rng, 5, 'wild'),
+      onBoardInit: (b, rng) => tagCells(b, rng, 8, 'wild'),
       validateSelection: (c) => {
         if (c.cells.length === 0) return undefined;
         const tags = c.board.tags;
@@ -335,12 +335,12 @@ export const CATALOG: Augment[] = [
   {
     id: 'risk.glasscannon',
     name: '유리대포',
-    desc: '점수 2배, 그러나 타이머 2배 속도',
+    desc: '점수 3배, 그러나 타이머 2배 속도',
     tier: 'prismatic',
     family: 'risk',
     hooks: {
       modifyRoundConfig: (cfg) => ({ ...cfg, durationMs: Math.round(cfg.durationMs / 2) }),
-      onClear: (r) => ({ ...r, finalScore: r.finalScore * 2, comboMultiplier: r.comboMultiplier * 2 }),
+      onClear: (r) => ({ ...r, finalScore: r.finalScore * 3, comboMultiplier: r.comboMultiplier * 3 }),
     },
   },
   {
@@ -357,12 +357,12 @@ export const CATALOG: Augment[] = [
   {
     id: 'risk.gambler',
     name: '도박사',
-    desc: '제거마다 50% 점수 2배, 50% 점수 0.5배 (도박)',
+    desc: '제거마다 50% 점수 3배, 50% 점수 0.5배 (도박)',
     tier: 'prismatic',
     family: 'risk',
     hooks: {
       onClear: (r, c) => {
-        const mult = c.rng.next() < 0.5 ? 2 : 0.5;
+        const mult = c.rng.next() < 0.5 ? 3 : 0.5;
         return { ...r, finalScore: Math.round(r.finalScore * mult), comboMultiplier: r.comboMultiplier * mult };
       },
     },

@@ -93,12 +93,12 @@ export function planClear(owned: string[], ctx: FxClearCtx): FxDir[] {
     tags.push({ t: `폭주 ×${(1 + ctx.count * 0.05).toFixed(2)}`, c: c('gold')[1] });
   }
   if (has('time.spurt') && ctx.remainingMs <= 7000) tags.push({ t: '막판 ×2', c: c('gold')[1] });
-  if (has('risk.glasscannon')) tags.push({ t: '대포 ×2', c: c('prism')[1] });
+  if (has('risk.glasscannon')) tags.push({ t: '대포 ×3', c: c('prism')[1] });
   if (has('risk.tightrope')) tags.push({ t: '외줄 ×1.6', c: c('gold')[1] });
   if (has('risk.gambler')) {
     // Gambler is the only sub-1 multiplier, so final<base ⇔ the 0.5× roll landed.
     const won = ctx.finalScore >= ctx.baseScore;
-    dirs.push({ k: 'dice', text: won ? '2×' : '0.5×', color: won ? c('green')[1] : c('red')[1] });
+    dirs.push({ k: 'dice', text: won ? '3×' : '0.5×', color: won ? c('green')[1] : c('red')[1] });
   }
 
   // Headline: the gained score + contributing tags, tinted by the net multiplier.

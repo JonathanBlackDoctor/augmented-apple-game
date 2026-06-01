@@ -1,8 +1,9 @@
 // bot/levels.ts — the 10 named AI rivals for the level campaign, themed as an
 // apple ripening from a sprout into a legendary "emperor apple". Difficulty is
-// hand-tuned (NOT a linear interpolation): levels 1–2 are far gentler than a
-// casual human (very long "thinking", fully random moves), the curve steepens
-// through the midgame, and level 10 out-paces a perfect-but-slow player (instant,
+// hand-tuned (NOT a linear interpolation): level 1 is still the gentle on-ramp
+// (always a random move) but no longer dawdles, levels 2–5 now think quicker,
+// blunder less and aim closer to the best move, the curve steepens through the
+// midgame, and level 10 out-paces a perfect-but-slow player (instant,
 // always-optimal). Strength rises by shrinking think-time, narrowing the move
 // choice (pickTop → 1), and cutting random blunders (→ 0).
 //
@@ -43,7 +44,7 @@ export const AI_LEVELS: AiLevel[] = [
     title: '갓 돋아난 떡잎',
     avatar: '🌱',
     taunt: '흙냄새… 좋다…',
-    tuning: { minDelayMs: 6500, maxDelayMs: 9500, pickTop: 1, blunderChance: 1 },
+    tuning: { minDelayMs: 4800, maxDelayMs: 7200, pickTop: 1, blunderChance: 1 },
     // Shy & innocent: soft, wide-eyed reactions — now a touch more talkative.
     emote: { chattiness: 0.34, greet: ['hi', 'apple'], ahead: ['nice', 'apple'], even: ['apple'], behind: ['shock'], roundWin: ['nice', 'apple'], roundLoss: ['shock'], augment: ['apple', 'hi'] },
   },
@@ -53,7 +54,7 @@ export const AI_LEVELS: AiLevel[] = [
     title: '아직 덜 익은',
     avatar: '🍏',
     taunt: '나… 아직 시큼해…',
-    tuning: { minDelayMs: 5200, maxDelayMs: 7800, pickTop: 1, blunderChance: 1 },
+    tuning: { minDelayMs: 4000, maxDelayMs: 6000, pickTop: 8, blunderChance: 0.78 },
     // Timid and a touch sour: easily startled, but warming up to the chatter.
     emote: { chattiness: 0.42, greet: ['hi', 'apple'], ahead: ['nice', 'wink'], even: ['apple', 'nice'], behind: ['shock'], roundWin: ['nice', 'wink'], roundLoss: ['shock', 'apple'], augment: ['apple', 'hi'] },
   },
@@ -63,7 +64,7 @@ export const AI_LEVELS: AiLevel[] = [
     title: '상큼한 한 입',
     avatar: '🍎',
     taunt: '한 입 깨물어 볼래?',
-    tuning: { minDelayMs: 4200, maxDelayMs: 6400, pickTop: 8, blunderChance: 0.8 },
+    tuning: { minDelayMs: 3300, maxDelayMs: 5100, pickTop: 7, blunderChance: 0.55 },
     // Cheeky and playful: giggles and winks constantly.
     emote: { chattiness: 0.68, greet: ['hi', 'wink'], ahead: ['lol', 'wink', 'nice'], even: ['wink', 'nice'], behind: ['shock', 'angry'], roundWin: ['lol', 'wink'], roundLoss: ['shock', 'angry'], augment: ['wink', 'cool', 'nice'] },
   },
@@ -73,7 +74,7 @@ export const AI_LEVELS: AiLevel[] = [
     title: '속까지 꽉 찬 단맛',
     avatar: '🍯',
     taunt: '달콤하게 이겨주지.',
-    tuning: { minDelayMs: 3400, maxDelayMs: 5200, pickTop: 7, blunderChance: 0.58 },
+    tuning: { minDelayMs: 2700, maxDelayMs: 4300, pickTop: 6, blunderChance: 0.42 },
     // Sweet and friendly: warm, encouraging reactions all round long.
     emote: { chattiness: 0.62, greet: ['hi', 'nice'], ahead: ['cool', 'nice', 'wink'], even: ['nice', 'wink'], behind: ['shock'], roundWin: ['nice', 'cool'], roundLoss: ['shock', 'nice'], augment: ['nice', 'wink', 'cool'] },
   },
@@ -83,7 +84,7 @@ export const AI_LEVELS: AiLevel[] = [
     title: '노릇하게 구워진',
     avatar: '🥧',
     taunt: '갓 구운 맛을 보여줄게!',
-    tuning: { minDelayMs: 2700, maxDelayMs: 4200, pickTop: 6, blunderChance: 0.42 },
+    tuning: { minDelayMs: 2200, maxDelayMs: 3500, pickTop: 5, blunderChance: 0.32 },
     // Hearty & jovial: laughs loudly, the most cheerful of the bunch.
     emote: { chattiness: 0.82, greet: ['hi', 'lol'], ahead: ['lol', 'fire', 'cool'], even: ['lol', 'nice'], behind: ['shock', 'angry'], roundWin: ['lol', 'fire'], roundLoss: ['shock', 'angry'], augment: ['lol', 'cool', 'fire'] },
   },
@@ -93,7 +94,7 @@ export const AI_LEVELS: AiLevel[] = [
     title: '명품 붉은 품종',
     avatar: '❤️',
     taunt: '품격의 차이를 보여주마.',
-    tuning: { minDelayMs: 2050, maxDelayMs: 3300, pickTop: 5, blunderChance: 0.3 },
+    tuning: { minDelayMs: 1750, maxDelayMs: 2875, pickTop: 5, blunderChance: 0.25 },
     // Proud & elegant: composed, faintly haughty smirks — and more of them.
     emote: { chattiness: 0.64, greet: ['cool'], ahead: ['smug', 'cool'], even: ['cool', 'wink'], behind: ['shock', 'angry'], roundWin: ['smug', 'cool'], roundLoss: ['shock'], augment: ['cool', 'smug'] },
   },

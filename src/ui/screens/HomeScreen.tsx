@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useGameStore } from '../../app/store';
 import { SettingsOverlay } from '../components/SettingsOverlay';
 import { HelpOverlay } from '../components/HelpOverlay';
+import { LandscapeFullscreenButton } from '../components/LandscapeFullscreenButton';
 import { loadMyProfile } from '../../profile/current';
 import type { Tier } from '../../contracts';
 
@@ -93,6 +94,7 @@ export function HomeScreen() {
         </div>
         {best > 0 && <p className="best">최고 점수 {best}</p>}
         <p className="hint">데스크톱·모바일 모두 드래그로 플레이</p>
+        <LandscapeFullscreenButton />
         <div className="home-tools">
           <button className="btn ghost small" onClick={() => setOverlay('settings')}>
             ⚙ 설정

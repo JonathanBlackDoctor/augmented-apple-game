@@ -1630,6 +1630,11 @@ body {
   padding: 9px 14px;
   font-size: 13px;
 }
+/* Mobile-only landscape-fullscreen toggle: full-width row above the tool buttons. */
+.landscape-fs-btn {
+  width: 100%;
+  margin-top: 8px;
+}
 
 /* ---- settings modal ---- */
 .settings-card {

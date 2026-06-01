@@ -16,6 +16,13 @@ vi.mock('../src/board/BoardView', () => ({
     resetFx() {}
     burst() {}
     setLabelsHidden() {}
+    pulseHideLabels() {}
+    companionPresence() {}
+    companionPop() {}
+    centroidPx() {
+      return null;
+    }
+    scorePopup() {}
     destroy() {}
   },
 }));

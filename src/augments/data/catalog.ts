@@ -89,16 +89,15 @@ export const CATALOG: Augment[] = [
   {
     id: 'time.lord',
     name: '시간의 지배자',
-    desc: '드래그 중 시간 2배 감속, 단 그동안 숫자가 보이지 않음',
+    desc: '내가 사과를 터뜨릴 때마다 상대 화면의 사과가 1초 동안 ?로 가려져요',
     tier: 'prismatic',
     family: 'time',
-    hooks: {
-      // While dragging, time flows at 1/2 speed (2x slower); idle is normal,
-      // so the round always ends (no infinite-pause exploit). The "numbers
-      // hidden while dragging" drawback is applied by the UI layer (BoardView).
-      onTick: (s, c) =>
-        c.isDragging ? { remainingMs: s.remainingMs + c.deltaMs * (1 / 2), paused: false } : s,
-    },
+    // Pure-disruption augment whose effect lives in the app layer: every time the
+    // owner clears apples, the OPPONENT's board hides its numerals (shows "?") for
+    // ~1s, re-armed (not extended) on each fresh clear. Applied by the controllers
+    // (vs-AI: bot clear → my board; online: opponent clear → my board), so the core
+    // carries no hook for it. See VersusController / OnlineController.
+    hooks: {},
   },
   // ----- combo -----
   {
@@ -254,6 +253,18 @@ export const CATALOG: Augment[] = [
     },
   },
   {
+    id: 'board.companion',
+    name: '새콤이와 함께',
+    desc: '동료 새콤이가 곁에서 함께 플레이하며 가끔 합 10 사과를 대신 터뜨려 줘요',
+    tier: 'prismatic',
+    family: 'board',
+    // Companion auto-clear: a friendly ally (새콤이, the Lv.3 rival 🍎) plays
+    // alongside the owner — the app layer periodically clears one sum-10 group on
+    // the OWNER's own board and animates 새콤이 doing it. Presentation + cadence
+    // live in the controllers (see COMPANION_* in app/companion.ts); no core hook.
+    hooks: {},
+  },
+  {
     id: 'board.rainbow',
     name: '무지개 사과',
     desc: '만능 사과 8개 — 부족분을 채워 합 완성',
@@ -286,7 +297,7 @@ export const CATALOG: Augment[] = [
     desc: '합 9도 인정',
     tier: 'prismatic',
     family: 'rule',
-    conflictsWith: ['rule.eleven', 'rule.alchemy'],
+    // Rule-benders may now be stacked freely (the accept-window widens further).
     hooks: {
       validateSelection: (c) => (c.sum === 9 && c.cells.length > 0 ? { accept: true } : undefined),
     },
@@ -297,7 +308,6 @@ export const CATALOG: Augment[] = [
     desc: '합이 10 이상 20 이하의 소수면 인정 (11·13·17·19)',
     tier: 'prismatic',
     family: 'rule',
-    conflictsWith: ['rule.kindness', 'rule.alchemy'],
     hooks: {
       validateSelection: (c) =>
         c.sum >= 10 && c.sum <= 20 && isPrime(c.sum) && c.cells.length > 0
@@ -311,7 +321,6 @@ export const CATALOG: Augment[] = [
     desc: '합이 5의 배수면 인정, 단 25 이하만 (5·10·15·20·25)',
     tier: 'prismatic',
     family: 'rule',
-    conflictsWith: ['rule.kindness', 'rule.eleven'],
     hooks: {
       validateSelection: (c) =>
         c.sum > 0 && c.sum % 5 === 0 && c.sum <= 25 && c.cells.length > 0 ? { accept: true } : undefined,

@@ -29,6 +29,7 @@ import { makeRoomCode, isValidRoomCode, buildRoomLink, parseDeepLink } from '../
 import { NO_LOBBY, type PublicLobby } from '../matchmaking/lobby';
 import { StandardRankingService, InMemoryRankingStore } from '../ranking';
 import { LocalProfileService, browserKV } from '../profile';
+import { COMPANION_ID, COMPANION_FIRST_MS, COMPANION_INTERVAL_MS } from './companion';
 
 const DURATION = 30_000;
 
@@ -56,6 +57,10 @@ export class OnlineController {
   private lastPhase = '';
   private pendingActivation: string | null = null;
   private activationTimer = 0;
+  // 새콤이 companion (board.companion): auto-clears on MY board at a fixed cadence.
+  private companionOn = false;
+  private companionStart = 0;
+  private companionNextAt = 0;
 
   async mount(parent: HTMLElement): Promise<void> {
     this.parent = parent;
@@ -220,6 +225,7 @@ export class OnlineController {
       this.board.resetFx();
       this.board.setBoard(this.match.myBoard());
       this.board.showSelection(null, false);
+      this.armCompanion(s);
       this.comboStreak = 0;
       const activate = this.pendingActivation;
       this.pendingActivation = null;
@@ -231,8 +237,12 @@ export class OnlineController {
       }
     } else if (s.phase !== 'round' && this.lastPhase === 'round') {
       this.board.resetFx();
+      this.companionOn = false;
     }
-    if (s.phase === 'round') updateAmbient(this.board, s.myOwned, s.remainingMs, DURATION);
+    if (s.phase === 'round') {
+      updateAmbient(this.board, s.myOwned, s.remainingMs, DURATION);
+      this.tickCompanion();
+    }
 
     // Opponent "+N" popup: their per-round score is cumulative within a round, so a
     // positive frame-to-frame delta is a fresh clear (round reset → 0 yields a
@@ -240,6 +250,9 @@ export class OnlineController {
     const oppDelta = s.oppScore - this.prevOppScore;
     if (oppDelta > 0) {
       useOnlineStore.setState((c) => ({ oppGainSeq: c.oppGainSeq + 1, oppGainAmount: oppDelta }));
+      // 시간의 지배자: the opponent owns time.lord and just cleared → veil MY apples
+      // as "?" for 1s, re-armed on each of their clears.
+      if (s.oppOwned.includes('time.lord')) this.board.pulseHideLabels(1000);
     }
     this.prevOppScore = s.oppScore;
 
@@ -394,10 +407,6 @@ export class OnlineController {
   private handlers: DragHandlers = {
     onStart: () => {
       this.match?.setDragging(true);
-      if (this.match?.snapshot().myOwned.includes('time.lord')) {
-        this.board.setLabelsHidden(true);
-        this.board.effects?.desat(true);
-      }
     },
     onMove: (rect: Rect | null) => {
       if (!this.match || !rect) {
@@ -411,10 +420,6 @@ export class OnlineController {
       const m = this.match;
       if (!m) return;
       m.setDragging(false);
-      if (m.snapshot().myOwned.includes('time.lord')) {
-        this.board.setLabelsHidden(false);
-        this.board.effects?.desat(false);
-      }
       this.board.showSelection(null, false);
       if (!rect) return;
       const evalBefore = m.evalDetail(rect);
@@ -447,6 +452,33 @@ export class OnlineController {
       });
     },
   };
+
+  /** Arm 새콤이's auto-clear cadence for a fresh round (owner check + presence). */
+  private armCompanion(s: OnlineSnapshot): void {
+    this.companionOn = s.myOwned.includes(COMPANION_ID);
+    this.companionStart = this.clock.now();
+    this.companionNextAt = COMPANION_FIRST_MS;
+    this.board.companionPresence(this.companionOn);
+  }
+
+  /** Let 새콤이 pop a sum-10 group for me whenever its timer comes due. */
+  private tickCompanion(): void {
+    const m = this.match;
+    if (!this.companionOn || !m) return;
+    const t = this.clock.now() - this.companionStart;
+    let guard = 0;
+    while (t >= this.companionNextAt && guard++ < 4) {
+      this.companionNextAt += COMPANION_INTERVAL_MS;
+      const info = m.companionClear();
+      if (!info) break;
+      this.board.burst(info.cells);
+      this.board.setBoard(m.myBoard());
+      const center = this.board.centroidPx(info.cells);
+      if (center) this.board.companionPop(center.x, center.y);
+      this.board.scorePopup(info.cells, info.finalScore);
+      sfx.clear(1);
+    }
+  }
 
   /** Remove our public-lobby advertisement (matched, cancelled, or screen left). */
   private withdrawLobby(): void {

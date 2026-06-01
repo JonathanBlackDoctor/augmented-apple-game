@@ -11,6 +11,12 @@ import { sfx } from './sound';
 import { useGameStore } from './store';
 import { getSettings } from './settingsStore';
 import { playActivation, playClear, updateAmbient } from './augmentFx';
+import {
+  COMPANION_ID,
+  COMPANION_FIRST_MS,
+  COMPANION_INTERVAL_MS,
+  companionMove,
+} from './companion';
 
 const NOOP_BUS: AugmentHookBus = { run: () => undefined };
 
@@ -48,6 +54,10 @@ export class MatchController {
   private pendingActivation: string | null = null;
   private roundDurationMs = 0;
   private activationTimer = 0;
+  // 새콤이 companion (board.companion): auto-clears on the board at a fixed cadence.
+  private companionOn = false;
+  private companionStart = 0;
+  private companionNextAt = 0;
 
   async mount(parent: HTMLElement): Promise<void> {
     this.parent = parent;
@@ -133,6 +143,10 @@ export class MatchController {
     this.comboStreak = 0;
     this.roundStart = this.clock.now();
     this.roundActive = true;
+    this.companionOn = this.owned.includes(COMPANION_ID);
+    this.companionStart = this.roundStart;
+    this.companionNextAt = COMPANION_FIRST_MS;
+    this.board.companionPresence(this.companionOn);
 
     const dur = this.engineDuration();
     this.roundDurationMs = dur;
@@ -167,6 +181,7 @@ export class MatchController {
     const { remainingMs, ended } = this.engine.tick(this.clock.now());
     useGameStore.getState().setRemaining(remainingMs);
     updateAmbient(this.board, this.owned, remainingMs, this.roundDurationMs);
+    this.tickCompanion();
     if (ended) {
       this.endRound();
       return;
@@ -174,8 +189,30 @@ export class MatchController {
     this.raf = requestAnimationFrame(this.loop);
   };
 
+  /** 새콤이 (board.companion) pops a sum-10 group for the player on cadence. */
+  private tickCompanion(): void {
+    if (!this.companionOn || !this.roundActive) return;
+    const t = this.clock.now() - this.companionStart;
+    let guard = 0;
+    while (t >= this.companionNextAt && guard++ < 4) {
+      this.companionNextAt += COMPANION_INTERVAL_MS;
+      const rect = companionMove(this.engine.getBoard(), this.plan?.targetSum ?? 10);
+      if (!rect) break;
+      const res = this.engine.commit({ seq: ++this.seq, rect, tMs: this.clock.now() - this.roundStart });
+      if ('rejected' in res) break;
+      this.board.burst(res.cells);
+      this.board.setBoard(this.engine.getBoard());
+      const center = this.board.centroidPx(res.cells);
+      if (center) this.board.companionPop(center.x, center.y);
+      this.board.scorePopup(res.cells, res.finalScore);
+      useGameStore.getState().setRoundScore(this.engine.getScore());
+      sfx.clear(1);
+    }
+  }
+
   private endRound(): void {
     this.roundActive = false;
+    this.companionOn = false;
     cancelAnimationFrame(this.raf);
     this.board.resetFx();
     const score = this.engine.getScore();
@@ -208,10 +245,6 @@ export class MatchController {
   private handlers: DragHandlers = {
     onStart: () => {
       this.engine.setDragging(true);
-      if (this.owned.includes('time.lord')) {
-        this.board.setLabelsHidden(true);
-        this.board.effects?.desat(true);
-      }
     },
     onMove: (rect: Rect | null) => {
       if (!this.roundActive || !rect) {
@@ -223,10 +256,6 @@ export class MatchController {
     },
     onEnd: (rect: Rect | null) => {
       this.engine.setDragging(false);
-      if (this.owned.includes('time.lord')) {
-        this.board.setLabelsHidden(false);
-        this.board.effects?.desat(false);
-      }
       this.board.showSelection(null, false);
       if (!this.roundActive || !rect) return;
       // A single-cell selection can't sum to the target (apples are 1–9), so a

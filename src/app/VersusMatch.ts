@@ -15,6 +15,8 @@ import type {
 } from '../contracts';
 import { decide, type BotTuning } from '../bot';
 import { versusOfferTiers, rollOfferTiers, buildHookBusFor } from '../augments/runtime';
+import { companionMove } from './companion';
+import type { CellTag } from '../contracts';
 
 export type VersusPhase = 'augment' | 'preRound' | 'round' | 'roundCheck' | 'matchResult';
 
@@ -208,6 +210,24 @@ export class VersusMatch {
       rect,
       tMs: nowMs - (this.roundStartMs ?? nowMs),
     });
+  }
+
+  /** 새콤이 (board.companion) clears one sum-10 group on MY board for me. Returns
+   *  the cleared cells + their pre-clear tags (for FX), or null when no move
+   *  exists / we're outside the round. The owner check lives in the controller. */
+  companionClear(nowMs: number): { cells: number[]; preTags: CellTag[]; finalScore: number } | null {
+    if (this.phase !== 'round') return null;
+    const board = this.myEngine.getBoard();
+    const rect = companionMove(board, this.opts.targetSum);
+    if (!rect) return null;
+    const preTags = board.tags?.slice() ?? [];
+    const res = this.myEngine.commit({
+      seq: ++this.mySeq,
+      rect,
+      tMs: nowMs - (this.roundStartMs ?? nowMs),
+    });
+    if (!res || 'rejected' in res) return null;
+    return { cells: res.cells, preTags, finalScore: res.finalScore };
   }
 
   /** Advance timers + bot AI to `nowMs` (monotonic ms). Returns a snapshot. */

@@ -1,7 +1,7 @@
 // app/VersusController.ts — runtime conductor for the vs-AI mode. Wires the
 // headless VersusMatch to the Pixi board, pointer input, monotonic clock, SFX,
 // profile (anon identity) and ranking (unranked vs bot). Mirrors MatchController.
-import type { Rect, Profile, PublicProfile } from '../contracts';
+import type { Rect, Profile, PublicProfile, CellTag } from '../contracts';
 import { BoardView } from '../board/BoardView';
 import { computeLayout, type BoardLayout } from '../board/layout';
 import { InputController, type DragHandlers } from '../input/InputController';
@@ -16,6 +16,7 @@ import { LocalProfileService, browserKV } from '../profile';
 import { StandardRankingService, InMemoryRankingStore } from '../ranking';
 import { levelInfo, levelTuning, type EmotePersona } from '../bot';
 import { useProgressStore } from './progressStore';
+import { COMPANION_ID, COMPANION_FIRST_MS, COMPANION_INTERVAL_MS } from './companion';
 
 const TARGET = 10;
 const ROUNDS = 5;
@@ -53,6 +54,10 @@ export class VersusController {
   private lastOppEmoteAt = 0; // throttle for the rival's in-round taunt emotes
   private pendingActivation: string | null = null;
   private activationTimer = 0;
+  // 새콤이 companion (board.companion): auto-clears on MY board at a fixed cadence.
+  private companionOn = false;
+  private companionStart = 0;
+  private companionNextAt = 0;
 
   private readonly profileSvc = new LocalProfileService(browserKV());
   private readonly ranking = new StandardRankingService(new InMemoryRankingStore());
@@ -186,7 +191,10 @@ export class VersusController {
       void this.finish();
       return;
     }
-    if (snap.phase !== 'round' && this.lastPhase === 'round') this.board.resetFx();
+    if (snap.phase !== 'round' && this.lastPhase === 'round') {
+      this.board.resetFx();
+      this.companionOn = false;
+    }
     if (snap.phase === 'round') {
       if (this.lastPhase === null) {
         // The rival greets at match start (tone set by its persona).
@@ -195,6 +203,7 @@ export class VersusController {
         // A fresh round just began (preRound countdown → round): refresh board + combo.
         this.board.resetFx();
         this.board.setBoard(m.myBoard());
+        this.armCompanion(snap);
         this.comboStreak = 0;
         useGameStore.getState().setCombo(0);
         const activate = this.pendingActivation;
@@ -211,6 +220,7 @@ export class VersusController {
           });
       }
       updateAmbient(this.board, snap.myOwned, snap.remainingMs, this.durationMs);
+      this.tickCompanion();
       st.setPhase('round');
     } else if (snap.phase === 'preRound') {
       // Augment locked in → 3·2·1 countdown before the round runs. The board timer
@@ -291,6 +301,9 @@ export class VersusController {
     const myDelta = s.myScore - this.prevMyScore;
     if (botDelta > 0) {
       useVersusStore.getState().bumpOppGain(botDelta);
+      // 시간의 지배자: when the rival (who owns time.lord) clears, MY apples are
+      // veiled as "?" for 1s — re-armed on each of its clears.
+      if (s.botOwned.includes('time.lord')) this.board.pulseHideLabels(1000);
       // Reacts to its own clear: gloat when ahead, stay breezy when even/behind.
       if (this.persona)
         this.botEmote(this.botAhead(s) ? this.persona.ahead : this.persona.even, { chance: 0.72 });
@@ -319,6 +332,40 @@ export class VersusController {
     }
     this.lastOppEmoteAt = now;
     useVersusStore.getState().sendOppEmote(pool[Math.floor(Math.random() * pool.length)]);
+  }
+
+  /** Arm 새콤이's auto-clear cadence for a fresh round (owner check + presence). */
+  private armCompanion(snap: VersusSnapshot): void {
+    this.companionOn = snap.myOwned.includes(COMPANION_ID);
+    this.companionStart = this.clock.now();
+    this.companionNextAt = COMPANION_FIRST_MS;
+    this.board.companionPresence(this.companionOn);
+  }
+
+  /** Let 새콤이 pop a sum-10 group for me whenever its timer comes due. */
+  private tickCompanion(): void {
+    const m = this.match;
+    if (!this.companionOn || !m) return;
+    const t = this.clock.now() - this.companionStart;
+    let guard = 0;
+    while (t >= this.companionNextAt && guard++ < 4) {
+      this.companionNextAt += COMPANION_INTERVAL_MS;
+      const info = m.companionClear(this.clock.now());
+      if (!info) break;
+      this.playCompanion(info);
+    }
+  }
+
+  private playCompanion(info: { cells: number[]; preTags: CellTag[]; finalScore: number }): void {
+    const m = this.match;
+    if (!m) return;
+    this.board.burst(info.cells);
+    this.board.setBoard(m.myBoard());
+    const center = this.board.centroidPx(info.cells);
+    if (center) this.board.companionPop(center.x, center.y);
+    this.board.scorePopup(info.cells, info.finalScore);
+    useGameStore.getState().setRoundScore(m.snapshot().myScore);
+    sfx.clear(1);
   }
 
   /** True when the rival's standing (banked total + current round) leads. */
@@ -362,10 +409,6 @@ export class VersusController {
   private handlers: DragHandlers = {
     onStart: () => {
       this.match?.setDragging(true);
-      if (this.match?.snapshot().myOwned.includes('time.lord')) {
-        this.board.setLabelsHidden(true);
-        this.board.effects?.desat(true);
-      }
     },
     onMove: (rect: Rect | null) => {
       if (!this.match || !rect) {
@@ -379,10 +422,6 @@ export class VersusController {
       const m = this.match;
       if (!m) return;
       m.setDragging(false);
-      if (m.snapshot().myOwned.includes('time.lord')) {
-        this.board.setLabelsHidden(false);
-        this.board.effects?.desat(false);
-      }
       this.board.showSelection(null, false);
       if (!rect) return;
       // Stray single-cell tap can't be a valid move — silent no-op (keep combo).

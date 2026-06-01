@@ -19,6 +19,7 @@ export class BoardFx {
   private overlay: HTMLDivElement | null = null;
   private vigs: Partial<Record<VigName, HTMLDivElement>> = {};
   private sumEl: HTMLDivElement | null = null;
+  private idleEl: HTMLDivElement | null = null;
   private reduce = false;
   private syncRaf = 0;
   private cellPx = 0;
@@ -75,6 +76,8 @@ export class BoardFx {
     }
     (Object.keys(this.vigs) as VigName[]).forEach((n) => this.vignette(n, false));
     this.sumEl = null;
+    // reset() removed every non-vignette child above, including the idle buddy.
+    this.idleEl = null;
     this.canvas?.classList.remove('bfx-shake', 'bfx-tilt', 'bfx-desat');
   }
 
@@ -84,6 +87,7 @@ export class BoardFx {
     this.overlay = null;
     this.vigs = {};
     this.sumEl = null;
+    this.idleEl = null;
   }
 
   // ---- primitives -----------------------------------------------------------
@@ -193,6 +197,29 @@ export class BoardFx {
   hideSum(): void {
     this.sumEl?.remove();
     this.sumEl = null;
+  }
+
+  /** 새콤이 (board.companion) hops onto the cleared apples and pops them with a
+   *  little sparkle ring — the "동료가 함께 터뜨려줬다" beat. */
+  companion(x: number, y: number): void {
+    this.node('bfx-companion', `left:${x}px;top:${y}px`, '🍎', 1100);
+    if (!this.reduce) this.ring(x, y, '#5E9A4E');
+  }
+
+  /** Persistent 새콤이 buddy idling at the board's corner while the augment is
+   *  owned, so the player always feels the companion is right there with them. */
+  companionIdle(on: boolean): void {
+    if (!on) {
+      this.idleEl?.remove();
+      this.idleEl = null;
+      return;
+    }
+    if (this.idleEl?.isConnected || !this.overlay) return;
+    const d = document.createElement('div');
+    d.className = 'bfx-buddy';
+    d.innerHTML = '<span class="bfx-buddy-face">🍎</span><span class="bfx-buddy-tag">새콤이</span>';
+    this.overlay.appendChild(d);
+    this.idleEl = d;
   }
 
   vignette(name: VigName, on: boolean): void {

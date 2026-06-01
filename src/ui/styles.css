@@ -2082,15 +2082,17 @@ body {
   opacity: 0.55;
 }
 
-/* ---- in-battle emote tray (Clash-Royale-style) ---- */
+/* ---- in-battle emote tray (Clash-Royale-style) ----
+   Lives in the bottom-LEFT corner so it sits under my own emote bubbles (which
+   float from the top-left), mirroring the opponent's top-right reactions. */
 .emote-tray {
   position: fixed;
-  right: 14px;
+  left: 14px;
   bottom: 16px;
   z-index: 4;
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
+  align-items: flex-start;
   gap: 8px;
 }
 .emote-toggle {
@@ -2113,7 +2115,7 @@ body {
 .emote-popup {
   display: flex;
   flex-wrap: wrap;
-  justify-content: flex-end;
+  justify-content: flex-start;
   gap: 6px;
   max-width: 232px;
   padding: 8px;
@@ -2148,9 +2150,11 @@ body {
   flex-direction: column-reverse;
   gap: 4px;
 }
+/* My reactions float from the top-LEFT (the opponent's stay top-right), so both
+   sides read symmetrically across the top of the board. */
 .emote-bubbles.me {
   left: 16px;
-  bottom: 84px;
+  top: 92px;
   align-items: flex-start;
 }
 .emote-bubbles.opp {
@@ -2159,17 +2163,23 @@ body {
   align-items: flex-end;
 }
 .emote-bubble {
-  font-size: 40px;
-  filter: drop-shadow(0 4px 10px rgba(120, 80, 40, 0.25));
+  font-size: 88px;
+  line-height: 1;
+  filter: drop-shadow(0 6px 16px rgba(120, 80, 40, 0.3));
   animation: emoteFloat 1.8s var(--ease) forwards;
+}
+@media (max-width: 560px) {
+  .emote-bubble {
+    font-size: 64px;
+  }
 }
 @keyframes emoteFloat {
   0% {
-    transform: translateY(10px) scale(0.4);
+    transform: translateY(14px) scale(0.4);
     opacity: 0;
   }
   18% {
-    transform: translateY(0) scale(1.1);
+    transform: translateY(0) scale(1.14);
     opacity: 1;
   }
   30% {
@@ -2180,7 +2190,7 @@ body {
     opacity: 1;
   }
   100% {
-    transform: translateY(-46px) scale(0.9);
+    transform: translateY(-64px) scale(0.92);
     opacity: 0;
   }
 }
@@ -2289,6 +2299,77 @@ body {
      scale off this so they stay proportional on phone / tablet / desktop; the
      50px fallback keeps things sane before the first layout sync. */
   --bfx-cell: 50px;
+}
+
+/* ---- 새콤이 companion (board.companion) ----
+   A friendly ally that pops apples for you: a buddy idles by the board corner
+   and a 🍎 hops onto each group it clears. */
+.bfx-companion {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  font-size: calc(var(--bfx-cell) * 1.5);
+  line-height: 1;
+  pointer-events: none;
+  filter: drop-shadow(0 4px 8px rgba(60, 30, 16, 0.35));
+  animation: bfxCompanionHop 1s var(--ease) forwards;
+}
+@keyframes bfxCompanionHop {
+  0% {
+    transform: translate(-50%, 30%) scale(0.3) rotate(-12deg);
+    opacity: 0;
+  }
+  28% {
+    transform: translate(-50%, -70%) scale(1.15) rotate(8deg);
+    opacity: 1;
+  }
+  52% {
+    transform: translate(-50%, -50%) scale(1) rotate(-4deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -120%) scale(0.7) rotate(0deg);
+    opacity: 0;
+  }
+}
+.bfx-buddy {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  pointer-events: none;
+  animation: bfxBuddyBob 2.4s var(--ease) infinite;
+}
+.bfx-buddy-face {
+  font-size: calc(var(--bfx-cell) * 0.9);
+  line-height: 1;
+  filter: drop-shadow(0 3px 6px rgba(60, 30, 16, 0.3));
+}
+.bfx-buddy-tag {
+  font-size: 11px;
+  font-weight: 800;
+  color: #3f7a32;
+  background: rgba(255, 253, 246, 0.82);
+  border-radius: 8px;
+  padding: 1px 6px;
+  box-shadow: 0 1px 3px rgba(60, 30, 16, 0.18);
+}
+@keyframes bfxBuddyBob {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-3deg);
+  }
+  50% {
+    transform: translateY(-6px) rotate(3deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bfx-companion,
+  .bfx-buddy {
+    animation: none;
+  }
 }
 
 /* sustain-augment ambience (toggled via .on): time.lord/glasscannon = prism,

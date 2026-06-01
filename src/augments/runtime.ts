@@ -90,11 +90,11 @@ export function rollOffer(
   return rollOfferTiers([tier], rng, owned, exclude);
 }
 
-/** Owning 3+ augments of the same family grants a permanent +20% score bonus
+/** Owning 3+ augments of the same family grants a permanent +50% score bonus
  *  (stacking per family that reaches the threshold). Folded into the hook bus as
  *  a synthetic augment so every mode (solo/versus/online) gets it for free. The
  *  threshold/bonus are exported so the augment-pick UI can show the same numbers. */
-export const SET_SYNERGY_BONUS = 0.2;
+export const SET_SYNERGY_BONUS = 0.5;
 export const SET_SYNERGY_THRESHOLD = 3;
 function familySetSynergy(list: Augment[]): Augment | null {
   const counts = new Map<string, number>();
@@ -106,7 +106,7 @@ function familySetSynergy(list: Augment[]): Augment | null {
   return {
     id: 'synergy.set',
     name: '세트 시너지',
-    desc: '같은 계열 증강 3개 이상 보유 시 점수 +20%',
+    desc: '같은 계열 증강 3개 이상 보유 시 점수 +50%',
     tier: 'silver',
     family: 'combo',
     hooks: {

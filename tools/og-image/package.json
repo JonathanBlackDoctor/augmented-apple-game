@@ -1,0 +1,15 @@
+{
+  "name": "aag-og-image",
+  "private": true,
+  "type": "module",
+  "description": "Generates public/og.png — the social card recreating an actual late-game scene.",
+  "scripts": {
+    "build": "node gen.mjs"
+  },
+  "dependencies": {
+    "@expo-google-fonts/noto-sans-kr": "^0.4.3",
+    "@expo-google-fonts/quicksand": "^0.4.1",
+    "@resvg/resvg-js": "^2.6.2",
+    "sharp": "^0.34.0"
+  }
+}

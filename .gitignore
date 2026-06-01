@@ -9,3 +9,7 @@ coverage
 !.env.example
 .firebase
 firebase-debug.log
+
+# OG image generator deps / scratch
+tools/og-image/node_modules/
+tools/og-image/out.*

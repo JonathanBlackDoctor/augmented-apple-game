@@ -63,6 +63,9 @@ export class BoardView {
   private layout: BoardLayout | null = null;
   private board: Board | null = null;
   private mounted = false;
+  // Set once the Quicksand webfont is confirmed loaded (or unavailable), after
+  // which all numerals rasterize in the same font. See syncWebFont().
+  private fontSynced = false;
 
   // DOM effect overlay (augment activation / clear FX, running-sum bubble).
   // Disabled for the tiny AI mini-view (`new BoardView({ fx: false })`).
@@ -99,7 +102,31 @@ export class BoardView {
       this.fx.mount(parent, this.app.canvas);
       this.fx.setCell(layout.cell);
     }
+    this.syncWebFont();
     if (this.board) this.rebuild();
+  }
+
+  // PixiJS Text bakes its glyphs into a texture the moment it is created, using
+  // whatever font is resolvable *then*. If the board is built before the
+  // Quicksand webfont finishes downloading, those labels bake the fallback font
+  // and Pixi never re-rasterizes them on its own — so a single board can show a
+  // mix of fonts (only labels whose text later changes pick Quicksand up). We
+  // wait for Quicksand (weight 600 — the weight index.html actually loads) and
+  // rebuild once it is ready so every numeral re-renders in the same font.
+  private syncWebFont(): void {
+    if (this.fontSynced) return;
+    const fonts = typeof document !== 'undefined' ? document.fonts : undefined;
+    if (!fonts || fonts.check('600 16px Quicksand')) {
+      this.fontSynced = true;
+      return;
+    }
+    void fonts
+      .load('600 16px Quicksand')
+      .catch(() => undefined)
+      .then(() => {
+        this.fontSynced = true;
+        if (this.mounted && this.board && this.layout) this.rebuild();
+      });
   }
 
   setLayout(layout: BoardLayout): void {
@@ -354,7 +381,7 @@ export class BoardView {
       style: {
         fontFamily: `Quicksand, ${theme.font}`,
         fontSize: Math.round(cell * 0.47),
-        fontWeight: '800',
+        fontWeight: '600',
         fill: numberColor(tag),
         dropShadow: {
           color: 0x781c0e, // rgba(120,28,14)

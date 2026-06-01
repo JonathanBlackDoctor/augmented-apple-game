@@ -314,12 +314,12 @@ export function drawApple(ctx: CanvasRenderingContext2D, opt: DrawAppleOptions):
   // 꼭지·잎은 보디 위(앞)에 얹는다 (HTML z-순서: 잎/꼭지 > 과일).
   if (showDeco) drawStemLeaf(ctx, v, s);
 
-  // ── 숫자 (Quicksand, weight 800, 셀 0.46배) ──
+  // ── 숫자 (Quicksand, weight 600, 셀 0.46배) ──
   if (value != null) {
     const small = size <= 24;
     const ratio = small ? 0.52 : 0.46;
     ctx.fillStyle = v.number;
-    ctx.font = `800 ${size * ratio}px Quicksand, "Pretendard Variable", Pretendard, sans-serif`;
+    ctx.font = `600 ${size * ratio}px Quicksand, "Pretendard Variable", Pretendard, sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.shadowColor = 'rgba(120,30,16,0.36)';

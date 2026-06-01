@@ -209,7 +209,6 @@ export class MatchController {
     onStart: () => {
       this.engine.setDragging(true);
       if (this.owned.includes('time.lord')) {
-        this.board.setLabelsHidden(true);
         this.board.effects?.desat(true);
       }
     },
@@ -224,7 +223,6 @@ export class MatchController {
     onEnd: (rect: Rect | null) => {
       this.engine.setDragging(false);
       if (this.owned.includes('time.lord')) {
-        this.board.setLabelsHidden(false);
         this.board.effects?.desat(false);
       }
       this.board.showSelection(null, false);

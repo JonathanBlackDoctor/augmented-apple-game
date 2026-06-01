@@ -89,15 +89,16 @@ export const CATALOG: Augment[] = [
   {
     id: 'time.lord',
     name: '시간의 지배자',
-    desc: '드래그 중 시간 2배 감속, 단 그동안 숫자가 보이지 않음',
+    desc: '드래그 중 시간이 1/3 속도로 흐른다',
     tier: 'prismatic',
     family: 'time',
     hooks: {
-      // While dragging, time flows at 1/2 speed (2x slower); idle is normal,
-      // so the round always ends (no infinite-pause exploit). The "numbers
-      // hidden while dragging" drawback is applied by the UI layer (BoardView).
+      // While dragging, time flows at 1/3 speed; idle is normal, so the round
+      // always ends (no infinite-pause exploit). Numbers stay visible during the
+      // drag, so the slowed window can actually be used to scan and aim — the
+      // player can start a drag early and plan inside the slow-motion bubble.
       onTick: (s, c) =>
-        c.isDragging ? { remainingMs: s.remainingMs + c.deltaMs * (1 / 2), paused: false } : s,
+        c.isDragging ? { remainingMs: s.remainingMs + c.deltaMs * (2 / 3), paused: false } : s,
     },
   },
   // ----- combo -----

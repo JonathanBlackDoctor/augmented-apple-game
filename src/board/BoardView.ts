@@ -425,17 +425,6 @@ export class BoardView {
     }
   }
 
-  /** Mask/reveal the numerals (time.lord: while dragging, numbers become "?"). */
-  setLabelsHidden(hidden: boolean): void {
-    const b = this.board;
-    for (let i = 0; i < this.labels.length; i++) {
-      const label = this.labels[i];
-      if (!label) continue;
-      if (hidden) label.text = '?';
-      else if (b) label.text = this.labelFor(b.cells[i], b.tags?.[i] ?? 'normal');
-    }
-  }
-
   // ---- special-apple readability + FX geometry ------------------------------
 
   /** Wild apples read as ★ (matches any value); others show their number. */

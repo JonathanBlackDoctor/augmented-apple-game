@@ -360,7 +360,6 @@ export class VersusController {
     onStart: () => {
       this.match?.setDragging(true);
       if (this.match?.snapshot().myOwned.includes('time.lord')) {
-        this.board.setLabelsHidden(true);
         this.board.effects?.desat(true);
       }
     },
@@ -377,7 +376,6 @@ export class VersusController {
       if (!m) return;
       m.setDragging(false);
       if (m.snapshot().myOwned.includes('time.lord')) {
-        this.board.setLabelsHidden(false);
         this.board.effects?.desat(false);
       }
       this.board.showSelection(null, false);

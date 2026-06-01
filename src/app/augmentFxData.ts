@@ -38,7 +38,7 @@ export const ACT: Record<string, ActSpec> = {
   "time.tempo": {"kind":"gauge","glow":"teal","badges":[{"t":"+0.5초","c":"teal"}]},
   "time.warmup": {"kind":"window","glow":"gold","badges":[{"t":"1.5×","c":"gold","big":true},{"t":"8초","c":"gold"}]},
   "time.spurt": {"kind":"speed","glow":"red","badges":[{"t":"2×","c":"gold","big":true}]},
-  "time.lord": {"kind":"slow","glow":"prism","badges":[{"t":"×1.5 SLOW","c":"prism"}]},
+  "time.lord": {"kind":"slow","glow":"prism","badges":[{"t":"⅓ SPEED","c":"prism","big":true}]},
   "combo.training": {"kind":"combo","glow":"green","count":3,"badges":[{"t":"+30%","c":"green","big":true}]},
   "combo.chain": {"kind":"combo","glow":"gold","count":4,"badges":[{"t":"4＋ → 2×","c":"gold","big":true}]},
   "combo.frenzy": {"kind":"gauge","glow":"gold","ramp":true,"badges":[{"t":"+5% / 사과","c":"gold"}]},

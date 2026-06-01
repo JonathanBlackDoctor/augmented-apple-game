@@ -204,6 +204,19 @@ describe('new augments', () => {
     }
   });
 
+  it('time.lord drains the timer at 1/3 speed while dragging', () => {
+    const owned = ['time.lord'];
+    const e = createEngine();
+    e.init(cfg('lord', owned, { durationMs: 30_000 }), makeRng('lord'), buildHookBusFor(owned));
+    // tick() takes an absolute monotonic timestamp; deltas are the gaps between.
+    e.tick(0); // anchor (first tick only seeds the clock)
+    // Idle drains in real time: 600ms elapsed -> 600ms gone.
+    expect(e.tick(600).remainingMs).toBe(30_000 - 600);
+    // While dragging, the next 600ms (600 -> 1200) only costs 200ms (1/3 speed).
+    e.setDragging(true);
+    expect(e.tick(1200).remainingMs).toBe(30_000 - 600 - 200);
+  });
+
   it('rule.twenty accepts a sum of 20', () => {
     const owned = ['rule.twenty'];
     const e = createEngine();

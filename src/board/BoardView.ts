@@ -35,6 +35,11 @@ interface Popup {
 }
 
 export class BoardView {
+  // Fraction of each cell left as empty margin around the apple body, so the
+  // stem/leaf of one apple never overlaps the apple in the cell above. Subtle:
+  // the apple still fills most of its cell, only a thin gap shows between them.
+  private static readonly CELL_GAP = 0.12;
+
   readonly app: Application;
   private gridLayer = new Container();
   private selLayer = new Graphics();
@@ -328,11 +333,17 @@ export class BoardView {
   // clipped; we scale it uniformly to the cell and anchor it so the circular
   // BODY (not the padded texture) is centred on the cell. The extra height
   // overflows upward, exactly like the CSS apple's negative-top decorations.
+  //
+  // We draw the body a hair smaller than the cell (CELL_GAP) so a thin margin
+  // sits on every side. Without it, apples are packed edge-to-edge and a lower
+  // apple's stem/leaf — which overflows upward — collides with the body of the
+  // apple directly above. The margin lets those decorations breathe instead.
   private sizeBody(body: Sprite, cell: number): void {
     const ratio = 1 + APPLE_TEX_PAD.top + APPLE_TEX_PAD.bottom;
+    const draw = cell * (1 - BoardView.CELL_GAP);
     body.anchor.set(0.5, (APPLE_TEX_PAD.top + 0.5) / ratio);
-    body.width = cell;
-    body.height = cell * ratio;
+    body.width = draw;
+    body.height = draw * ratio;
   }
 
   // Quicksand cream numeral, coloured per the candy-gloss variant (apple-spec

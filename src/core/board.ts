@@ -37,9 +37,9 @@ export function generateBoard(cfg: RoundConfig): Board {
   const rows = cfg.rows;
   const n = cols * rows;
   const rng: SeededRng = makeRng(cfg.seed).fork('board');
-  // Canonical landscape dimensions (the long side is the width).
+  // Canonical landscape width (the long side). The canonical board is cw wide
+  // and the short side tall, holding the same n cells in row-major order.
   const cw = Math.max(cols, rows);
-  const ch = Math.min(cols, rows);
   // Draw the canonical landscape values in row-major order (same sequence the
   // old code used for a landscape board, so wide boards are byte-identical).
   const canon: AppleValue[] = new Array<AppleValue>(n);

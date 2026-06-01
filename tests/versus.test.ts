@@ -52,7 +52,9 @@ describe('VersusMatch — you vs AI, full headless match', () => {
     let now = 0;
     // The match opens on the start-of-match augment pick; take it to reach round 1.
     if (m.snapshot().phase === 'augment') m.pickAugment(m.snapshot().offers[0], now);
-    while (m.snapshot().phase === 'round' && now < 5000) now = (m.tick(now), now + 50);
+    // The pick opens a 3·2·1 pre-round countdown before the round runs; advance
+    // through preRound + round until the mid-round review opens.
+    while (m.snapshot().phase !== 'roundCheck' && now < 8000) now = (m.tick(now), now + 50);
     const snap = m.snapshot();
     expect(snap.phase).toBe('roundCheck');
     expect(snap.lastRound).not.toBeNull();
@@ -73,8 +75,12 @@ describe('VersusMatch — you vs AI, full headless match', () => {
     while (m.snapshot().phase !== 'augment' && now < 10000) now = (m.tick(now), now + 50);
     expect(m.snapshot().phase).toBe('augment');
     const expected = m.snapshot().offers[0];
-    // never call pickAugment: let the timer fire
+    // never call pickAugment: let the timer fire (auto-pick → preRound → round)
     while (m.snapshot().phase === 'augment' && now < 20000) now = (m.tick(now), now + 50);
+    // The auto-pick lands the offer immediately; the round itself follows the
+    // 3·2·1 pre-round countdown.
+    expect(m.snapshot().myOwned).toContain(expected);
+    while (m.snapshot().phase === 'preRound' && now < 25000) now = (m.tick(now), now + 50);
     const snap = m.snapshot();
     expect(snap.phase).toBe('round'); // advanced into round 2
     expect(snap.myOwned).toContain(expected);

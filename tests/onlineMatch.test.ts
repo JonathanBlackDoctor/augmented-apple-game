@@ -143,6 +143,46 @@ describe('OnlineMatch — per-client board orientation', () => {
   });
 });
 
+describe('OnlineMatch — both picked collapses the augment window early', () => {
+  it('jumps from augment to the pre-round countdown once both sides have picked', async () => {
+    const backend = new InMemoryNetBackend();
+    const sa = new BackendNetSession(backend);
+    const sb = new BackendNetSession(backend);
+    await sa.join('ROOMBP', A);
+    await sb.join('ROOMBP', B);
+    // A long augment window so an early collapse is observable well before timeout.
+    const opts = { roomId: 'ROOMBP', durationMs: 2000, countdownMs: 500, augmentMs: 10_000, preRoundMs: 200, roundCheckMs: 600 };
+    const host = new OnlineMatch({ session: sa, role: 'host', self: A, ...opts });
+    const guest = new OnlineMatch({ session: sb, role: 'guest', self: B, ...opts });
+    await host.start();
+    await guest.start();
+    let now = 0;
+    // Drive into the (start-of-match) augment window.
+    for (let i = 0; i < 100 && host.snapshot().phase !== 'augment'; i++) {
+      host.tick(now);
+      guest.tick(now);
+      now += 50;
+    }
+    expect(host.snapshot().phase).toBe('augment');
+    expect(guest.snapshot().phase).toBe('augment');
+    const tBoth = now;
+    // Both lock in immediately, far inside the 10s window.
+    host.pickAugment(host.snapshot().offers[0]);
+    guest.pickAugment(guest.snapshot().offers[0]);
+    // Within a couple of ticks (events fan out + each side collapses its own
+    // schedule) both should leave the augment window for the pre-round countdown,
+    // long before the 10s auto-pick deadline.
+    for (let i = 0; i < 10; i++) {
+      host.tick(now);
+      guest.tick(now);
+      now += 50;
+    }
+    expect(now - tBoth).toBeLessThan(1000); // collapsed early, not at +10s
+    expect(host.snapshot().phase).not.toBe('augment');
+    expect(guest.snapshot().phase).not.toBe('augment');
+  });
+});
+
 describe('OnlineMatch — start-of-match pick + reroll', () => {
   it('opens on a start pick (round 0) and reroll spends the one token', async () => {
     const backend = new InMemoryNetBackend();

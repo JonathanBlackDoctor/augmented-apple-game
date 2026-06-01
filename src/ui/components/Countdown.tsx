@@ -14,7 +14,7 @@ function reduced(): boolean {
   }
 }
 
-export function Countdown({ onDone }: { onDone: () => void }) {
+export function Countdown({ onDone, durationMs }: { onDone: () => void; durationMs?: number }) {
   const [n, setN] = useState(3);
   const rm = reduced();
   // Keep the latest callback without retriggering the step timer each render.
@@ -25,10 +25,20 @@ export function Countdown({ onDone }: { onDone: () => void }) {
       doneRef.current();
       return;
     }
-    const ms = rm ? 250 : n === 0 ? 600 : 800;
+    // When a total duration is supplied (schedule-driven pre-round countdowns),
+    // pace the 3·2·1·시작 beats to fill it so the overlay clears as the round
+    // begins — even under reduced motion, where self-paced beats would otherwise
+    // finish early and leave a frozen gap before play starts.
+    const ms = durationMs
+      ? Math.round(durationMs * (n === 0 ? 0.19 : 0.27))
+      : rm
+        ? 250
+        : n === 0
+          ? 600
+          : 800;
     const id = setTimeout(() => setN((x) => x - 1), ms);
     return () => clearTimeout(id);
-  }, [n, rm]);
+  }, [n, rm, durationMs]);
   if (n < 0) return null;
   return (
     <div className="overlay light countdown-overlay">

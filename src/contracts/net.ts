@@ -27,6 +27,9 @@ export type NetEvent =
   | { t: 'sabotage'; ev: SabotageEvent }
   | { t: 'augment-pick'; player: PlayerId; round: number; augId: string }
   | { t: 'round-result'; player: PlayerId; round: number; score: number }
+  // Clash-Royale-style expression — sent when a player taps an emote so the
+  // opponent sees a matching floating bubble (purely cosmetic, no game effect).
+  | { t: 'emote'; player: PlayerId; emoteId: string }
   // Host announces the match start; cols/rows carry the host-chosen board aspect
   // so both clients render the same shared-seed board (portrait host → tall grid).
   | { t: 'phase'; phase: MatchPhase; round: number; startAtServerTs?: number; cols?: number; rows?: number }

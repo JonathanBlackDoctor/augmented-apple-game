@@ -215,6 +215,37 @@ describe('OnlineMatch — start-of-match pick + reroll', () => {
   });
 });
 
+describe('OnlineMatch — emotes', () => {
+  it('relays an emote to the opponent as a seq bump + id', async () => {
+    const backend = new InMemoryNetBackend();
+    const sa = new BackendNetSession(backend);
+    const sb = new BackendNetSession(backend);
+    await sa.join('ROOMEMO', A);
+    await sb.join('ROOMEMO', B);
+    const host = new OnlineMatch({ session: sa, role: 'host', self: A, roomId: 'ROOMEMO', ...FAST });
+    const guest = new OnlineMatch({ session: sb, role: 'guest', self: B, roomId: 'ROOMEMO', ...FAST });
+    await host.start();
+    await guest.start();
+    // Both sides start with no opponent emote.
+    expect(host.snapshot().oppEmoteSeq).toBe(0);
+    expect(guest.snapshot().oppEmoteSeq).toBe(0);
+    // Host emotes → the guest sees it; the host's own snapshot is unchanged (the
+    // local bubble is driven by the store, not the opponent-emote fields).
+    host.sendEmote('lol');
+    host.tick(0);
+    guest.tick(0);
+    expect(guest.snapshot().oppEmoteSeq).toBe(1);
+    expect(guest.snapshot().oppEmoteId).toBe('lol');
+    expect(host.snapshot().oppEmoteSeq).toBe(0);
+    // A second emote bumps the seq again so a fresh bubble spawns.
+    host.sendEmote('fire');
+    host.tick(50);
+    guest.tick(50);
+    expect(guest.snapshot().oppEmoteSeq).toBe(2);
+    expect(guest.snapshot().oppEmoteId).toBe('fire');
+  });
+});
+
 describe('OnlineMatch — robustness', () => {
   it('host wins by forfeit when the opponent stops responding', async () => {
     const backend = new InMemoryNetBackend();

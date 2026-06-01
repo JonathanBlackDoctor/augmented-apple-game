@@ -94,7 +94,7 @@ export const AI_LEVELS: AiLevel[] = [
     title: '명품 붉은 품종',
     avatar: '❤️',
     taunt: '품격의 차이를 보여주마.',
-    tuning: { minDelayMs: 2050, maxDelayMs: 3300, pickTop: 5, blunderChance: 0.3 },
+    tuning: { minDelayMs: 1750, maxDelayMs: 2875, pickTop: 5, blunderChance: 0.25 },
     // Proud & elegant: composed, faintly haughty smirks — and more of them.
     emote: { chattiness: 0.64, greet: ['cool'], ahead: ['smug', 'cool'], even: ['cool', 'wink'], behind: ['shock', 'angry'], roundWin: ['smug', 'cool'], roundLoss: ['shock'], augment: ['cool', 'smug'] },
   },

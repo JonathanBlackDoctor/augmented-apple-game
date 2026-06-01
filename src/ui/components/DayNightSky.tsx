@@ -298,12 +298,18 @@ export function DayNightSky() {
         // Ambient day: advance continuously (no easing avoids a 1→0 wrap jolt).
         autoP = (autoP + dt / CYCLE) % 1;
         cur = autoP;
-      } else {
+      } else if (st.phase === 'round') {
         // Follow the live round clock; easing only softens the home→round handoff.
         const target = roundTarget(st.roundIndex, st.totalRounds, st.remainingMs, st.durationMs);
         cur += (target - cur) * 0.08;
         if (Math.abs(target - cur) < 0.0005) cur = target;
         autoP = cur; // keep the ambient cycle in sync for a smooth return home
+      } else {
+        // Between rounds (라운드 점검 · 증강 선택 · 카운트다운 · 결과): the round clock is
+        // frozen, so pin the sky dead-still at this boundary's time of day instead
+        // of easing — no drift and no jump while the review/pick overlays are up.
+        cur = roundTarget(st.roundIndex, st.totalRounds, st.remainingMs, st.durationMs);
+        autoP = cur;
       }
       render(cur);
       raf = requestAnimationFrame(frame);

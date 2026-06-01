@@ -8,4 +8,6 @@ export {
   rollOfferTiers,
   buildHookBusFor,
   createAugmentRuntime,
+  SET_SYNERGY_BONUS,
+  SET_SYNERGY_THRESHOLD,
 } from './runtime';

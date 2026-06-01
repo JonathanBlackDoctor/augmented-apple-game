@@ -6,6 +6,7 @@ import type { CellTag } from '../contracts';
 import type { BoardView } from '../board/BoardView';
 import type { FxTag } from '../board/BoardFx';
 import { ACT, FX_COL, type FxColorKey } from './augmentFxData';
+import { byId } from '../augments';
 
 const PRIMES = new Set([11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47]);
 const c = (k: FxColorKey): [string, string, string] => FX_COL[k];
@@ -72,14 +73,14 @@ export function planClear(owned: string[], ctx: FxClearCtx): FxDir[] {
     tags.push({ t: '20 결단 ×2', c: c('gold')[1] });
   } else if (has('rule.kindness') && ctx.sum === 9) {
     dirs.push({ k: 'stamp', text: '허용', bd: c('green')[0], fg: c('green')[1] });
-  } else if (has('rule.eleven') && PRIMES.has(ctx.sum)) {
+  } else if (has('rule.eleven') && ctx.sum <= 20 && PRIMES.has(ctx.sum)) {
     dirs.push({ k: 'stamp', text: `소수 ${ctx.sum}`, bd: c('prism')[0], fg: c('prism')[1] });
   } else if (has('rule.alchemy') && ctx.sum % 5 === 0 && ctx.sum !== 10) {
     dirs.push({ k: 'stamp', text: `×5 ${ctx.sum}`, bd: c('prism')[0], fg: c('prism')[1] });
   }
 
   // Combo / score augments — fire on their observable trigger condition.
-  if (has('combo.massacre') && ctx.count >= 5) {
+  if (has('combo.massacre') && ctx.count >= 4) {
     dirs.push({ k: 'flash' }, { k: 'shake' }, { k: 'particles', color: c('gold')[0], n: 18 });
     tags.push({ t: '대량 ×3', c: c('gold')[1] });
   }
@@ -96,10 +97,21 @@ export function planClear(owned: string[], ctx: FxClearCtx): FxDir[] {
   if (has('risk.glasscannon')) tags.push({ t: '대포 ×3', c: c('prism')[1] });
   if (has('risk.tightrope')) tags.push({ t: '외줄 ×1.6', c: c('gold')[1] });
   if (has('risk.gambler')) {
-    // Gambler is the only sub-1 multiplier, so final<base ⇔ the 0.5× roll landed.
+    // Gambler is the only sub-1 multiplier, so final<base ⇔ the 0× roll landed.
     const won = ctx.finalScore >= ctx.baseScore;
-    dirs.push({ k: 'dice', text: won ? '3×' : '0.5×', color: won ? c('green')[1] : c('red')[1] });
+    dirs.push({ k: 'dice', text: won ? '10×' : '0×', color: won ? c('green')[1] : c('red')[1] });
   }
+
+  // Set synergy — 3+ augments of one family grant +20% (already folded into
+  // finalScore by the core); surface it as a tag so the player sees the bonus.
+  const famCounts = new Map<string, number>();
+  for (const id of owned) {
+    const a = byId(id);
+    if (a) famCounts.set(a.family, (famCounts.get(a.family) ?? 0) + 1);
+  }
+  let synergySets = 0;
+  for (const cnt of famCounts.values()) if (cnt >= 3) synergySets++;
+  if (synergySets > 0) tags.push({ t: `세트 +${synergySets * 20}%`, c: c('green')[1] });
 
   // Headline: the gained score + contributing tags, tinted by the net multiplier.
   const m = ctx.comboMultiplier;

@@ -193,14 +193,14 @@ describe('exploit fixes', () => {
 });
 
 describe('new augments', () => {
-  it('combo.massacre triples only when clearing 5+ at once', () => {
+  it('combo.massacre triples only when clearing 4+ at once', () => {
     const owned = ['combo.massacre'];
     const e = createEngine();
     e.init(cfg('mass', owned), makeRng('mass'), buildHookBusFor(owned));
     const r = findValidRect(e.getBoard(), (rect) => e.evaluate(rect))!;
     const res = e.commit({ seq: 1, rect: r, tMs: 0 });
     if (!('rejected' in res)) {
-      expect(res.finalScore).toBe(res.count >= 5 ? res.count * 3 : res.count);
+      expect(res.finalScore).toBe(res.count >= 4 ? res.count * 3 : res.count);
     }
   });
 
@@ -298,5 +298,48 @@ describe('new augments', () => {
       e.commit(a);
     }
     expect(e.replay(actions)).toBe(e.getScore());
+  });
+});
+
+describe('augment balance tweaks', () => {
+  const rule = (id: string) => CATALOG.find((a) => a.id === id)!;
+  const selCtx = (sum: number) =>
+    ({ sum, cells: [0, 1], board: {} as Board, rect: {} as Rect, targetSum: 10 }) as unknown as Parameters<
+      NonNullable<ReturnType<typeof rule>['hooks']['validateSelection']>
+    >[0];
+
+  it("'소수의 길' accepts 10–20 primes but rejects primes above 20", () => {
+    const eleven = rule('rule.eleven').hooks.validateSelection!;
+    for (const ok of [11, 13, 17, 19]) expect(eleven(selCtx(ok))?.accept).toBe(true);
+    for (const no of [9, 10, 21, 23, 29]) expect(eleven(selCtx(no))).toBeUndefined();
+  });
+
+  it("'도박사' rolls 10× on a hit (<0.2) and 0× on a miss", () => {
+    const gambler = rule('risk.gambler').hooks.onClear!;
+    const base = { cells: [0], count: 1, baseScore: 4, finalScore: 4, comboMultiplier: 1 };
+    const ctxWith = (roll: number) =>
+      ({ rng: { next: () => roll } }) as unknown as Parameters<typeof gambler>[1];
+    expect(gambler(base, ctxWith(0.1)).finalScore).toBe(40); // 4 × 10
+    expect(gambler(base, ctxWith(0.5)).finalScore).toBe(0); // 4 × 0
+  });
+
+  it('grants a +20% set bonus once a family reaches 3 augments', () => {
+    const base = { cells: [0], count: 1, baseScore: 10, finalScore: 10, comboMultiplier: 1 };
+    const clearCtx = { comboCount: 1, grantTimeMs: () => {} } as unknown as Parameters<
+      NonNullable<ReturnType<typeof rule>['hooks']['onClear']>
+    >[1];
+    // Three 'time'-family augments that don't change the score at comboCount 1.
+    const trio = buildHookBusFor(['time.relief', 'time.countdown', 'time.tempo']);
+    expect((trio.run('onClear', base, clearCtx) as typeof base).finalScore).toBe(12); // 10 × 1.2
+    // Only two of a family → no synergy.
+    const pair = buildHookBusFor(['time.relief', 'time.countdown']);
+    expect((pair.run('onClear', base, clearCtx) as typeof base).finalScore).toBe(10);
+  });
+
+  it('reroll never re-offers the cards being rerolled', () => {
+    const first = rollOfferTiers(['silver'], makeRng('reroll-a'), []);
+    const rerolled = rollOfferTiers(['silver'], makeRng('reroll-b'), [], first);
+    expect(new Set(rerolled).size).toBe(3);
+    for (const id of rerolled) expect(first).not.toContain(id);
   });
 });

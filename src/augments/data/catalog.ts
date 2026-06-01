@@ -141,12 +141,12 @@ export const CATALOG: Augment[] = [
   {
     id: 'combo.massacre',
     name: '대량 제거',
-    desc: '5개 이상 한 번에 제거 시 점수 3배',
+    desc: '4개 이상 한 번에 제거 시 점수 3배',
     tier: 'gold',
     family: 'combo',
     hooks: {
       onClear: (r) =>
-        r.count >= 5
+        r.count >= 4
           ? { ...r, finalScore: r.finalScore * 3, comboMultiplier: r.comboMultiplier * 3 }
           : r,
     },
@@ -294,13 +294,15 @@ export const CATALOG: Augment[] = [
   {
     id: 'rule.eleven',
     name: '소수의 길',
-    desc: '합이 10 이상의 소수면 인정 (11·13·17·19·23…)',
+    desc: '합이 10 이상 20 이하의 소수면 인정 (11·13·17·19)',
     tier: 'prismatic',
     family: 'rule',
     conflictsWith: ['rule.kindness', 'rule.alchemy'],
     hooks: {
       validateSelection: (c) =>
-        c.sum >= 10 && isPrime(c.sum) && c.cells.length > 0 ? { accept: true } : undefined,
+        c.sum >= 10 && c.sum <= 20 && isPrime(c.sum) && c.cells.length > 0
+          ? { accept: true }
+          : undefined,
     },
   },
   {
@@ -357,12 +359,12 @@ export const CATALOG: Augment[] = [
   {
     id: 'risk.gambler',
     name: '도박사',
-    desc: '제거마다 50% 점수 3배, 50% 점수 0.5배 (도박)',
+    desc: '제거마다 20% 확률로 점수 10배, 80% 확률로 0배 (도박)',
     tier: 'prismatic',
     family: 'risk',
     hooks: {
       onClear: (r, c) => {
-        const mult = c.rng.next() < 0.5 ? 3 : 0.5;
+        const mult = c.rng.next() < 0.2 ? 10 : 0;
         return { ...r, finalScore: Math.round(r.finalScore * mult), comboMultiplier: r.comboMultiplier * mult };
       },
     },

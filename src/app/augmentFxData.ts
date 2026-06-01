@@ -54,5 +54,5 @@ export const ACT: Record<string, ActSpec> = {
   "rule.twenty": {"kind":"allow","glow":"gold","stamp":"20","badges":[{"t":"합 20","c":"gold"},{"t":"×2","c":"gold","big":true}]},
   "risk.glasscannon": {"kind":"speed","glow":"prism","shatter":true,"badges":[{"t":"×3","c":"prism","big":true},{"t":"타이머 2×","c":"red"}]},
   "risk.tightrope": {"kind":"gauge","glow":"gold","drain":true,"badges":[{"t":"1.6×","c":"gold","big":true},{"t":"−8초","c":"red"}]},
-  "risk.gambler": {"kind":"dice","glow":"prism","results":[{"t":"3×","c":"green"},{"t":"0.5×","c":"red"}]},
+  "risk.gambler": {"kind":"dice","glow":"prism","results":[{"t":"10×","c":"green"},{"t":"0×","c":"red"}]},
 };

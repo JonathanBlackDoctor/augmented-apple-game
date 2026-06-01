@@ -302,12 +302,13 @@ export class VersusMatch {
     this.phaseRemainingMs = this.opts.augmentMs;
   }
 
-  /** (Re)roll the human's offer for the current offerRound + offerSalt. */
-  private rollMyOffer(): void {
+  /** (Re)roll the human's offer for the current offerRound + offerSalt. `exclude`
+   *  carries the offer being rerolled so the fresh draw avoids those same cards. */
+  private rollMyOffer(exclude: string[] = []): void {
     const tiers = versusOfferTiers(this.offerRound);
     this.offerTier = tiers[tiers.length - 1]; // badge shows the strongest tier on offer
     const seed = `${this.roundSeed(this.offerRound)}:offer:me:s${this.offerSalt}`;
-    this.offers = rollOfferTiers(tiers, makeRng(seed), this.myOwned);
+    this.offers = rollOfferTiers(tiers, makeRng(seed), this.myOwned, exclude);
   }
 
   /** Spend a reroll token to draw a fresh offer for the current pick. Returns
@@ -315,8 +316,9 @@ export class VersusMatch {
   reroll(_nowMs?: number): boolean {
     if (this.phase !== 'augment' || this.rerollsLeft <= 0) return false;
     this.rerollsLeft--;
+    const prev = this.offers.slice(); // avoid re-offering the cards being rerolled
     this.offerSalt++;
-    this.rollMyOffer();
+    this.rollMyOffer(prev);
     return true;
   }
 

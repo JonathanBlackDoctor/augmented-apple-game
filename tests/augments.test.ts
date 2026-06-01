@@ -124,7 +124,7 @@ describe('augment hook effects', () => {
     else expect(true).toBe(true); // board had no adjacent 9-pair; effect covered elsewhere
   });
 
-  it('glasscannon doubles clear score', () => {
+  it('glasscannon triples clear score', () => {
     const owned = ['risk.glasscannon'];
     const e = createEngine();
     e.init(cfg('triple', owned), makeRng('triple'), buildHookBusFor(owned));
@@ -132,8 +132,8 @@ describe('augment hook effects', () => {
     const before = e.getScore();
     const res = e.commit({ seq: 1, rect: r, tMs: 0 });
     if (!('rejected' in res)) {
-      expect(res.finalScore).toBe(res.count * 2);
-      expect(e.getScore()).toBe(before + res.count * 2);
+      expect(res.finalScore).toBe(res.count * 3);
+      expect(e.getScore()).toBe(before + res.count * 3);
     }
   });
 });

@@ -47,7 +47,20 @@ export function OnlineScreen() {
     if (s.myName && !nick) setNick(s.myName);
   }, [s.myName, nick]);
 
-  const copyLink = (): void => {
+  const shareLink = async (): Promise<void> => {
+    const shareData = {
+      title: '어그멘티드 애플 게임 초대',
+      text: '같이 1:1 대결해요! 아래 링크로 입장하세요.',
+      url: s.link,
+    };
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+        return;
+      } catch {
+        // 사용자가 공유를 취소했거나 공유에 실패한 경우 — 클립보드 복사로 폴백
+      }
+    }
     void navigator.clipboard?.writeText(s.link);
   };
   const goHome = (): void => {
@@ -156,8 +169,8 @@ export function OnlineScreen() {
               <>
                 <h2>방 코드</h2>
                 <div className="room-code">{s.roomCode}</div>
-                <button className="btn primary" onClick={copyLink}>
-                  초대 링크 복사
+                <button className="btn primary" onClick={() => void shareLink()}>
+                  초대 링크 공유
                 </button>
                 {s.noOpponent ? (
                   <>

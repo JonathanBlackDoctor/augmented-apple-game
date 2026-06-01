@@ -109,7 +109,10 @@ export class VersusController {
     useVersusStore
       .getState()
       .setOpponent(`Lv.${this.level} ${info.name}`, info.avatar, info.title, false);
-    this.board.setBoard(this.match.myBoard());
+    // Don't paint the round-0 apples yet: the start-of-match augment pick + 3·2·1
+    // intro come first, and drawing the board here flashes the apples for a frame
+    // before those overlays mount. The board is drawn when the round actually
+    // begins (preRound → round), matching the online flow.
     this.board.showSelection(null, false);
     cancelAnimationFrame(this.raf); // avoid a double loop on restart
     this.loop();

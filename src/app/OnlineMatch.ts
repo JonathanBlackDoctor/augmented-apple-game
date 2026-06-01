@@ -407,12 +407,13 @@ export class OnlineMatch {
     }
   }
 
-  /** (Re)draw this client's offer for the pick preceding `forRound`. */
-  private rollMyOffer(forRound: number): void {
+  /** (Re)draw this client's offer for the pick preceding `forRound`. `exclude`
+   *  carries the offer being rerolled so the fresh draw avoids those same cards. */
+  private rollMyOffer(forRound: number, exclude: string[] = []): void {
     const tiers = versusOfferTiers(forRound);
     this.offerTier = tiers[tiers.length - 1]; // badge shows the strongest tier on offer
     const seed = `${this.roundSeed(forRound)}:offer:${this.uid}:s${this.offerSalt}`;
-    this.offers = rollOfferTiers(tiers, makeRng(seed), this.myOwned);
+    this.offers = rollOfferTiers(tiers, makeRng(seed), this.myOwned, exclude);
   }
 
   /** Spend a reroll token to re-draw the current offer (local only — the network
@@ -421,8 +422,9 @@ export class OnlineMatch {
   reroll(): boolean {
     if (this.phase !== 'augment' || this.myPicked || this.rerollsLeft <= 0) return false;
     this.rerollsLeft--;
+    const prev = this.offers.slice(); // avoid re-offering the cards being rerolled
     this.offerSalt++;
-    this.rollMyOffer(this.round);
+    this.rollMyOffer(this.round, prev);
     return true;
   }
 

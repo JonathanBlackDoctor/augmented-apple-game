@@ -55,23 +55,74 @@ function sampleN(ids: string[], k: number, rng: SeededRng): string[] {
 }
 
 /** Offer 3 distinct augment ids drawn from the union of `tiers`, excluding
- *  owned/conflicts. Cards keep their own tier, so a mixed pool yields a mix. */
-export function rollOfferTiers(tiers: AugTier[], rng: SeededRng, owned: string[]): string[] {
+ *  owned/conflicts. Cards keep their own tier, so a mixed pool yields a mix.
+ *  `exclude` (e.g. the offer being rerolled) is avoided first so a reroll never
+ *  shows the same cards again; it only falls back to those ids when the fresh
+ *  pool can't fill all 3 slots, so the offer is always 3 distinct cards. */
+export function rollOfferTiers(
+  tiers: AugTier[],
+  rng: SeededRng,
+  owned: string[],
+  exclude: string[] = [],
+): string[] {
   const pool = eligible(tiers, owned).map((a) => a.id);
-  const picks = sampleN(pool, 3, rng);
-  // Degrade gracefully if the pool is exhausted (keeps the UI to 3 slots).
+  const excludeSet = new Set(exclude);
+  const fresh = pool.filter((id) => !excludeSet.has(id));
+  const picks = sampleN(fresh, 3, rng);
+  // Not enough fresh cards (tiny pool after a reroll) → fill from the excluded
+  // ones, still distinct, rather than leaving empty slots.
+  if (picks.length < 3) {
+    const stale = pool.filter((id) => excludeSet.has(id) && !picks.includes(id));
+    picks.push(...sampleN(stale, 3 - picks.length, rng));
+  }
+  // Last-resort degrade if the whole pool is exhausted (keeps the UI to 3 slots).
   while (picks.length < 3 && pool.length > 0) picks.push(pool[picks.length % pool.length]);
   return picks;
 }
 
 /** Offer 3 distinct augment ids of a single `tier`, excluding owned/conflicts. */
-export function rollOffer(tier: AugTier, rng: SeededRng, owned: string[]): string[] {
-  return rollOfferTiers([tier], rng, owned);
+export function rollOffer(
+  tier: AugTier,
+  rng: SeededRng,
+  owned: string[],
+  exclude: string[] = [],
+): string[] {
+  return rollOfferTiers([tier], rng, owned, exclude);
+}
+
+/** Owning 3+ augments of the same family grants a permanent +20% score bonus
+ *  (stacking per family that reaches the threshold). Folded into the hook bus as
+ *  a synthetic augment so every mode (solo/versus/online) gets it for free. */
+const SET_SYNERGY_BONUS = 0.2;
+const SET_SYNERGY_THRESHOLD = 3;
+function familySetSynergy(list: Augment[]): Augment | null {
+  const counts = new Map<string, number>();
+  for (const a of list) counts.set(a.family, (counts.get(a.family) ?? 0) + 1);
+  let sets = 0;
+  for (const n of counts.values()) if (n >= SET_SYNERGY_THRESHOLD) sets++;
+  if (sets === 0) return null;
+  const mult = (1 + SET_SYNERGY_BONUS) ** sets;
+  return {
+    id: 'synergy.set',
+    name: '세트 시너지',
+    desc: '같은 계열 증강 3개 이상 보유 시 점수 +20%',
+    tier: 'silver',
+    family: 'combo',
+    hooks: {
+      onClear: (r) => ({
+        ...r,
+        finalScore: Math.round(r.finalScore * mult),
+        comboMultiplier: r.comboMultiplier * mult,
+      }),
+    },
+  };
 }
 
 export function buildHookBusFor(owned: string[]): AugmentHookBus {
   const list = owned.map(byId).filter((a): a is Augment => Boolean(a));
-  return createHookBus(list);
+  // Apply the set-synergy multiplier last so it scales the fully-augmented score.
+  const synergy = familySetSynergy(list);
+  return createHookBus(synergy ? [...list, synergy] : list);
 }
 
 /** Stateful AugmentRuntime per the contract (used by tests / future net sync). */

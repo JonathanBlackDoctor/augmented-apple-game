@@ -28,8 +28,8 @@ describe('planClear (in-game augment FX)', () => {
   it("reads the gambler's roll from final vs base score", () => {
     const win = find(planClear(['risk.gambler'], ctx({ baseScore: 6, finalScore: 12 })), 'dice');
     const lose = find(planClear(['risk.gambler'], ctx({ baseScore: 6, finalScore: 3 })), 'dice');
-    expect(win?.k === 'dice' && win.text).toBe('3×');
-    expect(lose?.k === 'dice' && lose.text).toBe('0.5×');
+    expect(win?.k === 'dice' && win.text).toBe('10×');
+    expect(lose?.k === 'dice' && lose.text).toBe('0×');
   });
 
   it('stamps rule clears keyed off the sum', () => {
@@ -43,13 +43,13 @@ describe('planClear (in-game augment FX)', () => {
     expect(find(planClear([], ctx({ sum: 9 })), 'stamp')).toBeUndefined();
   });
 
-  it('bursts on a 5+ massacre clear', () => {
-    const d = planClear(['combo.massacre'], ctx({ count: 6 }));
+  it('bursts on a 4+ massacre clear', () => {
+    const d = planClear(['combo.massacre'], ctx({ count: 4 }));
     expect(find(d, 'flash')).toBeDefined();
     expect(find(d, 'shake')).toBeDefined();
     expect(find(d, 'particles')).toBeDefined();
     // not below the threshold
-    expect(find(planClear(['combo.massacre'], ctx({ count: 4 })), 'flash')).toBeUndefined();
+    expect(find(planClear(['combo.massacre'], ctx({ count: 3 })), 'flash')).toBeUndefined();
   });
 
   it('sparkles special apples and tags the bonus', () => {

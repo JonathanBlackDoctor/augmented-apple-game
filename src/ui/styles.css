@@ -720,28 +720,61 @@ body {
   margin: 0;
 }
 .aug-reroll {
-  margin-top: 10px;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--ink);
-  background: #f3f4f7;
-  border: 1px solid #d9dde3;
+  margin-top: 14px;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  color: #fff;
+  background: linear-gradient(135deg, #ff8a4c 0%, #e8472b 100%);
+  border: 2px solid rgba(255, 255, 255, 0.6);
   border-radius: 999px;
-  padding: 6px 16px;
+  padding: 11px 26px;
   cursor: pointer;
+  box-shadow:
+    0 8px 20px rgba(232, 71, 43, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.55);
+  animation: rerollPulse 1.8s ease-in-out infinite;
   transition:
     background 0.12s ease,
-    transform 0.08s ease;
+    transform 0.08s ease,
+    box-shadow 0.12s ease;
 }
 .aug-reroll:hover:not(:disabled) {
-  background: #e8eaef;
+  background: linear-gradient(135deg, #ff9a60 0%, #f0512f 100%);
+  box-shadow:
+    0 10px 26px rgba(232, 71, 43, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.55);
+  transform: translateY(-1px);
 }
 .aug-reroll:active:not(:disabled) {
   transform: scale(0.96);
 }
 .aug-reroll:disabled {
-  opacity: 0.45;
+  color: #fff;
+  background: #c4c8d0;
+  border-color: rgba(255, 255, 255, 0.5);
+  box-shadow: none;
+  opacity: 0.6;
   cursor: not-allowed;
+  animation: none;
+}
+@keyframes rerollPulse {
+  0%,
+  100% {
+    box-shadow:
+      0 8px 20px rgba(232, 71, 43, 0.45),
+      inset 0 1px 0 rgba(255, 255, 255, 0.55);
+  }
+  50% {
+    box-shadow:
+      0 8px 26px rgba(232, 71, 43, 0.7),
+      inset 0 1px 0 rgba(255, 255, 255, 0.55);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .aug-reroll {
+    animation: none;
+  }
 }
 .tier-badge {
   display: inline-block;

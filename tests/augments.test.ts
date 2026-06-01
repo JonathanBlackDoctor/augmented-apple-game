@@ -105,23 +105,23 @@ describe('augment hook effects', () => {
     expect(e.tick(0).remainingMs).toBe(18500);
   });
 
-  it('rule.kindness accepts a sum of 9', () => {
-    // craft via engine board scan: find a rect summing to 9 (invalid by default)
+  it('rule.kindness accepts a sum of 11', () => {
+    // craft via engine board scan: find a rect summing to 11 (invalid by default)
     const e = createEngine();
     const owned = ['rule.kindness'];
     e.init(cfg('kind', owned), makeRng('kind'), buildHookBusFor(owned));
     const b = e.getBoard();
-    let nineRect: Rect | null = null;
-    for (let i = 0; i < b.cells.length && !nineRect; i++) {
+    let elevenRect: Rect | null = null;
+    for (let i = 0; i < b.cells.length && !elevenRect; i++) {
       const col = i % b.cols;
       if (col < b.cols - 1) {
         const s = b.cells[i] + b.cells[i + 1];
-        if (s === 9 && b.cells[i] > 0 && b.cells[i + 1] > 0)
-          nineRect = { x0: col, y0: Math.floor(i / b.cols), x1: col + 1, y1: Math.floor(i / b.cols) };
+        if (s === 11 && b.cells[i] > 0 && b.cells[i + 1] > 0)
+          elevenRect = { x0: col, y0: Math.floor(i / b.cols), x1: col + 1, y1: Math.floor(i / b.cols) };
       }
     }
-    if (nineRect) expect(e.evaluate(nineRect).valid).toBe(true);
-    else expect(true).toBe(true); // board had no adjacent 9-pair; effect covered elsewhere
+    if (elevenRect) expect(e.evaluate(elevenRect).valid).toBe(true);
+    else expect(true).toBe(true); // board had no adjacent 11-pair; effect covered elsewhere
   });
 
   it('glasscannon doubles clear score', () => {

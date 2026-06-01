@@ -34,7 +34,7 @@ describe('planClear (in-game augment FX)', () => {
 
   it('stamps rule clears keyed off the sum', () => {
     const twenty = find(planClear(['rule.twenty'], ctx({ sum: 20 })), 'stamp');
-    const kind = find(planClear(['rule.kindness'], ctx({ sum: 9 })), 'stamp');
+    const kind = find(planClear(['rule.kindness'], ctx({ sum: 11 })), 'stamp');
     const prime = find(planClear(['rule.eleven'], ctx({ sum: 13 })), 'stamp');
     expect(twenty?.k === 'stamp' && twenty.text).toBe('20');
     expect(kind?.k === 'stamp' && kind.text).toBe('허용');

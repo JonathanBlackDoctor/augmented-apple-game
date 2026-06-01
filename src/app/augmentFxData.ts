@@ -48,7 +48,7 @@ export const ACT: Record<string, ActSpec> = {
   "board.gem": {"kind":"spawn","glow":"blue","spawn":{"type":"gem","count":1},"badges":[{"t":"+20","c":"blue","big":true}]},
   "board.bomb": {"kind":"spawn","glow":"dark","spawn":{"type":"bomb","count":2},"badges":[{"t":"💥 상하좌우","c":"silver"}]},
   "board.rainbow": {"kind":"spawn","glow":"prism","spawn":{"type":"wild","count":5},"badges":[{"t":"빈칸 채움","c":"prism"}]},
-  "rule.kindness": {"kind":"allow","glow":"green","stamp":"9","badges":[{"t":"합 9 허용","c":"green"}]},
+  "rule.kindness": {"kind":"allow","glow":"green","stamp":"11","badges":[{"t":"합 11 허용","c":"green"}]},
   "rule.eleven": {"kind":"allow","glow":"prism","stamp":"11·13·17","badges":[{"t":"소수 허용","c":"prism"}]},
   "rule.alchemy": {"kind":"allow","glow":"prism","stamp":"×5","badges":[{"t":"5의 배수 허용","c":"prism"}]},
   "rule.twenty": {"kind":"allow","glow":"gold","stamp":"20","badges":[{"t":"합 20","c":"gold"},{"t":"×2","c":"gold","big":true}]},

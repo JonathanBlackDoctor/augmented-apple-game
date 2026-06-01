@@ -70,7 +70,7 @@ export function planClear(owned: string[], ctx: FxClearCtx): FxDir[] {
   if (has('rule.twenty') && ctx.sum === 20) {
     dirs.push({ k: 'stamp', text: '20', bd: c('gold')[0], fg: c('gold')[1] });
     tags.push({ t: '20 결단 ×2', c: c('gold')[1] });
-  } else if (has('rule.kindness') && ctx.sum === 9) {
+  } else if (has('rule.kindness') && ctx.sum === 11) {
     dirs.push({ k: 'stamp', text: '허용', bd: c('green')[0], fg: c('green')[1] });
   } else if (has('rule.eleven') && PRIMES.has(ctx.sum)) {
     dirs.push({ k: 'stamp', text: `소수 ${ctx.sum}`, bd: c('prism')[0], fg: c('prism')[1] });

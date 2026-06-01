@@ -283,12 +283,12 @@ export const CATALOG: Augment[] = [
   {
     id: 'rule.kindness',
     name: '친절',
-    desc: '합 9도 인정',
+    desc: '합 11도 인정',
     tier: 'prismatic',
     family: 'rule',
     conflictsWith: ['rule.eleven', 'rule.alchemy'],
     hooks: {
-      validateSelection: (c) => (c.sum === 9 && c.cells.length > 0 ? { accept: true } : undefined),
+      validateSelection: (c) => (c.sum === 11 && c.cells.length > 0 ? { accept: true } : undefined),
     },
   },
   {

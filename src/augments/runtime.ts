@@ -92,9 +92,10 @@ export function rollOffer(
 
 /** Owning 3+ augments of the same family grants a permanent +20% score bonus
  *  (stacking per family that reaches the threshold). Folded into the hook bus as
- *  a synthetic augment so every mode (solo/versus/online) gets it for free. */
-const SET_SYNERGY_BONUS = 0.2;
-const SET_SYNERGY_THRESHOLD = 3;
+ *  a synthetic augment so every mode (solo/versus/online) gets it for free. The
+ *  threshold/bonus are exported so the augment-pick UI can show the same numbers. */
+export const SET_SYNERGY_BONUS = 0.2;
+export const SET_SYNERGY_THRESHOLD = 3;
 function familySetSynergy(list: Augment[]): Augment | null {
   const counts = new Map<string, number>();
   for (const a of list) counts.set(a.family, (counts.get(a.family) ?? 0) + 1);

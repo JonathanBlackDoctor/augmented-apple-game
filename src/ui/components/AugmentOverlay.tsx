@@ -1,8 +1,22 @@
-import type { AugTier } from '../../contracts';
+import type { AugTier, AugFamily } from '../../contracts';
 import { useGameStore } from '../../app/store';
-import { byId } from '../../augments';
+import { byId, SET_SYNERGY_BONUS, SET_SYNERGY_THRESHOLD } from '../../augments';
 import { FAMILY_ICON } from './augmentIcons';
 import { AugmentEmblem } from './AugmentEmblem';
+
+const SET_BONUS_PCT = Math.round(SET_SYNERGY_BONUS * 100);
+
+/** Tally owned augments by family (most-collected first) for the set-bonus row. */
+function familyTallies(owned: string[]): { family: AugFamily; count: number }[] {
+  const counts = new Map<AugFamily, number>();
+  for (const id of owned) {
+    const fam = byId(id)?.family;
+    if (fam) counts.set(fam, (counts.get(fam) ?? 0) + 1);
+  }
+  return [...counts.entries()]
+    .map(([family, count]) => ({ family, count }))
+    .sort((a, b) => b.count - a.count);
+}
 
 const TIER_LABEL: Record<string, string> = { silver: '실버', gold: '골드', prismatic: '프리즘' };
 const FAMILY_LABEL: Record<string, string> = {
@@ -122,6 +136,25 @@ export function AugmentOverlay({
             })
           )}
         </div>
+        {owned.length > 0 && (
+          <div className="cur-build-sets">
+            <span className="set-hint">
+              같은 계열 {SET_SYNERGY_THRESHOLD}개 모으면 점수 +{SET_BONUS_PCT}%
+            </span>
+            <div className="set-tallies">
+              {familyTallies(owned).map(({ family, count }) => {
+                const done = count >= SET_SYNERGY_THRESHOLD;
+                return (
+                  <span key={family} className={`set-tally${done ? ' done' : ''}`}>
+                    <span className="set-tally-icon">{FAMILY_ICON[family]}</span>
+                    {FAMILY_LABEL[family] ?? family} {count}/{SET_SYNERGY_THRESHOLD}
+                    {done && <span className="set-tally-bonus">+{SET_BONUS_PCT}%</span>}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

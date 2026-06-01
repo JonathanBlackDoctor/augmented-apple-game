@@ -2834,6 +2834,57 @@ body {
   width: 100%;
   height: 100%;
 }
+/* Set-synergy tally under the current build: how many of each family you have
+   and whether the 3-of-a-kind +20% bonus is active. */
+.cur-build-sets {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: 100%;
+  margin-top: 8px;
+}
+.set-hint {
+  font-size: 10.5px;
+  color: var(--ink-2);
+  opacity: 0.85;
+}
+.set-tallies {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.set-tally {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-2);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-variant-numeric: tabular-nums;
+}
+.set-tally.done {
+  color: #1f7a3a;
+  border-color: #54b06a;
+  background: rgba(84, 176, 106, 0.12);
+}
+.set-tally-icon {
+  display: inline-flex;
+  width: 11px;
+  height: 11px;
+  opacity: 0.8;
+}
+.set-tally-icon svg {
+  width: 100%;
+  height: 100%;
+}
+.set-tally-bonus {
+  font-weight: 800;
+  color: #1f7a3a;
+}
 
 /* Toasts */
 .toast-host {

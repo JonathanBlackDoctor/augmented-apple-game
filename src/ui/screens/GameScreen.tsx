@@ -5,7 +5,7 @@ import { useProgressStore } from '../../app/progressStore';
 import { MAX_LEVEL } from '../../bot';
 import { ROUND_DURATION_MS } from '../../app/settingsStore';
 import { MatchController, type MatchPlan } from '../../app/MatchController';
-import { VersusController, AUGMENT_MS } from '../../app/VersusController';
+import { VersusController, AUGMENT_MS, PRE_ROUND_MS } from '../../app/VersusController';
 import { useVersusStore } from '../../app/versusStore';
 import { buildHookBusFor, rollOffer, tierForRound } from '../../augments';
 import { pickGridDims } from '../../board/orientation';
@@ -164,6 +164,10 @@ export function GameScreen() {
       {isVersus && <EmoteOverlay />}
       {isVersus && phase !== 'result' && !paused && !intro && <EmoteTray />}
       {intro && <Countdown onDone={endIntro} />}
+      {/* Per-round 3·2·1 after the augment pick (versus). The match loop drives the
+          real round start, so onDone is a no-op; durationMs keeps the overlay in
+          step with the countdown phase. */}
+      {!intro && phase === 'preRound' && <Countdown onDone={() => {}} durationMs={PRE_ROUND_MS} />}
       {phase === 'roundCheck' && isVersus && <RoundCheckOverlay />}
       {phase === 'augment' &&
         (isVersus ? (

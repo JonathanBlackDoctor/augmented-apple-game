@@ -21,17 +21,40 @@ export function cellIndex(cols: number, col: number, row: number): number {
 }
 
 /** Build the board purely from cfg.seed so replay() can reproduce it exactly,
- *  independent of any externally-injected live RNG. */
+ *  independent of any externally-injected live RNG.
+ *
+ *  Orientation-canonical: values are always drawn in the LANDSCAPE (wide) order
+ *  — a W×H grid where W≥H — then mapped into the requested orientation. This way
+ *  a portrait board (cols<rows) is the exact TRANSPOSE of the landscape board
+ *  with the same seed: identical apples, just rotated 90°. Online opponents can
+ *  therefore each render the board in the orientation that fits their own screen
+ *  (a phone gets the tall layout) while staying perfectly fair — a rectangle and
+ *  its transpose contain the same values and sum the same. Landscape boards
+ *  (cols≥rows, what solo/AI modes always use) are produced exactly as before, so
+ *  their generation — and every existing seed/replay — is unchanged. */
 export function generateBoard(cfg: RoundConfig): Board {
   const cols = cfg.cols;
   const rows = cfg.rows;
   const n = cols * rows;
   const rng: SeededRng = makeRng(cfg.seed).fork('board');
+  // Canonical landscape dimensions (the long side is the width).
+  const cw = Math.max(cols, rows);
+  const ch = Math.min(cols, rows);
+  // Draw the canonical landscape values in row-major order (same sequence the
+  // old code used for a landscape board, so wide boards are byte-identical).
+  const canon: AppleValue[] = new Array<AppleValue>(n);
+  for (let i = 0; i < n; i++) canon[i] = (1 + rng.int(9)) as AppleValue; // uniform 1..9
   const cells: Cell[] = new Array<Cell>(n);
   const tags: CellTag[] = new Array<CellTag>(n);
-  for (let i = 0; i < n; i++) {
-    cells[i] = (1 + rng.int(9)) as AppleValue; // uniform 1..9
-    tags[i] = 'normal';
+  const portrait = cols < rows;
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      // Landscape: identity. Portrait: this cell (col,row) maps to canonical
+      // (canonCol=row, canonRow=col) — i.e. the transpose of the wide board.
+      const ci = portrait ? col * cw + row : row * cw + col;
+      cells[row * cols + col] = canon[ci];
+      tags[row * cols + col] = 'normal';
+    }
   }
   return { cols, rows, cells, tags };
 }

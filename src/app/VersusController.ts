@@ -20,6 +20,7 @@ import { useProgressStore } from './progressStore';
 const TARGET = 10;
 const ROUNDS = 5;
 export const AUGMENT_MS = 12_000; // augment-pick window before auto-picking
+export const PRE_ROUND_MS = 3_000; // 3·2·1 countdown after the pick, before the round
 export const ROUND_CHECK_MS = 3_500; // mid-round review screen duration
 
 // Each rival's emote tone + frequency lives on its AiLevel.emote persona
@@ -95,6 +96,7 @@ export class VersusController {
       durationMs: this.durationMs,
       targetSum: TARGET,
       augmentMs: AUGMENT_MS,
+      preRoundMs: PRE_ROUND_MS,
       roundCheckMs: ROUND_CHECK_MS,
     });
     this.comboStreak = 0;
@@ -186,8 +188,8 @@ export class VersusController {
       if (this.lastPhase === null) {
         // The rival greets at match start (tone set by its persona).
         if (this.persona) this.botEmote(this.persona.greet, { force: true });
-      } else if (this.lastPhase === 'augment') {
-        // A fresh round just began (augment → round): refresh the board + combo.
+      } else if (this.lastPhase === 'preRound') {
+        // A fresh round just began (preRound countdown → round): refresh board + combo.
         this.board.resetFx();
         this.board.setBoard(m.myBoard());
         this.comboStreak = 0;
@@ -207,6 +209,10 @@ export class VersusController {
       }
       updateAmbient(this.board, snap.myOwned, snap.remainingMs, this.durationMs);
       st.setPhase('round');
+    } else if (snap.phase === 'preRound') {
+      // Augment locked in → 3·2·1 countdown before the round runs. The board timer
+      // stays frozen (the round hasn't begun); GameScreen shows the countdown.
+      st.setPhase('preRound');
     } else if (snap.phase === 'roundCheck') {
       const r = snap.lastRound;
       if (r) {

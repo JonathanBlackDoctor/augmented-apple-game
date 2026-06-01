@@ -16,7 +16,7 @@ import type {
 import { decide, type BotTuning } from '../bot';
 import { versusOfferTiers, rollOfferTiers, buildHookBusFor } from '../augments/runtime';
 
-export type VersusPhase = 'round' | 'roundCheck' | 'augment' | 'matchResult';
+export type VersusPhase = 'augment' | 'preRound' | 'round' | 'roundCheck' | 'matchResult';
 
 export interface VersusOptions {
   seedBase: string;
@@ -32,6 +32,7 @@ export interface VersusOptions {
   winnerBonusStep: number;
   rerolls: number; // reroll tokens for the whole match (re-rolls the current offer)
   augmentMs: number; // augment-pick window before auto-picking offers[0]
+  preRoundMs: number; // 3·2·1 countdown shown after the pick, before the round runs
   roundCheckMs: number; // mid-round review screen before advancing
 }
 
@@ -71,6 +72,7 @@ const DEFAULTS = {
   winnerBonusStep: 10,
   rerolls: 1,
   augmentMs: 12_000,
+  preRoundMs: 3_000,
   roundCheckMs: 3_500,
 };
 
@@ -123,6 +125,7 @@ export class VersusMatch {
       winnerBonusStep: opts.winnerBonusStep ?? DEFAULTS.winnerBonusStep,
       rerolls: opts.rerolls ?? DEFAULTS.rerolls,
       augmentMs: opts.augmentMs ?? DEFAULTS.augmentMs,
+      preRoundMs: opts.preRoundMs ?? DEFAULTS.preRoundMs,
       roundCheckMs: opts.roundCheckMs ?? DEFAULTS.roundCheckMs,
     };
     this.botRng = makeRng(`${this.opts.seedBase}:bot`);
@@ -227,6 +230,10 @@ export class VersusMatch {
       if (nowMs >= this.phaseEndsAt && this.offers.length > 0) {
         this.pickAugment(this.offers[0], nowMs);
       }
+    } else if (this.phase === 'preRound') {
+      // 3·2·1 countdown after the pick; the round begins only when it elapses.
+      this.phaseRemainingMs = Math.max(0, (this.phaseEndsAt ?? nowMs) - nowMs);
+      if (nowMs >= (this.phaseEndsAt ?? nowMs)) this.beginRound();
     }
     return this.snapshot();
   }
@@ -313,9 +320,11 @@ export class VersusMatch {
     return true;
   }
 
-  /** Human (or the auto-pick timer) picks an augment; the bot auto-picks its
-   *  own; the round the offer preceded begins. */
-  pickAugment(id: string, _nowMs?: number): void {
+  /** Human (or the auto-pick timer) picks an augment; the bot auto-picks its own.
+   *  Both builds are now locked, so we open the 3·2·1 pre-round countdown — the
+   *  round itself begins when that countdown elapses (see tick's preRound branch),
+   *  never the instant the augment overlay closes. */
+  pickAugment(id: string, nowMs = 0): void {
     if (this.phase !== 'augment') return;
     this.myOwned.push(id);
     const tiers = versusOfferTiers(this.offerRound);
@@ -326,7 +335,10 @@ export class VersusMatch {
     );
     if (botOffers.length > 0) this.botOwned.push(botOffers[this.botRng.int(botOffers.length)]);
     this.round = this.offerRound;
-    this.beginRound();
+    this.phase = 'preRound';
+    this.remainingMs = this.opts.durationMs; // HUD shows the full clock behind the countdown
+    this.phaseEndsAt = nowMs + this.opts.preRoundMs;
+    this.phaseRemainingMs = this.opts.preRoundMs;
   }
 
   snapshot(): VersusSnapshot {

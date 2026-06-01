@@ -3,6 +3,7 @@
 // Firebase online).
 import type { Profile, PublicProfile, MatchResult, RankingService, Tier } from '../contracts';
 import { nextMmr, tierFromMmr } from './elo';
+import { evaluateGuard } from './mmrGuard';
 
 export interface RankingStore {
   saveProfile(p: Profile): Promise<void>;
@@ -15,7 +16,10 @@ export function toPublic(p: Profile): PublicProfile {
 }
 
 export class StandardRankingService implements RankingService {
-  constructor(private readonly store: RankingStore) {}
+  constructor(
+    private readonly store: RankingStore,
+    private readonly now: () => number = () => Date.now(),
+  ) {}
 
   tierFromMmr(mmr: number): Tier {
     return tierFromMmr(mmr);
@@ -28,7 +32,18 @@ export class StandardRankingService implements RankingService {
     ranked: boolean,
   ): Promise<{ mmrDelta: number; tier: Tier }> {
     const before = self.mmr;
-    const mmr = nextMmr(self.mmr, opp.mmr, result, self.games, ranked);
+    const target = nextMmr(self.mmr, opp.mmr, result, self.games, ranked);
+
+    // MMR 조작 방지: 랭크 경기에서 같은 상대 연속 상승/하루 누적 상승 한도를
+    // 넘는 상승은 차단한다(상승분만 0으로 막고, 전적·하락은 그대로 둔다).
+    let mmr = target;
+    if (ranked) {
+      const wouldGain = target > before;
+      const guard = evaluateGuard(self.mmrGuard, opp.uid, wouldGain, this.now());
+      if (wouldGain && !guard.allowGain) mmr = before;
+      self.mmrGuard = guard.next;
+    }
+
     const delta = mmr - before;
     self.mmr = mmr;
     self.tier = tierFromMmr(mmr);

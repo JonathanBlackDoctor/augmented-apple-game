@@ -274,7 +274,8 @@ export class OnlineController {
     let mmrDelta: number | null = null;
     if (this.profile && s.oppPresent) {
       const opp: PublicProfile = {
-        uid: 'opp',
+        // 상대 식별자(MMR 조작 방지의 "같은 상대" 판정 키). 닉네임을 안정 식별자로 사용.
+        uid: s.oppName || 'opp',
         nickname: s.oppName,
         avatar: '🍏',
         tier: 'Silver',

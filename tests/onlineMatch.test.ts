@@ -8,7 +8,7 @@ import type { PublicProfile } from '../src/contracts';
 const A: PublicProfile = { uid: 'A', nickname: 'A', avatar: '🍎', tier: 'Silver', mmr: 1000 };
 const B: PublicProfile = { uid: 'B', nickname: 'B', avatar: '🍏', tier: 'Silver', mmr: 1000 };
 const C: PublicProfile = { uid: 'C', nickname: 'C', avatar: '🍊', tier: 'Silver', mmr: 1000 };
-const FAST = { durationMs: 2000, countdownMs: 500, augmentMs: 800, roundCheckMs: 600 };
+const FAST = { durationMs: 2000, countdownMs: 500, augmentMs: 800, preRoundMs: 100, roundCheckMs: 600 };
 
 async function simulate(room: string) {
   const backend = new InMemoryNetBackend();
@@ -99,40 +99,87 @@ describe('OnlineMatch — mid-round review (roundCheck)', () => {
   });
 });
 
-describe('OnlineMatch — board aspect sync', () => {
-  it('guest adopts the host-chosen cols/rows so both play the same board', async () => {
+describe('OnlineMatch — per-client board orientation', () => {
+  it('each client keeps its own viewport orientation; boards stay transpose-equivalent', async () => {
     const backend = new InMemoryNetBackend();
     const sa = new BackendNetSession(backend);
     const sb = new BackendNetSession(backend);
     await sa.join('ROOMTL', A);
     await sb.join('ROOMTL', B);
-    // Host fixes a tall (portrait) board; guest starts with the default wide one.
+    // Host on a portrait phone (tall board); guest on a landscape screen (wide).
+    // Neither imposes its aspect on the other — each renders what fits its screen.
     const host = new OnlineMatch({ session: sa, role: 'host', self: A, roomId: 'ROOMTL', cols: 10, rows: 17, ...FAST });
-    const guest = new OnlineMatch({ session: sb, role: 'guest', self: B, roomId: 'ROOMTL', ...FAST });
+    const guest = new OnlineMatch({ session: sb, role: 'guest', self: B, roomId: 'ROOMTL', cols: 17, rows: 10, ...FAST });
     await host.start();
     await guest.start();
-    expect(guest.dims()).toEqual({ cols: 17, rows: 10 }); // default before the host announces
-    // Run through the lobby + countdown so the host broadcasts its dims.
-    let now = 0;
-    for (let i = 0; i < 30 && guest.snapshot().phase === 'lobby'; i++) {
-      host.tick(now);
-      guest.tick(now);
-      now += 50;
-    }
-    // Tick once more so the guest processes the countdown phase event.
-    host.tick(now);
-    guest.tick(now);
-    expect(guest.dims()).toEqual({ cols: 10, rows: 17 });
     expect(host.dims()).toEqual({ cols: 10, rows: 17 });
-    // Drive to the first round and confirm both boards share the same shape.
-    for (let i = 0; i < 60 && guest.snapshot().phase !== 'round'; i++) {
+    expect(guest.dims()).toEqual({ cols: 17, rows: 10 });
+    // Drive to the first round so both boards are built.
+    let now = 0;
+    for (
+      let i = 0;
+      i < 200 && (host.snapshot().phase !== 'round' || guest.snapshot().phase !== 'round');
+      i++
+    ) {
       host.tick(now);
       guest.tick(now);
       now += 50;
     }
-    expect(guest.myBoard().cols).toBe(host.myBoard().cols);
-    expect(guest.myBoard().rows).toBe(host.myBoard().rows);
-    expect(guest.myBoard().cols).toBe(10);
+    const hb = host.myBoard();
+    const gb = guest.myBoard();
+    expect(hb.cols).toBe(10);
+    expect(hb.rows).toBe(17);
+    expect(gb.cols).toBe(17);
+    expect(gb.rows).toBe(10);
+    // Same apples for the same seed, just rotated 90°: host(row,col) === guest(col,row).
+    let transpose = true;
+    for (let r = 0; r < 17 && transpose; r++)
+      for (let c = 0; c < 10; c++)
+        if (hb.cells[r * 10 + c] !== gb.cells[c * 17 + r]) {
+          transpose = false;
+          break;
+        }
+    expect(transpose).toBe(true);
+  });
+});
+
+describe('OnlineMatch — both picked collapses the augment window early', () => {
+  it('jumps from augment to the pre-round countdown once both sides have picked', async () => {
+    const backend = new InMemoryNetBackend();
+    const sa = new BackendNetSession(backend);
+    const sb = new BackendNetSession(backend);
+    await sa.join('ROOMBP', A);
+    await sb.join('ROOMBP', B);
+    // A long augment window so an early collapse is observable well before timeout.
+    const opts = { roomId: 'ROOMBP', durationMs: 2000, countdownMs: 500, augmentMs: 10_000, preRoundMs: 200, roundCheckMs: 600 };
+    const host = new OnlineMatch({ session: sa, role: 'host', self: A, ...opts });
+    const guest = new OnlineMatch({ session: sb, role: 'guest', self: B, ...opts });
+    await host.start();
+    await guest.start();
+    let now = 0;
+    // Drive into the (start-of-match) augment window.
+    for (let i = 0; i < 100 && host.snapshot().phase !== 'augment'; i++) {
+      host.tick(now);
+      guest.tick(now);
+      now += 50;
+    }
+    expect(host.snapshot().phase).toBe('augment');
+    expect(guest.snapshot().phase).toBe('augment');
+    const tBoth = now;
+    // Both lock in immediately, far inside the 10s window.
+    host.pickAugment(host.snapshot().offers[0]);
+    guest.pickAugment(guest.snapshot().offers[0]);
+    // Within a couple of ticks (events fan out + each side collapses its own
+    // schedule) both should leave the augment window for the pre-round countdown,
+    // long before the 10s auto-pick deadline.
+    for (let i = 0; i < 10; i++) {
+      host.tick(now);
+      guest.tick(now);
+      now += 50;
+    }
+    expect(now - tBoth).toBeLessThan(1000); // collapsed early, not at +10s
+    expect(host.snapshot().phase).not.toBe('augment');
+    expect(guest.snapshot().phase).not.toBe('augment');
   });
 });
 

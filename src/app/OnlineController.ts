@@ -11,9 +11,14 @@ import { createMonotonicClock } from './clock';
 import { START_MMR } from '../ranking/elo';
 import { sfx } from './sound';
 import { playActivation, playClear, updateAmbient } from './augmentFx';
-import { useOnlineStore, ONLINE_AUGMENT_MS, ONLINE_ROUND_CHECK_MS } from './onlineStore';
+import {
+  useOnlineStore,
+  ONLINE_AUGMENT_MS,
+  ONLINE_PRE_ROUND_MS,
+  ONLINE_ROUND_CHECK_MS,
+} from './onlineStore';
 import type { RoundResult } from './versusStore';
-import { useGameStore } from './store';
+import { useGameStore, type Phase } from './store';
 import { getSettings } from './settingsStore';
 import { OnlineMatch, type OnlineSnapshot, type Role } from './OnlineMatch';
 import { InMemoryNetBackend } from '../net/memoryBackend';
@@ -158,10 +163,12 @@ export class OnlineController {
     // The host (re)creates the room, so wipe any leftover events from a previous
     // match that reused this code; the guest joins into that clean room.
     await session.join(code, this.pub(), { reset: role === 'host' });
-    // The host fixes the board aspect from its own viewport (portrait → tall) and
-    // broadcasts it on countdown; the guest joins with defaults and then adopts it,
-    // so both clients render the same shared-seed board.
-    const dims = role === 'host' ? pickGridDims() : undefined;
+    // Each client picks the board aspect that fits ITS OWN viewport (portrait →
+    // tall). Boards stay fair across orientations because generateBoard() makes a
+    // portrait board the exact transpose of the landscape one for the same seed
+    // (same apples, rotated 90°), so each player sees comfortably-sized apples on
+    // their own screen regardless of the opponent's device.
+    const dims = pickGridDims();
     this.match = new OnlineMatch({
       session,
       role,
@@ -169,9 +176,10 @@ export class OnlineController {
       roomId: code,
       durationMs: DURATION,
       augmentMs: ONLINE_AUGMENT_MS,
+      preRoundMs: ONLINE_PRE_ROUND_MS,
       roundCheckMs: ONLINE_ROUND_CHECK_MS,
-      cols: dims?.cols,
-      rows: dims?.rows,
+      cols: dims.cols,
+      rows: dims.rows,
     });
     this.resolved = false;
     this.started = false;
@@ -278,6 +286,41 @@ export class OnlineController {
       owned: s.myOwned,
       oppOwned: s.oppOwned,
     });
+
+    // Mirror the match clock into the shared game store so the DayNightSky
+    // backdrop — which reads useGameStore like every other mode — advances WITH
+    // the online rounds instead of idling on its home auto-cycle (the "라운드와
+    // 배경이 연동되지 않는" bug). Only once play has started; the lobby keeps the
+    // ambient home cycle.
+    if (s.phase !== 'lobby') {
+      const skyPhase: Phase =
+        s.phase === 'roundCheck'
+          ? 'roundCheck'
+          : s.phase === 'augment'
+            ? 'augment'
+            : s.phase === 'matchResult'
+              ? 'result'
+              : s.phase === 'preRound'
+                ? 'preRound'
+                : 'round';
+      // Sit at the round's start-of-day anchor through the countdown/augment/
+      // preRound beats (full clock), sweep during the round, rest at its end
+      // during the review.
+      const skyRound = s.phase === 'countdown' ? 0 : s.round;
+      const skyRemaining =
+        s.phase === 'round'
+          ? s.remainingMs
+          : s.phase === 'roundCheck' || s.phase === 'matchResult'
+            ? 0
+            : DURATION;
+      useGameStore.setState({
+        phase: skyPhase,
+        roundIndex: skyRound,
+        totalRounds: s.rounds,
+        remainingMs: skyRemaining,
+        durationMs: DURATION,
+      });
+    }
   }
 
   pick(id: string): void {

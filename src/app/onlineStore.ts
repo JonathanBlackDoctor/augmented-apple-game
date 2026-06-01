@@ -11,6 +11,7 @@ export type OnlineStage = 'menu' | 'hosting' | 'connecting' | 'playing' | 'resul
 // Single source for both the match schedule (OnlineController → OnlineMatch) and the
 // overlay countdown bars (OnlineScreen), so the timer and the schedule never drift.
 export const ONLINE_AUGMENT_MS = 12_000;
+export const ONLINE_PRE_ROUND_MS = 3_000; // 3·2·1 countdown between the pick and the round
 export const ONLINE_ROUND_CHECK_MS = 3_500;
 
 export interface OnlineStore {

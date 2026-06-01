@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { useGameStore } from '../../app/store';
-import { useOnlineStore, ONLINE_AUGMENT_MS, ONLINE_ROUND_CHECK_MS } from '../../app/onlineStore';
+import {
+  useOnlineStore,
+  ONLINE_AUGMENT_MS,
+  ONLINE_PRE_ROUND_MS,
+  ONLINE_ROUND_CHECK_MS,
+} from '../../app/onlineStore';
 import { OnlineController } from '../../app/OnlineController';
 import { OnlineHud } from '../components/OnlineHud';
 import { AugmentOverlay } from '../components/AugmentOverlay';
@@ -182,9 +187,16 @@ export function OnlineScreen() {
         </div>
       )}
 
-      {/* Animated 3·2·1 intro (parity with versus). The schedule drives the real
-          round start, so onDone is a no-op here. */}
-      {s.stage === 'playing' && s.phase === 'countdown' && <Countdown onDone={() => {}} />}
+      {/* Animated 3·2·1 intro (parity with versus): once at match start and again
+          before every round (after the augment pick — the window closes and this
+          countdown leads into the round). The schedule drives the real round
+          start, so onDone is a no-op here. */}
+      {s.stage === 'playing' && (s.phase === 'countdown' || s.phase === 'preRound') && (
+        <Countdown
+          onDone={() => {}}
+          durationMs={s.phase === 'preRound' ? ONLINE_PRE_ROUND_MS : undefined}
+        />
+      )}
 
       {s.stage === 'playing' && s.phase === 'augment' && (
         <AugmentOverlay

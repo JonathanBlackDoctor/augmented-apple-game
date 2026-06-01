@@ -19,7 +19,14 @@ import type {
 } from '../contracts';
 import { versusOfferTiers, rollOfferTiers, buildHookBusFor } from '../augments/runtime';
 
-export type OnlinePhase = 'lobby' | 'countdown' | 'round' | 'roundCheck' | 'augment' | 'matchResult';
+export type OnlinePhase =
+  | 'lobby'
+  | 'countdown'
+  | 'augment'
+  | 'preRound'
+  | 'round'
+  | 'roundCheck'
+  | 'matchResult';
 export type Role = 'host' | 'guest';
 
 export interface OnlineOptions {
@@ -37,6 +44,7 @@ export interface OnlineOptions {
   rerolls?: number; // reroll tokens for the whole match
   countdownMs?: number;
   augmentMs?: number;
+  preRoundMs?: number; // 3·2·1 countdown shown after the pick, before the round runs
   roundCheckMs?: number; // mid-round review screen before the next pick
   hbIntervalMs?: number;
   disconnectMs?: number;
@@ -86,9 +94,9 @@ export class OnlineMatch {
   private readonly uid: string;
   private readonly seedBase: string;
   private readonly rounds: number;
-  // Board aspect. The host fixes this from its viewport and broadcasts it on the
-  // countdown `phase` event; the guest adopts it before round 0 so both clients
-  // play the identical shared-seed board.
+  // Board aspect — chosen per-client to fit its own viewport. Boards stay fair
+  // across orientations because a portrait board is the transpose of the
+  // landscape one for the same seed (see generateBoard).
   private cols: number;
   private rows: number;
   private readonly durationMs: number;
@@ -96,6 +104,7 @@ export class OnlineMatch {
   private readonly winnerBonusStep: number;
   private readonly countdownMs: number;
   private readonly augmentMs: number;
+  private readonly preRoundMs: number;
   private readonly roundCheckMs: number;
   private readonly hbIntervalMs: number;
   private readonly disconnectMs: number;
@@ -136,6 +145,15 @@ export class OnlineMatch {
   private offerSalt = 0; // bumped on reroll to re-draw the current offer
   private rerollsLeft = 0; // reroll tokens left for the whole match
   private myPicked = false;
+  // Rounds the opponent has already picked an augment for (from augment-pick
+  // events). Once both sides have picked the augment window collapses early.
+  private readonly oppPickedRounds = new Set<number>();
+  // Augment windows we've already collapsed early, so the skip fires only once.
+  private readonly skippedAugments = new Set<number>();
+  // Cumulative time (ms) the schedule has been fast-forwarded by early picks.
+  // Folded into `elapsed` so every later segment shifts with it, keeping both
+  // clients on the same (now-shorter) shared timeline.
+  private scheduleShift = 0;
 
   private oppUid: string | null = null;
   private oppReadyLobby = false;
@@ -160,6 +178,7 @@ export class OnlineMatch {
     this.rerollsLeft = o.rerolls ?? 1;
     this.countdownMs = o.countdownMs ?? 3000;
     this.augmentMs = o.augmentMs ?? 12_000;
+    this.preRoundMs = o.preRoundMs ?? 3000;
     this.roundCheckMs = o.roundCheckMs ?? 3_500;
     this.hbIntervalMs = o.hbIntervalMs ?? 2000;
     // Generous grace window: comfortably longer than the augment phase (12s) and
@@ -181,6 +200,11 @@ export class OnlineMatch {
       // round 0): 5 picks total. The seg's `round` is the round it precedes.
       segs.push({ phase: 'augment', round: r, start: t, dur: this.augmentMs });
       t += this.augmentMs;
+      // A 3·2·1 countdown sits between the pick and the round so play never starts
+      // the instant the augment overlay closes. When BOTH players have picked the
+      // augment window is collapsed early (see tick) and we jump straight here.
+      segs.push({ phase: 'preRound', round: r, start: t, dur: this.preRoundMs });
+      t += this.preRoundMs;
       segs.push({ phase: 'round', round: r, start: t, dur: this.durationMs });
       t += this.durationMs;
       // Mid-round review (라운드 점검), mirroring versus: both players see the round
@@ -215,11 +239,9 @@ export class OnlineMatch {
       if (this.role === 'guest') {
         this.lastOppSeen = this.nowMs;
         this.oppPresent = true;
-        // Adopt the host's board aspect before the first round is built.
-        if (typeof e.cols === 'number' && typeof e.rows === 'number') {
-          this.cols = e.cols;
-          this.rows = e.rows;
-        }
+        // Each client renders the board in its own orientation (boards are
+        // transpose-equivalent for the same seed), so we no longer adopt the
+        // host's cols/rows — we only use the countdown event to anchor matchStart.
         if (e.phase === 'countdown' && this.matchStart === null) this.matchStart = this.nowMs;
       }
       return;
@@ -242,6 +264,7 @@ export class OnlineMatch {
         break;
       case 'augment-pick':
         this.oppOwned.push(e.augId);
+        this.oppPickedRounds.add(e.round);
         break;
       case 'heartbeat':
         break;
@@ -311,7 +334,26 @@ export class OnlineMatch {
       this.appliedKey = 'matchResult:forfeit';
       return this.snapshot();
     }
-    const elapsed = nowMs - this.matchStart;
+    let elapsed = nowMs - this.matchStart + this.scheduleShift;
+    // Both players locked in? Collapse the rest of this augment window so the
+    // overlay closes and the round's pre-countdown starts now. We fast-forward to
+    // the augment seg's end (= the preRound start) by growing scheduleShift, which
+    // every later segment inherits — each client does this independently the
+    // moment it knows both picks, landing on the same shared (shorter) timeline.
+    const here = this.segAt(elapsed);
+    if (
+      here.phase === 'augment' &&
+      this.myPicked &&
+      this.oppPickedRounds.has(here.round) &&
+      !this.skippedAugments.has(here.round)
+    ) {
+      this.skippedAugments.add(here.round);
+      const target = here.start + here.dur;
+      if (elapsed < target) {
+        this.scheduleShift += target - elapsed;
+        elapsed = nowMs - this.matchStart + this.scheduleShift;
+      }
+    }
     if (elapsed >= this.totalMs) {
       this.enterPhase({ phase: 'matchResult', round: this.rounds - 1, start: 0, dur: 0 });
       return this.snapshot();
@@ -319,7 +361,7 @@ export class OnlineMatch {
     const seg = this.segAt(elapsed);
     const key = `${seg.phase}:${seg.round}`;
     if (key !== this.appliedKey) this.enterPhase(seg);
-    // Schedule-driven countdown for the timed overlays (augment + roundCheck).
+    // Schedule-driven countdown for the timed overlays (augment + preRound + roundCheck).
     this.phaseRemainingMs = Math.max(0, seg.start + seg.dur - elapsed);
     if (this.phase === 'round') {
       const t = this.engine.tick(nowMs);
@@ -337,8 +379,14 @@ export class OnlineMatch {
     this.phase = seg.phase;
     this.round = seg.round;
 
-    if (seg.phase === 'round') {
-      if (prevPhase === 'augment' && !this.myPicked && this.offers.length > 0) this.pickAugment(this.offers[0]);
+    if (seg.phase === 'preRound') {
+      // Leaving the augment window → lock in offers[0] if the player never picked
+      // (auto-pick on timeout), so the build is set before the round is built.
+      if (prevPhase === 'augment' && !this.myPicked && this.offers.length > 0)
+        this.pickAugment(this.offers[0]);
+      // Show the full clock behind the 3·2·1 countdown (the round hasn't run yet).
+      this.remainingMs = this.durationMs;
+    } else if (seg.phase === 'round') {
       this.beginRound(seg.round);
     } else if (seg.phase === 'augment') {
       this.offerSalt = 0;

@@ -138,11 +138,15 @@ describe('VersusController — match-start augment pick after the intro', () => 
     expect(useGameStore.getState().phase).toBe('augment');
     expect(afterRemaining).toBeLessThan(startRemaining);
 
-    // Picking an augment must transition into the first round (loop applies it).
+    // Picking an augment opens the 3·2·1 pre-round countdown; the round itself
+    // begins only once that countdown elapses (loop applies both transitions).
     const offer = useGameStore.getState().offers[0];
     expect(offer).toBeTruthy();
     ctrl.pick(offer);
     step(16);
+    expect(useGameStore.getState().phase).toBe('preRound');
+    // Advance past the pre-round countdown (default 3s) into the live round.
+    for (let i = 0; i < 40 && useGameStore.getState().phase !== 'round'; i++) step(100);
     expect(useGameStore.getState().phase).toBe('round');
 
     ctrl.destroy();

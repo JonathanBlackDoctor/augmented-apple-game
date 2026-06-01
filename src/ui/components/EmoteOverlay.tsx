@@ -1,9 +1,16 @@
 // ui/components/EmoteOverlay.tsx — floating emote bubbles for both sides. Watches
-// the versus store's emote pulses (seq bumps) and spawns a short-lived bubble that
-// removes itself on animation end (same pattern as the score "+N" popups).
+// the versus store's emote pulses (seq bumps) and spawns a short-lived bubble.
+// A timed self-removal (not just onAnimationEnd) guarantees the bubble clears:
+// under prefers-reduced-motion the CSS sets `animation: none`, so the
+// animationend event never fires and bubbles would otherwise linger forever.
 import { useEffect, useState } from 'react';
 import { useVersusStore } from '../../app/versusStore';
 import { getEmote } from '../../emotes';
+
+// Slightly longer than the emoteFloat animation (1.8s) so a bubble that *does*
+// animate finishes naturally; the timer is the hard backstop for the no-animation
+// (reduced-motion) case.
+const BUBBLE_TTL_MS = 2200;
 
 interface Bubble {
   seq: number;
@@ -17,6 +24,8 @@ function Side({ seq, id, side }: { seq: number; id: string | null; side: 'me' | 
     const e = getEmote(id);
     if (!e) return;
     setBubbles((cur) => [...cur, { seq, emoji: e.emoji }]);
+    const t = setTimeout(() => setBubbles((c) => c.filter((x) => x.seq !== seq)), BUBBLE_TTL_MS);
+    return () => clearTimeout(t);
   }, [seq, id]);
   return (
     <div className={`emote-bubbles ${side}`}>

@@ -63,6 +63,10 @@ export class BoardView {
   private layout: BoardLayout | null = null;
   private board: Board | null = null;
   private mounted = false;
+  // time.lord sabotage: while true, every numeral renders as "?" (re-applied by
+  // refresh() so a mid-veil clear keeps the mask). Driven by pulseHideLabels().
+  private labelsHidden = false;
+  private labelPulseTimer = 0;
   // Set once the Quicksand webfont is confirmed loaded (or unavailable), after
   // which all numerals rasterize in the same font. See syncWebFont().
   private fontSynced = false;
@@ -258,6 +262,7 @@ export class BoardView {
 
   destroy(): void {
     this.mounted = false;
+    clearTimeout(this.labelPulseTimer);
     this.fx?.destroy();
     this.fx = null;
     try {
@@ -415,7 +420,7 @@ export class BoardView {
       const tag = b.tags?.[i] ?? 'normal';
       const label = this.labels[i];
       if (label) {
-        label.text = this.labelFor(v, tag);
+        label.text = this.labelsHidden ? '?' : this.labelFor(v, tag);
         if (tag !== this.cellTags[i]) label.style.fill = numberColor(tag);
       }
       const body = this.bodies[i];
@@ -425,8 +430,9 @@ export class BoardView {
     }
   }
 
-  /** Mask/reveal the numerals (time.lord: while dragging, numbers become "?"). */
+  /** Mask/reveal the numerals (time.lord sabotage: the apples become "?"). */
   setLabelsHidden(hidden: boolean): void {
+    this.labelsHidden = hidden;
     const b = this.board;
     for (let i = 0; i < this.labels.length; i++) {
       const label = this.labels[i];
@@ -434,6 +440,19 @@ export class BoardView {
       if (hidden) label.text = '?';
       else if (b) label.text = this.labelFor(b.cells[i], b.tags?.[i] ?? 'normal');
     }
+  }
+
+  /** Veil every numeral as "?" for `ms`, then reveal — the time.lord disruption
+   *  the opponent inflicts on us each time they clear. Re-armed (not extended) on
+   *  each call, so a fresh hit restarts the full window from now. */
+  pulseHideLabels(ms = 1000): void {
+    this.setLabelsHidden(true);
+    this.fx?.desat(true);
+    clearTimeout(this.labelPulseTimer);
+    this.labelPulseTimer = window.setTimeout(() => {
+      this.setLabelsHidden(false);
+      this.fx?.desat(false);
+    }, ms);
   }
 
   // ---- special-apple readability + FX geometry ------------------------------
@@ -533,7 +552,19 @@ export class BoardView {
 
   /** Clear transient FX + state classes (between rounds / on reset). */
   resetFx(): void {
+    clearTimeout(this.labelPulseTimer);
+    if (this.labelsHidden) this.setLabelsHidden(false);
     this.fx?.reset();
+  }
+
+  /** Animate the 새콤이 companion popping apples at (x,y) — board.companion. */
+  companionPop(x: number, y: number): void {
+    this.fx?.companion(x, y);
+  }
+
+  /** Show/hide the persistent 새콤이 buddy idling beside the board. */
+  companionPresence(on: boolean): void {
+    this.fx?.companionIdle(on);
   }
 
   // ---- day-night candy-gloss look -------------------------------------------

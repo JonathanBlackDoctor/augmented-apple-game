@@ -4,6 +4,7 @@
 // level-select screen; apple count is fixed to medium; round time is fixed.)
 import { useSettingsStore, APPLE_SIZE_PRESETS } from '../../app/settingsStore';
 import { toast } from '../../app/toastStore';
+import { isIOS, isStandalone, promptInstall } from '../../app/installPrompt';
 
 function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
   return (
@@ -46,6 +47,25 @@ function Segmented<T extends string | number>({
 
 export function SettingsOverlay({ onClose }: { onClose: () => void }) {
   const s = useSettingsStore();
+  const ios = isIOS();
+  const installed = isStandalone();
+
+  const onInstall = async (): Promise<void> => {
+    if (installed) {
+      toast('이미 앱으로 실행 중이에요');
+      return;
+    }
+    if (ios) {
+      // iOS has no install API — guide the Safari "홈 화면에 추가" (바로가기) flow.
+      toast('사파리 공유 버튼 → "홈 화면에 추가"를 눌러주세요');
+      return;
+    }
+    const outcome = await promptInstall();
+    if (outcome === 'accepted') toast('앱으로 추가했어요!');
+    else if (outcome === 'unavailable')
+      toast('브라우저 메뉴에서 "앱 설치" 또는 "홈 화면에 추가"를 선택하세요');
+  };
+
   return (
     <div className="overlay" onClick={onClose}>
       <div className="result-card settings-card" onClick={(e) => e.stopPropagation()}>
@@ -63,7 +83,19 @@ export function SettingsOverlay({ onClose }: { onClose: () => void }) {
               onChange={(v) => s.setAppleScale(v)}
             />
           </div>
+          <div className="set-row">
+            <span className="set-label">앱으로 다운로드</span>
+            <button type="button" className="btn ghost small" onClick={() => void onInstall()}>
+              {installed ? '설치됨' : ios ? '바로가기 만들기' : '앱 설치'}
+            </button>
+          </div>
         </div>
+        {ios && !installed && (
+          <p className="set-note">
+            아이폰·아이패드는 <b>사파리</b>에서 공유 버튼(⬆️) → <b>홈 화면에 추가</b>로 바로가기를
+            만들 수 있어요.
+          </p>
+        )}
         <p className="set-note">사과 크기는 다음 게임부터 적용돼요.</p>
         <div className="btn-row">
           <button

@@ -18,6 +18,8 @@ import type {
   Rect,
 } from '../contracts';
 import { versusOfferTiers, rollOfferTiers, buildHookBusFor } from '../augments/runtime';
+import { companionMove } from './companion';
+import type { CellTag } from '../contracts';
 
 export type OnlinePhase =
   | 'lobby'
@@ -503,6 +505,32 @@ export class OnlineMatch {
       });
     }
     return res;
+  }
+
+  /** 새콤이 (board.companion) clears one sum-10 group on MY board for me, then
+   *  reports the new score to the opponent exactly like a manual clear. Returns
+   *  the cleared cells + pre-clear tags (for FX), or null when no move exists. */
+  companionClear(): { cells: number[]; preTags: CellTag[]; finalScore: number } | null {
+    if (this.phase !== 'round') return null;
+    const board = this.engine.getBoard();
+    const rect = companionMove(board, this.targetSum);
+    if (!rect) return null;
+    const preTags = board.tags?.slice() ?? [];
+    const res = this.engine.commit({
+      seq: ++this.mySeq,
+      rect,
+      tMs: this.nowMs - (this.matchStart ?? this.nowMs),
+    });
+    if (!res || 'rejected' in res) return null;
+    void this.session.send({
+      t: 'clear',
+      player: this.uid,
+      seq: this.mySeq,
+      cells: res.cells,
+      score: this.engine.getScore(),
+      ts: this.nowMs,
+    });
+    return { cells: res.cells, preTags, finalScore: res.finalScore };
   }
 
   /** Broadcast an emote to the opponent (cosmetic; safe to call any phase). */

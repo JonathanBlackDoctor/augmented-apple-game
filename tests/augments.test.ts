@@ -169,11 +169,12 @@ describe('augment determinism (golden placement + replay with augments)', () => 
 });
 
 describe('exploit fixes', () => {
-  it('rule augments are mutually exclusive (conflictsWith)', () => {
-    // Owning any rule-bender excludes the others from future offers.
-    expect(rollOffer('gold', makeRng('x'), ['rule.kindness'])).not.toContain('rule.eleven');
-    expect(rollOffer('prismatic', makeRng('y'), ['rule.kindness'])).not.toContain('rule.alchemy');
-    expect(rollOffer('silver', makeRng('z'), ['rule.alchemy'])).not.toContain('rule.kindness');
+  it('rule-bender augments can now be stacked (no conflictsWith)', () => {
+    // The mutual-exclusion was lifted: owning one rule-bender no longer excludes
+    // the others, so none of them declares a conflict.
+    for (const id of ['rule.kindness', 'rule.eleven', 'rule.alchemy']) {
+      expect(CATALOG.find((a) => a.id === id)?.conflictsWith).toBeUndefined();
+    }
   });
 
   it('engine caps banked time at 2x effective duration', () => {
@@ -323,14 +324,14 @@ describe('augment balance tweaks', () => {
     expect(gambler(base, ctxWith(0.5)).finalScore).toBe(0); // 4 × 0
   });
 
-  it('grants a +20% set bonus once a family reaches 3 augments', () => {
+  it('grants a +50% set bonus once a family reaches 3 augments', () => {
     const base = { cells: [0], count: 1, baseScore: 10, finalScore: 10, comboMultiplier: 1 };
     const clearCtx = { comboCount: 1, grantTimeMs: () => {} } as unknown as Parameters<
       NonNullable<ReturnType<typeof rule>['hooks']['onClear']>
     >[1];
     // Three 'time'-family augments that don't change the score at comboCount 1.
     const trio = buildHookBusFor(['time.relief', 'time.countdown', 'time.tempo']);
-    expect((trio.run('onClear', base, clearCtx) as typeof base).finalScore).toBe(12); // 10 × 1.2
+    expect((trio.run('onClear', base, clearCtx) as typeof base).finalScore).toBe(15); // 10 × 1.5
     // Only two of a family → no synergy.
     const pair = buildHookBusFor(['time.relief', 'time.countdown']);
     expect((pair.run('onClear', base, clearCtx) as typeof base).finalScore).toBe(10);

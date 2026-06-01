@@ -6,7 +6,7 @@ import type { CellTag } from '../contracts';
 import type { BoardView } from '../board/BoardView';
 import type { FxTag } from '../board/BoardFx';
 import { ACT, FX_COL, type FxColorKey } from './augmentFxData';
-import { byId } from '../augments';
+import { byId, SET_SYNERGY_BONUS } from '../augments';
 
 const PRIMES = new Set([11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47]);
 const c = (k: FxColorKey): [string, string, string] => FX_COL[k];
@@ -102,8 +102,8 @@ export function planClear(owned: string[], ctx: FxClearCtx): FxDir[] {
     dirs.push({ k: 'dice', text: won ? '10×' : '0×', color: won ? c('green')[1] : c('red')[1] });
   }
 
-  // Set synergy — 3+ augments of one family grant +20% (already folded into
-  // finalScore by the core); surface it as a tag so the player sees the bonus.
+  // Set synergy — 3+ augments of one family grant a flat bonus (already folded
+  // into finalScore by the core); surface it as a tag so the player sees the bonus.
   const famCounts = new Map<string, number>();
   for (const id of owned) {
     const a = byId(id);
@@ -111,7 +111,8 @@ export function planClear(owned: string[], ctx: FxClearCtx): FxDir[] {
   }
   let synergySets = 0;
   for (const cnt of famCounts.values()) if (cnt >= 3) synergySets++;
-  if (synergySets > 0) tags.push({ t: `세트 +${synergySets * 20}%`, c: c('green')[1] });
+  if (synergySets > 0)
+    tags.push({ t: `세트 +${Math.round(synergySets * SET_SYNERGY_BONUS * 100)}%`, c: c('green')[1] });
 
   // Headline: the gained score + contributing tags, tinted by the net multiplier.
   const m = ctx.comboMultiplier;
@@ -216,7 +217,7 @@ export function updateAmbient(
 ): void {
   const fx = board.effects;
   if (!fx) return;
-  fx.vignette('prism', owned.includes('risk.glasscannon') || owned.includes('time.lord'));
+  fx.vignette('prism', owned.includes('risk.glasscannon'));
   fx.vignette('warm', owned.includes('time.warmup') && remainingMs > durationMs - 8000);
   fx.vignette('red', owned.includes('time.spurt') && remainingMs <= 7000);
 }

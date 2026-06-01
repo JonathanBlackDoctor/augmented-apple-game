@@ -192,6 +192,25 @@ export const EMBLEM_SVG: Record<string, string> = {
       </g>
       <g transform="translate(76,78)"><circle r="11" fill="#fffdf6"/><circle r="11" fill="none" stroke="#8a7dff" stroke-width="2.2"/><text x="0" y="2.7" text-anchor="middle" font-family="var(--font)" font-size="7.6" font-weight="800" fill="#5b4fb0">+8</text></g>
     </svg>`,
+  "board.companion": `<svg class="emblem prism" viewBox="0 0 100 100" role="img" aria-label="새콤이와 함께">
+      <defs><radialGradient id="cp-a" cx="38%" cy="30%" r="80%"><stop offset="0" stop-color="#ff9a77"/><stop offset="50" stop-color="#e04a36"/><stop offset="100" stop-color="#b1301e"/></radialGradient><radialGradient id="cp-b" cx="38%" cy="30%" r="80%"><stop offset="0" stop-color="#ffd1c0"/><stop offset="48" stop-color="#f0654a"/><stop offset="100" stop-color="#c5341f"/></radialGradient></defs>
+      <g class="beat" fill="#ffd3c9" opacity=".5"><path d="M50 22 C52 18 57 17 60 19 C63 21 63 26 60 30 C58 33 53 37 50 39 C47 37 42 33 40 30 C37 26 37 21 40 19 C43 17 48 18 50 22 Z"/></g>
+      <g transform="translate(-6,12) scale(.62)" class="bob">
+        <rect x="48.4" y="8" width="3.2" height="9" rx="1.6" fill="#7a5230"/><path d="M51 11 C53 5 60 3 66 4 C65 11 59 14 51 13 Z" fill="#6fb35a"/>
+        <path d="M44 15C47 18 53 18 56 15C67 11 90 24 90 50C90 73 72 89 50 89C28 89 10 73 10 50C10 24 33 11 44 15Z" fill="url(#cp-a)"/>
+        <ellipse cx="38" cy="34" rx="12" ry="8" fill="#fff" opacity="0.42"/>
+      </g>
+      <g transform="translate(40,16) scale(.62)" class="bob" style="animation-delay:.5s">
+        <rect x="48.4" y="8" width="3.2" height="9" rx="1.6" fill="#7a5230"/><path d="M51 11 C53 5 60 3 66 4 C65 11 59 14 51 13 Z" fill="#6fb35a"/>
+        <path d="M44 15C47 18 53 18 56 15C67 11 90 24 90 50C90 73 72 89 50 89C28 89 10 73 10 50C10 24 33 11 44 15Z" fill="url(#cp-b)"/>
+        <ellipse cx="38" cy="34" rx="11" ry="7" fill="#fff" opacity="0.4"/>
+        <g fill="#3a1410"><circle cx="42" cy="48" r="3"/><circle cx="60" cy="48" r="3"/></g>
+        <path d="M44 58 Q51 66 58 58" fill="none" stroke="#3a1410" stroke-width="3" stroke-linecap="round"/>
+        <g fill="#ff8a6a" opacity=".7"><circle cx="36" cy="56" r="3.4"/><circle cx="66" cy="56" r="3.4"/></g>
+      </g>
+      <g fill="#fff6cf" class="anim twinkle"><path d="M20 64 l1.4 3.6 3.6 1.4 -3.6 1.4 -1.4 3.6 -1.4 -3.6 -3.6 -1.4 3.6 -1.4 Z"/></g>
+      <g fill="#fff6cf" class="anim twinkle" style="animation-delay:1s"><path d="M82 28 l1.1 2.8 2.8 1.1 -2.8 1.1 -1.1 2.8 -1.1 -2.8 -2.8 -1.1 2.8 -1.1 Z"/></g>
+    </svg>`,
   "rule.kindness": `<svg class="emblem prism" viewBox="0 0 100 100" role="img" aria-label="친절 하트">
       <defs><radialGradient id="kn-h" cx="38%" cy="30%" r="80%"><stop offset="0" stop-color="#ffc7bb"/><stop offset="45" stop-color="#ef6f57"/><stop offset="100" stop-color="#c93f2c"/></radialGradient></defs>
       <g class="beat">

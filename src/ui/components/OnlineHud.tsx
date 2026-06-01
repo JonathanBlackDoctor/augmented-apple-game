@@ -47,10 +47,10 @@ export function OnlineHud() {
           </span>
         </div>
         <SeriesPips history={s.roundHistory} total={s.rounds} />
-        <span className={`time-num${low ? ' low' : ''}`}>{live ? secs : '—'}</span>
         <div className={`time-bar${low ? ' low' : ''}`}>
           <div className={`time-fill${fill ? ' ' + fill : ''}`} style={{ width: `${pct * 100}%` }} />
         </div>
+        <span className={`time-num${low ? ' low' : ''}`}>{live ? secs : '—'}</span>
       </div>
       <div className="vs-side opp">
         <span className="vs-label">

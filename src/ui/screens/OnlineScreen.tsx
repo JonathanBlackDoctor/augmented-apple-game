@@ -65,8 +65,10 @@ export function OnlineScreen() {
 
   return (
     <div className="screen game online">
-      <div className="board-host" ref={hostRef} />
+      {/* HUD before the board (mirrors the AI versus screen) so it pins to the top
+          of the column instead of being pushed below the flex:1 board host. */}
       {s.stage === 'playing' && <OnlineHud />}
+      <div className="board-host" ref={hostRef} />
       {s.stage === 'playing' && <OwnedAugments ids={s.owned} />}
       {s.stage === 'playing' && <OpponentAugments ids={s.oppOwned} />}
       {s.stage === 'playing' && (

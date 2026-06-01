@@ -53,10 +53,10 @@ export function VersusHud({ onPause }: { onPause?: () => void }) {
           )}
         </div>
         <SeriesPips history={v.roundHistory} total={s.totalRounds} />
-        <span className={`time-num${low ? ' low' : ''}`}>{secs}</span>
         <div className={`time-bar${low ? ' low' : ''}`}>
           <div className={`time-fill${fill ? ' ' + fill : ''}`} style={{ width: `${pct * 100}%` }} />
         </div>
+        <span className={`time-num${low ? ' low' : ''}`}>{secs}</span>
       </div>
       <div className="vs-side opp">
         <span className="vs-label">{v.oppName}</span>

@@ -243,6 +243,13 @@ export class OnlineController {
     }
     this.prevOppScore = s.oppScore;
 
+    // Mirror the opponent's emote pulse into the store so EmoteOverlay spawns a
+    // bubble (and plays its SFX) on the far side. seq is monotonic, so a plain
+    // copy is enough — the overlay re-keys on it.
+    if (s.oppEmoteSeq !== st.oppEmoteSeq) {
+      st.set({ oppEmoteSeq: s.oppEmoteSeq, oppEmoteId: s.oppEmoteId });
+    }
+
     // Build the mid-round review payload while the roundCheck overlay is up; keep
     // the previous one otherwise so the overlay's staged animation stays stable.
     let roundResult: RoundResult | null = st.roundResult;
@@ -327,6 +334,12 @@ export class OnlineController {
     this.match?.pickAugment(id);
     this.pendingActivation = id; // activation FX plays when the next round opens
     sfx.pick();
+  }
+
+  /** Fire my own emote locally and broadcast it to the opponent. */
+  sendEmote(id: string): void {
+    useOnlineStore.getState().sendMyEmote(id);
+    this.match?.sendEmote(id);
   }
 
   /** Spend a reroll token on the current augment offer (no-op if none left). */

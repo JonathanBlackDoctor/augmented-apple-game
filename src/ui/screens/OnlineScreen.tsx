@@ -8,6 +8,8 @@ import {
 } from '../../app/onlineStore';
 import { OnlineController } from '../../app/OnlineController';
 import { OnlineHud } from '../components/OnlineHud';
+import { EmoteTray } from '../components/EmoteTray';
+import { EmoteOverlay } from '../components/EmoteOverlay';
 import { AugmentOverlay } from '../components/AugmentOverlay';
 import { RoundCheckOverlay } from '../components/RoundCheckOverlay';
 import { OwnedAugments, OpponentAugments } from '../components/OwnedAugments';
@@ -67,6 +69,17 @@ export function OnlineScreen() {
       {s.stage === 'playing' && <OnlineHud />}
       {s.stage === 'playing' && <OwnedAugments ids={s.owned} />}
       {s.stage === 'playing' && <OpponentAugments ids={s.oppOwned} />}
+      {s.stage === 'playing' && (
+        <EmoteOverlay
+          myEmoteSeq={s.myEmoteSeq}
+          myEmoteId={s.myEmoteId}
+          oppEmoteSeq={s.oppEmoteSeq}
+          oppEmoteId={s.oppEmoteId}
+        />
+      )}
+      {s.stage === 'playing' && (
+        <EmoteTray onSend={(id) => ctrlRef.current?.sendEmote(id)} />
+      )}
 
       {s.stage === 'menu' && (
         <div className="overlay">

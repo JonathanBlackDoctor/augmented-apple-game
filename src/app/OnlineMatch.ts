@@ -79,6 +79,10 @@ export interface OnlineSnapshot {
   oppConnected: boolean;
   oppLeft: boolean;
   noOpponent: boolean;
+  // opponent emote pulse: seq bumps each time an 'emote' event arrives so the HUD
+  // can spawn a fresh bubble (mirrors versusStore's oppEmoteSeq/Id).
+  oppEmoteSeq: number;
+  oppEmoteId: string | null;
 }
 
 interface Seg {
@@ -162,6 +166,8 @@ export class OnlineMatch {
   private noOpponent = false;
   private oppName: string;
   private winner: 'me' | 'opp' | 'draw' | null = null;
+  private oppEmoteSeq = 0;
+  private oppEmoteId: string | null = null;
 
   constructor(o: OnlineOptions) {
     this.session = o.session;
@@ -265,6 +271,10 @@ export class OnlineMatch {
       case 'augment-pick':
         this.oppOwned.push(e.augId);
         this.oppPickedRounds.add(e.round);
+        break;
+      case 'emote':
+        this.oppEmoteSeq++;
+        this.oppEmoteId = e.emoteId;
         break;
       case 'heartbeat':
         break;
@@ -493,6 +503,11 @@ export class OnlineMatch {
     return res;
   }
 
+  /** Broadcast an emote to the opponent (cosmetic; safe to call any phase). */
+  sendEmote(id: string): void {
+    void this.session.send({ t: 'emote', player: this.uid, emoteId: id });
+  }
+
   pickAugment(id: string): void {
     if (this.myPicked) return;
     this.myPicked = true;
@@ -527,6 +542,8 @@ export class OnlineMatch {
       oppConnected,
       oppLeft: this.oppLeft,
       noOpponent: this.noOpponent,
+      oppEmoteSeq: this.oppEmoteSeq,
+      oppEmoteId: this.oppEmoteId,
     };
   }
 

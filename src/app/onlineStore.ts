@@ -44,6 +44,11 @@ export interface OnlineStore {
   // opponent "+N" score-popup pulses (seq bumps each time the opponent scores)
   oppGainSeq: number;
   oppGainAmount: number;
+  // emote bubbles (Clash-Royale-style): seq bumps each time a side emotes
+  myEmoteSeq: number;
+  myEmoteId: string | null;
+  oppEmoteSeq: number;
+  oppEmoteId: string | null;
   winner: 'me' | 'opp' | 'draw' | null;
   mmrDelta: number | null;
   mmr: number; // my MMR AFTER the ranked result (for the result rank band)
@@ -55,6 +60,8 @@ export interface OnlineStore {
   noOpponent: boolean;
   myName: string;
   set: (p: Partial<OnlineStore>) => void;
+  /** Locally fire my own emote bubble (the controller also sends it on the wire). */
+  sendMyEmote: (id: string) => void;
   reset: () => void;
 }
 
@@ -85,6 +92,10 @@ const INIT = {
   roundResult: null as RoundResult | null,
   oppGainSeq: 0,
   oppGainAmount: 0,
+  myEmoteSeq: 0,
+  myEmoteId: null as string | null,
+  oppEmoteSeq: 0,
+  oppEmoteId: null as string | null,
   winner: null as 'me' | 'opp' | 'draw' | null,
   mmrDelta: null as number | null,
   mmr: START_MMR,
@@ -100,5 +111,6 @@ const INIT = {
 export const useOnlineStore = create<OnlineStore>((set) => ({
   ...INIT,
   set: (p) => set(p),
+  sendMyEmote: (id) => set((s) => ({ myEmoteSeq: s.myEmoteSeq + 1, myEmoteId: id })),
   reset: () => set({ ...INIT }),
 }));

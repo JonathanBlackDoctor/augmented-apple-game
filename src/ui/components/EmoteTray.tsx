@@ -1,21 +1,18 @@
 // ui/components/EmoteTray.tsx — in-battle emote launcher (Clash-Royale-style).
 // A corner button opens your unlocked emotes; tapping one fires a bubble on your
-// side (rendered by EmoteOverlay) and a small SFX.
+// side via the `onSend` callback (versus or online). The bubble + its SFX are
+// rendered/played by EmoteOverlay, so the same tray works in both modes.
 import { useState } from 'react';
 import { useProgressStore } from '../../app/progressStore';
-import { useVersusStore } from '../../app/versusStore';
 import { getEmote, type Emote } from '../../emotes';
-import { sfx } from '../../app/sound';
 
-export function EmoteTray() {
+export function EmoteTray({ onSend }: { onSend: (id: string) => void }) {
   const unlocked = useProgressStore((s) => s.unlockedEmotes);
-  const send = useVersusStore((s) => s.sendMyEmote);
   const [open, setOpen] = useState(false);
   const emotes = unlocked.map(getEmote).filter((e): e is Emote => Boolean(e));
 
   const fire = (id: string): void => {
-    send(id);
-    sfx.emote();
+    onSend(id);
     setOpen(false);
   };
 

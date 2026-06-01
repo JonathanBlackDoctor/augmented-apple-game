@@ -161,8 +161,7 @@ export function GameScreen() {
       <div className="board-host" ref={hostRef} />
       {isVersus && <OwnedAugments />}
       {isVersus && <OpponentAugments />}
-      {isVersus && <EmoteOverlay />}
-      {isVersus && phase !== 'result' && !paused && !intro && <EmoteTray />}
+      {isVersus && <VersusEmotes paused={paused} intro={intro} />}
       {intro && <Countdown onDone={endIntro} />}
       {/* Per-round 3·2·1 after the augment pick (versus). The match loop drives the
           real round start, so onDone is a no-op; durationMs keeps the overlay in
@@ -198,5 +197,27 @@ export function GameScreen() {
       {overlay === 'settings' && <SettingsOverlay onClose={() => setOverlay(null)} />}
       {overlay === 'help' && <HelpOverlay onClose={() => setOverlay(null)} />}
     </div>
+  );
+}
+
+// Emote bubbles + launcher for the AI battle, fed by the versus store. The tray is
+// hidden during the result screen, while paused, and through the intro countdown.
+function VersusEmotes({ paused, intro }: { paused: boolean; intro: boolean }) {
+  const phase = useGameStore((s) => s.phase);
+  const myEmoteSeq = useVersusStore((s) => s.myEmoteSeq);
+  const myEmoteId = useVersusStore((s) => s.myEmoteId);
+  const oppEmoteSeq = useVersusStore((s) => s.oppEmoteSeq);
+  const oppEmoteId = useVersusStore((s) => s.oppEmoteId);
+  const send = useVersusStore((s) => s.sendMyEmote);
+  return (
+    <>
+      <EmoteOverlay
+        myEmoteSeq={myEmoteSeq}
+        myEmoteId={myEmoteId}
+        oppEmoteSeq={oppEmoteSeq}
+        oppEmoteId={oppEmoteId}
+      />
+      {phase !== 'result' && !paused && !intro && <EmoteTray onSend={send} />}
+    </>
   );
 }

@@ -3,7 +3,7 @@ import { hudTimerState } from './hudTimer';
 
 export function Hud({ onPause }: { onPause?: () => void }) {
   const s = useGameStore();
-  const total = s.totalScore + s.roundScore;
+  const total = s.roundScore;
   const pct = Math.max(0, Math.min(1, s.durationMs ? s.remainingMs / s.durationMs : 0));
   const secs = Math.max(0, Math.ceil(s.remainingMs / 1000));
   const low = secs <= 5;

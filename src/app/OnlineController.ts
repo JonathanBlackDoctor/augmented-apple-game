@@ -80,8 +80,18 @@ export class OnlineController {
     }
     useOnlineStore.getState().set({ myName: this.profile.nickname });
     const dl = parseDeepLink(window.location.search);
-    if (dl.room && isValidRoomCode(dl.room.toUpperCase())) await this.join(dl.room);
-    else useOnlineStore.getState().set({ stage: 'menu' });
+    if (dl.room) {
+      // Arrived via a 1:1 invite link. Auto-join the room; if its code is malformed
+      // (a broken link) or the host has since closed the room (it expires when the
+      // host leaves — see lobby onDisconnect), the join falls through to the
+      // no-opponent timeout, which the screen now surfaces as an expired invite.
+      useOnlineStore.getState().set({ fromInvite: true });
+      const c = dl.room.toUpperCase();
+      if (isValidRoomCode(c)) await this.join(c);
+      else useOnlineStore.getState().set({ stage: 'connecting', noOpponent: true });
+    } else {
+      useOnlineStore.getState().set({ stage: 'menu' });
+    }
   }
 
   private async makeBackend(): Promise<NetBackend> {

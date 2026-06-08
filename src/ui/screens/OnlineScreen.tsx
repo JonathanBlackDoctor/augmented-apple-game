@@ -64,6 +64,11 @@ export function OnlineScreen() {
     void navigator.clipboard?.writeText(s.link);
   };
   const goHome = (): void => {
+    // Drop any ?room=…/inv=… invite params so going home (and any later reload)
+    // lands on a clean menu instead of re-triggering the same expired-link join.
+    if (window.location.search) {
+      window.history.replaceState(null, '', window.location.pathname + window.location.hash);
+    }
     useOnlineStore.getState().reset();
     useGameStore.setState({ mode: 'solo' });
     useGameStore.getState().goHome();
@@ -198,10 +203,21 @@ export function OnlineScreen() {
         <div className="overlay">
           <div className="lobby-card">
             {s.noOpponent ? (
-              <>
-                <h2>상대를 찾을 수 없어요</h2>
-                <p className="aug-sub">방 코드를 확인하거나 다시 시도해 주세요.</p>
-              </>
+              s.fromInvite ? (
+                <>
+                  <h2>만료된 초대 링크예요</h2>
+                  <p className="aug-sub">
+                    이 1:1 대결 초대 링크는 만료되었거나 더 이상 유효하지 않아요.
+                    <br />
+                    새 초대 링크를 받아 다시 시도해 주세요.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h2>상대를 찾을 수 없어요</h2>
+                  <p className="aug-sub">방 코드를 확인하거나 다시 시도해 주세요.</p>
+                </>
+              )
             ) : (
               <>
                 <h2>연결 중…</h2>
@@ -209,7 +225,7 @@ export function OnlineScreen() {
               </>
             )}
             <button className="btn ghost" onClick={goHome}>
-              {s.noOpponent ? '돌아가기' : '취소'}
+              {s.noOpponent ? '홈으로' : '취소'}
             </button>
           </div>
         </div>

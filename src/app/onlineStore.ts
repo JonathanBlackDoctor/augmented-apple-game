@@ -58,6 +58,9 @@ export interface OnlineStore {
   oppConnected: boolean;
   oppLeft: boolean;
   noOpponent: boolean;
+  // true when this session was opened via a 1:1 invite/deep link (?room=…), so a
+  // dead room is surfaced as an "expired invite link" rather than a generic miss.
+  fromInvite: boolean;
   myName: string;
   set: (p: Partial<OnlineStore>) => void;
   /** Locally fire my own emote bubble (the controller also sends it on the wire). */
@@ -105,6 +108,7 @@ const INIT = {
   oppConnected: false,
   oppLeft: false,
   noOpponent: false,
+  fromInvite: false,
   myName: '나',
 };
 

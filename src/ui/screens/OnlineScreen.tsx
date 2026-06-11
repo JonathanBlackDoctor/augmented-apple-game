@@ -24,6 +24,7 @@ export function OnlineScreen() {
   const s = useOnlineStore();
   const [code, setCode] = useState('');
   const [nick, setNick] = useState('');
+  const [confirmExit, setConfirmExit] = useState(false);
 
   useEffect(() => {
     let disposed = false;
@@ -85,7 +86,7 @@ export function OnlineScreen() {
     <div className="screen game online">
       {/* HUD before the board (mirrors the AI versus screen) so it pins to the top
           of the column instead of being pushed below the flex:1 board host. */}
-      {s.stage === 'playing' && <OnlineHud />}
+      {s.stage === 'playing' && <OnlineHud onExit={() => setConfirmExit(true)} />}
       <div className="board-host" ref={hostRef} />
       {s.stage === 'playing' && <OwnedAugments ids={s.owned} />}
       {s.stage === 'playing' && <OpponentAugments ids={s.oppOwned} />}
@@ -99,6 +100,23 @@ export function OnlineScreen() {
       )}
       {s.stage === 'playing' && (
         <EmoteTray onSend={(id) => ctrlRef.current?.sendEmote(id)} />
+      )}
+
+      {s.stage === 'playing' && confirmExit && (
+        <div className="overlay">
+          <div className="lobby-card">
+            <h2>대결에서 나갈까요?</h2>
+            <p className="aug-sub">
+              지금 나가면 이번 대결은 기권 처리되고 홈으로 돌아가요.
+            </p>
+            <button className="btn primary" onClick={() => setConfirmExit(false)}>
+              계속하기
+            </button>
+            <button className="btn ghost" onClick={goHome}>
+              나가서 홈으로
+            </button>
+          </div>
+        </div>
       )}
 
       {s.stage === 'menu' && (

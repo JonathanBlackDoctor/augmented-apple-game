@@ -10,7 +10,7 @@ interface Pop {
   amount: number;
 }
 
-export function OnlineHud() {
+export function OnlineHud({ onExit }: { onExit?: () => void }) {
   const s = useOnlineStore();
   const live = s.phase === 'round';
   const myTotal = s.myTotal + (live ? s.myScore : 0);
@@ -47,6 +47,11 @@ export function OnlineHud() {
           <span className="vs-wins">
             {s.roundWins.me} : {s.roundWins.opp}
           </span>
+          {onExit && (
+            <button className="icon-btn hud-pause" onClick={onExit} aria-label="나가기">
+              ✕
+            </button>
+          )}
         </div>
         <SeriesPips history={s.roundHistory} total={s.rounds} />
         <div className={`time-bar${low ? ' low' : ''}`}>

@@ -90,6 +90,28 @@ describe('engine evaluate / commit / score', () => {
     for (const i of res.cells) expect(e.getBoard().cells[i]).toBe(0);
   });
 
+  it('keeps the combo within a 2s window and resets it after a longer gap', () => {
+    // Record the comboCount the engine reports to onClear for each clear.
+    const combos: number[] = [];
+    const recordBus: AugmentHookBus = {
+      run: (point, ...args) => {
+        if (point === 'onClear') combos.push((args[1] as { comboCount: number }).comboCount);
+        return undefined;
+      },
+    };
+    const e = createEngine();
+    e.init(cfg('combo-window'), makeRng('combo-window'), recordBus);
+    let seq = 0;
+    // tMs gaps: 0 -> +500 -> +1500 (all within 2s) -> +2001 (lapsed)
+    for (const tMs of [0, 500, 2000, 4001]) {
+      const r = findValidRect(e.getBoard(), (rect) => e.evaluate(rect));
+      if (!r) break;
+      e.commit({ seq: ++seq, rect: r, tMs });
+    }
+    // First three chain (1,2,3); the >2s gap before the fourth restarts at 1.
+    expect(combos).toEqual([1, 2, 3, 1]);
+  });
+
   it('rejects an invalid selection without changing the score', () => {
     const e = createEngine();
     e.init(cfg('reject-seed'), makeRng('reject-seed'), noopBus);

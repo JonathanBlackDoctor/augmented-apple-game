@@ -1,0 +1,42 @@
+name: deploy firebase rules
+
+# The web app ships to GitHub Pages (see deploy.yml). Firebase is used only for
+# the Realtime Database, so this workflow keeps the live RTDB security rules +
+# indexes (firebase/database.rules.json) in sync with the repo. Without it the
+# committed rules never reach Firebase and leaderboard reads/writes can be denied.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'firebase/**'
+      - '.github/workflows/firebase-rules.yml'
+  workflow_dispatch: # lets you deploy the current rules on demand from the Actions tab
+
+permissions:
+  contents: read
+
+concurrency:
+  group: firebase-rules
+  cancel-in-progress: true
+
+jobs:
+  database-rules:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Write service account credentials
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          if [ -z "$FIREBASE_SERVICE_ACCOUNT" ]; then
+            echo "::error::Secret FIREBASE_SERVICE_ACCOUNT is not set. Add the Google service account JSON (Firebase Admin role) under Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+          printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/firebase-sa.json"
+          echo "GOOGLE_APPLICATION_CREDENTIALS=$RUNNER_TEMP/firebase-sa.json" >> "$GITHUB_ENV"
+      - name: Deploy Realtime Database rules
+        working-directory: firebase
+        run: npx --yes firebase-tools@latest deploy --only database --project augmented-apple-game --non-interactive

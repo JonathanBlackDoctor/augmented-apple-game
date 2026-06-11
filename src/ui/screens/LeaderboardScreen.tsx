@@ -3,7 +3,7 @@ import { useGameStore } from '../../app/store';
 import { StandardRankingService, InMemoryRankingStore, type RankingStore } from '../../ranking';
 import { FIREBASE_CONFIGURED } from '../../net/firebaseConfig';
 import { loadMyProfile } from '../../profile/current';
-import type { PublicProfile } from '../../contracts';
+import type { PublicProfile, RankTrack } from '../../contracts';
 
 function LbRow({ r, rank, me }: { r: PublicProfile; rank: number; me: boolean }) {
   return (
@@ -21,11 +21,16 @@ function LbRow({ r, rank, me }: { r: PublicProfile; rank: number; me: boolean })
 }
 
 export function LeaderboardScreen() {
+  // PvP is the primary competitive ladder (default tab); AI is the campaign ladder.
+  const [track, setTrack] = useState<RankTrack>('pvp');
   const [rows, setRows] = useState<PublicProfile[] | null>(null);
+  const [failed, setFailed] = useState(false);
   const [myUid, setMyUid] = useState<string | null>(null);
 
   useEffect(() => {
     let alive = true;
+    setRows(null);
+    setFailed(false);
     void (async () => {
       let store: RankingStore = new InMemoryRankingStore();
       if (FIREBASE_CONFIGURED) {
@@ -33,10 +38,16 @@ export function LeaderboardScreen() {
         store = new FirebaseRankingStore();
       }
       try {
-        const lb = await new StandardRankingService(store).leaderboard(20);
+        const lb = await new StandardRankingService(store).leaderboard(20, track);
         if (alive) setRows(lb);
-      } catch {
-        if (alive) setRows([]);
+      } catch (err) {
+        // A read failure is NOT an empty board — surface it instead of silently
+        // showing "아직 기록이 없어요" (which masks rules/index/network problems).
+        console.error('[leaderboard] failed to load', err);
+        if (alive) {
+          setRows([]);
+          setFailed(true);
+        }
       }
       try {
         const me = await loadMyProfile();
@@ -48,7 +59,7 @@ export function LeaderboardScreen() {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [track]);
 
   const goHome = (): void => {
     useGameStore.setState({ mode: 'solo' });
@@ -62,9 +73,30 @@ export function LeaderboardScreen() {
     <div className="screen home">
       <div className="home-card lb-card">
         <h2 className="title sm">랭킹 · 상위 20</h2>
+        <div className="lb-tabs" role="tablist">
+          <button
+            className={`lb-tab${track === 'pvp' ? ' on' : ''}`}
+            role="tab"
+            aria-selected={track === 'pvp'}
+            onClick={() => setTrack('pvp')}
+          >
+            1:1 랭크
+          </button>
+          <button
+            className={`lb-tab${track === 'ai' ? ' on' : ''}`}
+            role="tab"
+            aria-selected={track === 'ai'}
+            onClick={() => setTrack('ai')}
+          >
+            AI 랭크
+          </button>
+        </div>
         {rows === null && <div className="spinner" />}
-        {rows && rows.length === 0 && (
-          <p className="aug-sub">아직 기록이 없어요. 친구와 랭크 대결을 해보세요!</p>
+        {rows && rows.length === 0 && failed && (
+          <p className="aug-sub">랭킹을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</p>
+        )}
+        {rows && rows.length === 0 && !failed && (
+          <p className="aug-sub">아직 기록이 없어요. 한 판 플레이해 랭킹에 이름을 올려보세요!</p>
         )}
         {rows && rows.length > 0 && (
           <ol className="lb-list">

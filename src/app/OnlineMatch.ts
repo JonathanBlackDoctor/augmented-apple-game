@@ -77,6 +77,7 @@ export interface OnlineSnapshot {
   oppOwned: string[];
   winner: 'me' | 'opp' | 'draw' | null;
   oppName: string;
+  oppMmr: number | null; // opponent's MMR from the handshake (null until learned)
   oppPresent: boolean;
   oppConnected: boolean;
   oppLeft: boolean;
@@ -167,6 +168,9 @@ export class OnlineMatch {
   private oppLeft = false;
   private noOpponent = false;
   private oppName: string;
+  private oppMmr: number | null = null; // learned from the opponent's 'ready' handshake
+  private readonly selfName: string;
+  private readonly selfMmr: number;
   private winner: 'me' | 'opp' | 'draw' | null = null;
   private oppEmoteSeq = 0;
   private oppEmoteId: string | null = null;
@@ -175,6 +179,8 @@ export class OnlineMatch {
     this.session = o.session;
     this.role = o.role;
     this.uid = o.self.uid;
+    this.selfName = o.self.nickname;
+    this.selfMmr = o.self.mmr;
     this.seedBase = o.roomId;
     this.oppName = o.oppName ?? '상대';
     this.rounds = o.rounds ?? 5;
@@ -239,7 +245,13 @@ export class OnlineMatch {
     // disconnect check fire instantly and declare a bogus forfeit win.
     this.nowMs = nowMs;
     this.unsub = this.session.on((e) => this.onEvent(e));
-    await this.session.send({ t: 'ready', player: this.uid, phase: 'lobby' });
+    await this.session.send({
+      t: 'ready',
+      player: this.uid,
+      phase: 'lobby',
+      name: this.selfName,
+      mmr: this.selfMmr,
+    });
   }
 
   private onEvent(e: NetEvent): void {
@@ -263,6 +275,10 @@ export class OnlineMatch {
     switch (e.t) {
       case 'ready':
         this.oppReadyLobby = true;
+        // Adopt the opponent's announced identity for the displayed name and the
+        // post-match ranked ELO (real opponent rating, not an assumed equal MMR).
+        if (typeof e.name === 'string' && e.name) this.oppName = e.name;
+        if (typeof e.mmr === 'number') this.oppMmr = e.mmr;
         break;
       case 'clear':
         this.oppRound = e.score;
@@ -568,6 +584,7 @@ export class OnlineMatch {
       oppOwned: [...this.oppOwned],
       winner: this.winner,
       oppName: this.oppName,
+      oppMmr: this.oppMmr,
       oppPresent: this.oppPresent,
       oppConnected,
       oppLeft: this.oppLeft,

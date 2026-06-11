@@ -9,6 +9,12 @@
     },
     "leaderboard": {
       ".read": true,
+      ".indexOn": ["mmr"],
+      "$uid": { ".write": "auth != null && auth.uid === $uid" }
+    },
+    "leaderboardAi": {
+      ".read": true,
+      ".indexOn": ["mmr"],
       "$uid": { ".write": "auth != null && auth.uid === $uid" }
     },
     "queue": {

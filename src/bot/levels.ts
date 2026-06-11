@@ -149,3 +149,12 @@ export function levelInfo(level: number): AiLevel {
 export function levelTuning(level: number): BotTuning {
   return levelInfo(level).tuning;
 }
+
+/** Representative MMR for an AI rival, used to weight the ranked ELO of a level
+ *  win/loss. Spreads the 10 rivals across the tier table (elo.ts): L1≈Bronze
+ *  (880) … L10≈Master (1960), so beating a tougher rival is worth more and
+ *  losing to a gentle one costs more. PURE data. */
+export function levelMmr(level: number): number {
+  const i = Math.min(MAX_LEVEL, Math.max(1, Math.round(level)));
+  return 760 + i * 120;
+}

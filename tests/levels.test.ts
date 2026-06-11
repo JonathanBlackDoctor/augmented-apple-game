@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { AI_LEVELS, MAX_LEVEL, levelInfo, levelTuning } from '../src/bot/levels';
+import { AI_LEVELS, MAX_LEVEL, levelInfo, levelTuning, levelMmr } from '../src/bot/levels';
+import { tierFromMmr } from '../src/ranking/elo';
 import { EMOTES, STARTER_EMOTE_IDS, emoteForLevel, getEmote } from '../src/emotes';
 
 describe('AI levels', () => {
@@ -36,6 +37,17 @@ describe('AI levels', () => {
   it('clamps out-of-range levels', () => {
     expect(levelInfo(0)).toBe(AI_LEVELS[0]);
     expect(levelInfo(99)).toBe(AI_LEVELS[MAX_LEVEL - 1]);
+  });
+
+  it('assigns a strictly rising MMR spanning Bronze → Master', () => {
+    for (let l = 2; l <= MAX_LEVEL; l++) {
+      expect(levelMmr(l)).toBeGreaterThan(levelMmr(l - 1));
+    }
+    expect(tierFromMmr(levelMmr(1))).toBe('Bronze');
+    expect(tierFromMmr(levelMmr(MAX_LEVEL))).toBe('Master');
+    // Out-of-range levels clamp to the ends, never NaN.
+    expect(levelMmr(0)).toBe(levelMmr(1));
+    expect(levelMmr(99)).toBe(levelMmr(MAX_LEVEL));
   });
 });
 

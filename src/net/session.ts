@@ -13,7 +13,15 @@ export class BackendNetSession implements NetSession {
     this.uid = profile.uid;
     this.channel = this.backend.open(roomId);
     if (opts?.reset) await this.channel.reset(); // host clears stale room state first
-    await this.channel.send({ t: 'ready', player: this.uid, phase: 'lobby' });
+    // Announce our public identity in the join handshake so the opponent learns
+    // our real nickname + MMR (used for the displayed name and ranked ELO weighting).
+    await this.channel.send({
+      t: 'ready',
+      player: this.uid,
+      phase: 'lobby',
+      name: profile.nickname,
+      mmr: profile.mmr,
+    });
   }
 
   on(cb: (e: NetEvent) => void): () => void {

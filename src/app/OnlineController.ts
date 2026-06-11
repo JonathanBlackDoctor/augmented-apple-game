@@ -400,7 +400,7 @@ export class OnlineController {
       // A backend write hiccup must never swallow the result screen — rank the
       // result best-effort and always fall through to showing the outcome.
       try {
-        const r = await this.ranking.applyResult(this.profile, opp, result, true);
+        const r = await this.ranking.applyResult(this.profile, opp, result, 'pvp');
         mmrDelta = r.mmrDelta;
         await this.persistProfile();
       } catch (err) {

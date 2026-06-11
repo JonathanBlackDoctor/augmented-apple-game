@@ -1,7 +1,7 @@
 // profile/local.ts — offline anonymous identity persisted via a KV store
 // (plan §12). The Firebase-backed service mirrors this to /profiles/{uid}.
 import type { Profile, ProfileService } from '../contracts';
-import { tierFromMmr, START_MMR } from '../ranking/elo';
+import { newRankFields, withRankDefaults } from './defaults';
 
 export interface KV {
   get(key: string): string | null;
@@ -47,7 +47,8 @@ export class LocalProfileService implements ProfileService {
     const raw = this.kv.get(KEY);
     if (raw) {
       try {
-        this.profile = JSON.parse(raw) as Profile;
+        // Backfill rank fields for saves predating the separate AI ladder.
+        this.profile = withRankDefaults(JSON.parse(raw) as Profile);
         return this.profile;
       } catch {
         /* corrupt — recreate below */
@@ -58,11 +59,7 @@ export class LocalProfileService implements ProfileService {
       uid,
       nickname: '사과러' + uid.slice(-4),
       avatar: AVATARS[Math.floor(Math.random() * AVATARS.length)],
-      mmr: START_MMR,
-      tier: tierFromMmr(START_MMR),
-      wins: 0,
-      losses: 0,
-      games: 0,
+      ...newRankFields(),
       unlocks: [],
       createdAt: Date.now(),
     };

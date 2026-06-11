@@ -5,6 +5,7 @@ import { getEmote } from '../../emotes';
 import { MAX_LEVEL } from '../../bot';
 import { AnimNum } from './AnimNum';
 import { RoundStrip } from './RoundStrip';
+import { RankBand } from './RankBand';
 
 export function VersusResult({
   onReplay,
@@ -52,6 +53,12 @@ export function VersusResult({
           라운드 {v.roundWins.me} : {v.roundWins.opp}
         </p>
         {v.roundHistory.length > 0 && <RoundStrip history={v.roundHistory} />}
+        {v.mmrDelta !== null && (
+          <>
+            <p className="mmr-cap">AI 랭크</p>
+            <RankBand mmrAfter={v.mmr} mmrDelta={v.mmrDelta} />
+          </>
+        )}
         {win && rewardEmote && (
           <div className="reward-pop">
             <span className="reward-cap">새 감정표현 획득!</span>

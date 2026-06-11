@@ -2002,6 +2002,36 @@ body {
 .btn.rank { background: var(--chip-bg); color: var(--ink); border: 1px solid var(--line); }
 .lb-card { width: min(420px, 90vw); }
 .title.sm { font-size: 22px; }
+.lb-tabs {
+  display: flex;
+  gap: 6px;
+  margin: 10px 0 4px;
+  width: 100%;
+}
+.lb-tab {
+  flex: 1;
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--ink, #e8e8ea);
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.lb-tab.on {
+  background: linear-gradient(120deg, var(--apple, #e2476a), #f0a23c);
+  border-color: transparent;
+  color: #fff;
+}
+.mmr-cap {
+  margin: 10px 0 2px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  opacity: 0.7;
+}
 .lb-list {
   list-style: none;
   margin: 8px 0;

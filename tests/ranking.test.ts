@@ -46,31 +46,48 @@ describe('RankingService', () => {
     wins: 0,
     losses: 0,
     games,
+    aiMmr: 1000,
+    aiTier: tierFromMmr(1000),
+    aiWins: 0,
+    aiLosses: 0,
+    aiGames: 0,
     unlocks: [],
     createdAt: 0,
   });
+  const opp = (mmr: number): PublicProfile => ({ uid: 'op', nickname: 'op', avatar: '🍏', tier: tierFromMmr(mmr), mmr });
 
-  it('applies a ranked win and mirrors to the leaderboard', async () => {
+  it('applies a PvP win and mirrors to the PvP leaderboard only', async () => {
     const svc = new StandardRankingService(new InMemoryRankingStore());
     const self = mkProfile('me', 1000);
-    const opp: PublicProfile = { uid: 'op', nickname: 'op', avatar: '🍏', tier: 'Silver', mmr: 1000 };
-    const { mmrDelta, tier } = await svc.applyResult(self, opp, 'win', true);
+    const { mmrDelta, tier } = await svc.applyResult(self, opp(1000), 'win', 'pvp');
     expect(mmrDelta).toBe(20);
     expect(self.mmr).toBe(1020);
     expect(self.wins).toBe(1);
     expect(self.games).toBe(1);
     expect(tier).toBe('Silver');
-    const lb = await svc.leaderboard(10);
+    const lb = await svc.leaderboard(10, 'pvp');
     expect(lb[0].uid).toBe('me');
+    expect(lb[0].mmr).toBe(1020);
+    // The AI ladder is untouched by a PvP result.
+    expect(self.aiMmr).toBe(1000);
+    expect((await svc.leaderboard(10, 'ai')).length).toBe(0);
   });
 
-  it('bot match is unranked: no mmr change, absent from leaderboard', async () => {
+  it('AI and PvP ladders are fully independent (separate MMR + leaderboard)', async () => {
     const svc = new StandardRankingService(new InMemoryRankingStore());
     const self = mkProfile('me', 1000);
-    const bot: PublicProfile = { uid: 'bot', nickname: 'AI', avatar: '🤖', tier: 'Silver', mmr: 1000 };
-    const { mmrDelta } = await svc.applyResult(self, bot, 'win', false);
-    expect(mmrDelta).toBe(0);
+    const { mmrDelta } = await svc.applyResult(self, opp(1000), 'win', 'ai');
+    expect(mmrDelta).toBe(20);
+    expect(self.aiMmr).toBe(1020);
+    expect(self.aiWins).toBe(1);
+    expect(self.aiGames).toBe(1);
+    // PvP rating + record stay put.
     expect(self.mmr).toBe(1000);
-    expect((await svc.leaderboard(10)).length).toBe(0);
+    expect(self.wins).toBe(0);
+    expect(self.games).toBe(0);
+    const aiLb = await svc.leaderboard(10, 'ai');
+    expect(aiLb[0].uid).toBe('me');
+    expect(aiLb[0].mmr).toBe(1020);
+    expect((await svc.leaderboard(10, 'pvp')).length).toBe(0);
   });
 });

@@ -22,13 +22,18 @@ export function HomeScreen() {
   const startOnline = useGameStore((s) => s.startOnline);
   const startLeaderboard = useGameStore((s) => s.startLeaderboard);
   const [overlay, setOverlay] = useState<'settings' | 'help' | null>(null);
-  const [me, setMe] = useState<{ mmr: number; tier: Tier } | null>(null);
+  const [me, setMe] = useState<{
+    mmr: number;
+    tier: Tier;
+    aiMmr: number;
+    aiTier: Tier;
+  } | null>(null);
 
   useEffect(() => {
     let alive = true;
     void loadMyProfile()
       .then((p) => {
-        if (alive) setMe({ mmr: p.mmr, tier: p.tier });
+        if (alive) setMe({ mmr: p.mmr, tier: p.tier, aiMmr: p.aiMmr, aiTier: p.aiTier });
       })
       .catch(() => {
         /* anonymous / unavailable — hide the rank badge */
@@ -68,8 +73,8 @@ export function HomeScreen() {
             </span>
             {me && (
               <span className="mc-meta">
-                <span className="mc-tier">{TIER_KO[me.tier]}</span>
-                <span className="mc-mmr">MMR {me.mmr}</span>
+                <span className="mc-tier">{TIER_KO[me.aiTier]}</span>
+                <span className="mc-mmr">AI {me.aiMmr}</span>
               </span>
             )}
           </button>
@@ -81,6 +86,12 @@ export function HomeScreen() {
               <span className="mc-title">친구와 1:1 대결</span>
               <span className="mc-sub">코드로 초대해 실시간 랭크전</span>
             </span>
+            {me && (
+              <span className="mc-meta">
+                <span className="mc-tier">{TIER_KO[me.tier]}</span>
+                <span className="mc-mmr">MMR {me.mmr}</span>
+              </span>
+            )}
           </button>
           <button className="modecard" onClick={() => startLeaderboard()}>
             <span className="mc-ic rank" aria-hidden>

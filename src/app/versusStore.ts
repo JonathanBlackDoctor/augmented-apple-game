@@ -1,6 +1,7 @@
 // app/versusStore.ts — UI state specific to the vs-opponent mode (opponent score,
 // round wins, final result). Shared timer/score/combo stay in the main store.
 import { create } from 'zustand';
+import { START_MMR } from '../ranking/elo';
 
 export interface RoundResult {
   my: number;
@@ -27,6 +28,7 @@ export interface VersusState {
   winner: 'me' | 'opp' | 'draw' | null;
   newRecord: boolean;
   mmrDelta: number | null;
+  mmr: number; // my AI-ladder MMR AFTER the result (for the result rank band)
   ranked: boolean;
   // mid-round review + augment-pick countdown (shared by both timed overlays)
   overlayRemainingMs: number;
@@ -52,7 +54,12 @@ export interface VersusState {
   bumpOppGain(delta: number): void;
   sendMyEmote(id: string): void;
   sendOppEmote(id: string): void;
-  setResult(winner: 'me' | 'opp' | 'draw', mmrDelta: number | null, newRecord: boolean): void;
+  setResult(
+    winner: 'me' | 'opp' | 'draw',
+    mmrDelta: number | null,
+    mmr: number,
+    newRecord: boolean,
+  ): void;
   reset(): void;
 }
 
@@ -68,6 +75,7 @@ const INIT = {
   winner: null as 'me' | 'opp' | 'draw' | null,
   newRecord: false,
   mmrDelta: null as number | null,
+  mmr: START_MMR,
   ranked: false,
   overlayRemainingMs: 0,
   roundResult: null as RoundResult | null,
@@ -92,6 +100,6 @@ export const useVersusStore = create<VersusState>((set) => ({
     set((s) => ({ oppGainSeq: s.oppGainSeq + 1, oppGainAmount: delta })),
   sendMyEmote: (id) => set((s) => ({ myEmoteSeq: s.myEmoteSeq + 1, myEmoteId: id })),
   sendOppEmote: (id) => set((s) => ({ oppEmoteSeq: s.oppEmoteSeq + 1, oppEmoteId: id })),
-  setResult: (winner, mmrDelta, newRecord) => set({ winner, mmrDelta, newRecord }),
+  setResult: (winner, mmrDelta, mmr, newRecord) => set({ winner, mmrDelta, mmr, newRecord }),
   reset: () => set({ ...INIT }),
 }));

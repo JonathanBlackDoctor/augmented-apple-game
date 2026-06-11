@@ -16,7 +16,7 @@ import { VersusMatch, type VersusSnapshot, type VersusPhase } from './VersusMatc
 import { playActivation, playClear, updateAmbient } from './augmentFx';
 import { LocalProfileService, browserKV } from '../profile';
 import { StandardRankingService, InMemoryRankingStore } from '../ranking';
-import { tierFromMmr } from '../ranking/elo';
+import { tierFromMmr, START_MMR } from '../ranking/elo';
 import { FIREBASE_CONFIGURED } from '../net/firebaseConfig';
 import { levelInfo, levelTuning, levelMmr, type EmotePersona } from '../bot';
 import { useProgressStore } from './progressStore';
@@ -426,11 +426,12 @@ export class VersusController {
         mmr: oppMmr,
       };
       const result = winner === 'me' ? 'win' : winner === 'opp' ? 'loss' : 'draw';
-      // The AI ladder is ranked: each rival has a representative MMR (levelMmr),
-      // so climbing the ladder moves your rating + writes you onto the leaderboard.
+      // The AI ladder is ranked on its OWN track: each rival has a representative
+      // MMR (levelMmr), so climbing it moves the player's AI rating + AI leaderboard
+      // standing without ever touching the competitive PvP ladder.
       // Best-effort — a backend write hiccup must never swallow the result screen.
       try {
-        const r = await this.ranking.applyResult(this.profile, opp, result, true);
+        const r = await this.ranking.applyResult(this.profile, opp, result, 'ai');
         mmrDelta = r.mmrDelta;
         await this.persistProfile();
       } catch (err) {
@@ -444,7 +445,8 @@ export class VersusController {
     const newRecord = s.myTotal > gs.bestTotal;
     gs.setTotalScore(s.myTotal);
     gs.finishMatch();
-    useVersusStore.getState().setResult(winner, mmrDelta, newRecord);
+    // Surface the AI-ladder rating (separate from PvP) on the result rank band.
+    useVersusStore.getState().setResult(winner, mmrDelta, this.profile?.aiMmr ?? START_MMR, newRecord);
     useGameStore.getState().setPhase('result');
   }
 

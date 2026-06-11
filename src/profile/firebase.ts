@@ -3,7 +3,7 @@
 import { signInAnonymously } from 'firebase/auth';
 import { ref, get, set, update } from 'firebase/database';
 import type { Profile, ProfileService } from '../contracts';
-import { tierFromMmr, START_MMR } from '../ranking/elo';
+import { newRankFields, withRankDefaults } from './defaults';
 import { getFirebaseAuth, getDb } from '../net/firebaseApp';
 
 const AVATARS = ['🍎', '🍏', '🍊', '🍇', '🍒', '🍓', '🥝', '🍑'];
@@ -17,18 +17,15 @@ export class FirebaseProfileService implements ProfileService {
     const db = getDb();
     const snap = await get(ref(db, `profiles/${uid}`));
     if (snap.exists()) {
-      this.profile = snap.val() as Profile;
+      // Backfill rank fields for profiles saved before the separate AI ladder.
+      this.profile = withRankDefaults(snap.val() as Profile);
       return this.profile;
     }
     const p: Profile = {
       uid,
       nickname: '사과러' + uid.slice(0, 4),
       avatar: AVATARS[Math.floor(Math.random() * AVATARS.length)],
-      mmr: START_MMR,
-      tier: tierFromMmr(START_MMR),
-      wins: 0,
-      losses: 0,
-      games: 0,
+      ...newRankFields(),
       unlocks: [],
       createdAt: Date.now(),
     };

@@ -6,6 +6,7 @@ import { VersusController } from '../../app/VersusController';
 import { buildHookBusFor, rollOffer, tierForRound } from '../../augments';
 import { Hud } from '../components/Hud';
 import { VersusHud } from '../components/VersusHud';
+import { ExitButton } from '../components/ExitButton';
 import { AugmentOverlay } from '../components/AugmentOverlay';
 import { ResultOverlay } from '../components/ResultOverlay';
 import { VersusResult } from '../components/VersusResult';
@@ -87,6 +88,7 @@ export function GameScreen() {
     <div className="screen game">
       {isVersus ? <VersusHud /> : <Hud />}
       <div className="board-host" ref={hostRef} />
+      {phase !== 'result' && <ExitButton onExit={onHome} />}
       {phase === 'augment' && <AugmentOverlay onPick={onPick} />}
       {phase === 'result' &&
         (isVersus ? (

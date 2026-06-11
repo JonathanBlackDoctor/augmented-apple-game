@@ -19,3 +19,13 @@ export function buildRoomLink(origin: string, room: string, inv?: string): strin
   if (inv) u.searchParams.set('inv', inv);
   return u.toString();
 }
+
+/** Returns `href` with the room/inv params removed (for history.replaceState
+ *  after the deep link is consumed), or null when there is nothing to strip. */
+export function stripDeepLink(href: string): string | null {
+  const u = new URL(href);
+  if (!u.searchParams.has('room') && !u.searchParams.has('inv')) return null;
+  u.searchParams.delete('room');
+  u.searchParams.delete('inv');
+  return u.toString();
+}

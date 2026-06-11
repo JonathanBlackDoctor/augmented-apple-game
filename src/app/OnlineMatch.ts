@@ -222,7 +222,10 @@ export class OnlineMatch {
         this.matchStart = nowMs;
         void this.session.send({ t: 'phase', phase: 'countdown', round: 0, startAtServerTs: nowMs });
       } else {
-        if (this.role === 'host' && !this.oppReadyLobby && nowMs - this.lobbyStart > this.lobbyTimeoutMs) {
+        // Host: nobody arrived. Guest: no live host started a countdown — the
+        // invite is stale (room log replayed, but its host is long gone).
+        const hostAlone = this.role === 'host' && !this.oppReadyLobby;
+        if ((hostAlone || this.role === 'guest') && nowMs - this.lobbyStart > this.lobbyTimeoutMs) {
           this.noOpponent = true;
         }
         return this.snapshot();

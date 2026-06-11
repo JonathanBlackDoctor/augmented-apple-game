@@ -585,6 +585,39 @@ body {
 .overlay.light { background: rgba(0, 0, 0, 0.25); }
 .countdown { font-size: 42px; font-weight: 800; color: #fff; }
 
+/* ---- in-game exit ---- */
+.exit-fab {
+  position: fixed;
+  left: 10px;
+  bottom: 10px;
+  z-index: 4; /* under .overlay (5) so modal flows stay on top */
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--panel, #1c1714);
+  border: 1px solid var(--edge, #2e2620);
+  border-radius: 999px;
+  color: var(--muted, #b8a89c);
+  font-family: var(--font);
+  font-size: 13px;
+}
+button.exit-fab {
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  font-size: 15px;
+  cursor: pointer;
+  opacity: 0.75;
+}
+button.exit-fab:hover {
+  opacity: 1;
+  color: var(--text, #fff);
+}
+div.exit-fab.confirm {
+  padding: 6px 8px 6px 14px;
+}
+
 /* ---- in-app banner + nickname ---- */
 .inapp-banner {
   position: fixed;

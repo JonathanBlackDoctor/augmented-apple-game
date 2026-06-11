@@ -3,7 +3,7 @@ import { create } from 'zustand';
 import type { AugTier } from '../contracts';
 import type { OnlinePhase } from './OnlineMatch';
 
-export type OnlineStage = 'menu' | 'hosting' | 'connecting' | 'playing' | 'result';
+export type OnlineStage = 'menu' | 'hosting' | 'connecting' | 'playing' | 'result' | 'expired';
 
 export interface OnlineStore {
   stage: OnlineStage;

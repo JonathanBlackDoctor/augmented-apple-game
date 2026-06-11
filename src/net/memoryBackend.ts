@@ -2,7 +2,7 @@
 // synchronous fan-out. Powers offline play (vs bot), local dev without Firebase,
 // and 2-client simulation tests.
 import type { NetEvent, PlayerId } from '../contracts';
-import type { NetBackend, RoomChannel } from './backend';
+import type { NetBackend, RoomChannel, RoomStatus } from './backend';
 
 interface Room {
   subs: Set<(e: NetEvent) => void>;
@@ -20,6 +20,12 @@ export class InMemoryNetBackend implements NetBackend {
       this.rooms.set(id, r);
     }
     return r;
+  }
+
+  async roomStatus(roomId: string): Promise<RoomStatus> {
+    const r = this.rooms.get(roomId); // peek only — must not create the room
+    if (!r || r.log.length === 0) return 'empty';
+    return r.log.some((e) => e.t === 'phase') ? 'started' : 'waiting';
   }
 
   open(roomId: string): RoomChannel {

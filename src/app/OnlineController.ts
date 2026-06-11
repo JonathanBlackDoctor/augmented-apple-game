@@ -14,7 +14,7 @@ import { InMemoryNetBackend } from '../net/memoryBackend';
 import { BackendNetSession } from '../net/session';
 import type { NetBackend } from '../net/backend';
 import { FIREBASE_CONFIGURED } from '../net/firebaseConfig';
-import { makeRoomCode, isValidRoomCode, buildRoomLink, parseDeepLink } from '../matchmaking';
+import { makeRoomCode, isValidRoomCode, buildRoomLink, parseDeepLink, stripDeepLink } from '../matchmaking';
 import { StandardRankingService, InMemoryRankingStore } from '../ranking';
 import { LocalProfileService, browserKV } from '../profile';
 
@@ -57,8 +57,16 @@ export class OnlineController {
     }
     useOnlineStore.getState().set({ myName: this.profile.nickname });
     const dl = parseDeepLink(window.location.search);
-    if (dl.room && isValidRoomCode(dl.room.toUpperCase())) await this.join(dl.room);
-    else useOnlineStore.getState().set({ stage: 'menu' });
+    // Consume the deep link: strip ?room/inv so refresh or "home" lands on the
+    // plain URL instead of re-triggering the (possibly expired) invite.
+    const stripped = stripDeepLink(window.location.href);
+    if (stripped) window.history.replaceState(null, '', stripped);
+    if (dl.room && isValidRoomCode(dl.room.toUpperCase())) await this.join(dl.room, true);
+    else if (dl.room) {
+      useOnlineStore
+        .getState()
+        .set({ stage: 'expired', error: '잘못되었거나 만료된 초대 링크예요.' });
+    } else useOnlineStore.getState().set({ stage: 'menu' });
   }
 
   private async makeBackend(): Promise<NetBackend> {
@@ -103,14 +111,37 @@ export class OnlineController {
     await this.enter(code, 'host');
   }
 
-  async join(code: string): Promise<void> {
+  async join(code: string, fromLink = false): Promise<void> {
     const c = code.toUpperCase();
     if (!isValidRoomCode(c)) {
       useOnlineStore.getState().set({ error: '코드 형식이 올바르지 않아요 (6자리)' });
       return;
     }
     useOnlineStore.getState().set({ stage: 'connecting', roomCode: c, error: null });
+    // Probe before joining: a missing room or one whose match already started
+    // means the invite is stale — entering would replay old events and "start"
+    // a match against nobody.
+    const status = await this.backend?.roomStatus?.(c);
+    if (status === 'empty' || status === 'started') {
+      const msg =
+        status === 'started'
+          ? '이 대결은 이미 시작되었거나 끝났어요.'
+          : '방을 찾을 수 없어요. 초대가 만료된 것 같아요.';
+      if (fromLink) useOnlineStore.getState().set({ stage: 'expired', error: msg });
+      else useOnlineStore.getState().set({ stage: 'menu', error: msg });
+      return;
+    }
     await this.enter(c, 'guest');
+  }
+
+  /** Abandon the current room (stale invite / nobody came) and return to the
+   *  online menu without tearing down the whole controller. */
+  backToMenu(): void {
+    cancelAnimationFrame(this.raf);
+    this.match?.destroy();
+    this.match = null;
+    useOnlineStore.getState().reset();
+    useOnlineStore.getState().set({ stage: 'menu', myName: this.profile?.nickname ?? '나' });
   }
 
   private async enter(code: string, role: Role): Promise<void> {

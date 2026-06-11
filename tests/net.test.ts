@@ -34,6 +34,17 @@ describe('in-memory net — 2-client simulation', () => {
     expect(seen.some((e) => e.t === 'ready' && e.player === 'A')).toBe(true);
   });
 
+  it('reports room status for invite-expiry checks without creating the room', async () => {
+    const backend = new InMemoryNetBackend();
+    expect(await backend.roomStatus('ghost')).toBe('empty');
+    expect(await backend.roomStatus('ghost')).toBe('empty'); // probe must not create it
+    const a = new BackendNetSession(backend);
+    await a.join('r4', pubA); // host 'ready' lands in the log
+    expect(await backend.roomStatus('r4')).toBe('waiting');
+    await a.send({ t: 'phase', phase: 'countdown', round: 0, startAtServerTs: 0 });
+    expect(await backend.roomStatus('r4')).toBe('started');
+  });
+
   it('shared-board claim is atomic: first wins, overlap loses, disjoint ok', async () => {
     const backend = new InMemoryNetBackend();
     const a = new BackendNetSession(backend);

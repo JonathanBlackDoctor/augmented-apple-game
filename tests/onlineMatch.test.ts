@@ -105,6 +105,29 @@ describe('OnlineMatch — robustness', () => {
     expect(host.snapshot().phase).toBe('lobby');
   });
 
+  it('guest flags no-opponent when no live host starts a countdown (stale invite)', async () => {
+    const backend = new InMemoryNetBackend();
+    const sa = new BackendNetSession(backend);
+    await sa.join('ROOMEX', A); // stale host 'ready' remains in the room log; host gone
+    const sb = new BackendNetSession(backend);
+    await sb.join('ROOMEX', B);
+    const guest = new OnlineMatch({
+      session: sb,
+      role: 'guest',
+      self: B,
+      roomId: 'ROOMEX',
+      lobbyTimeoutMs: 1000,
+    });
+    await guest.start();
+    let now = 0;
+    for (let i = 0; i < 40; i++) {
+      guest.tick(now);
+      now += 50;
+    }
+    expect(guest.snapshot().noOpponent).toBe(true);
+    expect(guest.snapshot().phase).toBe('lobby'); // never auto-starts a match
+  });
+
   it('ignores a third party joining the room (2-player cap)', async () => {
     const backend = new InMemoryNetBackend();
     const sa = new BackendNetSession(backend);

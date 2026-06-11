@@ -1,16 +1,28 @@
 // net/firebaseBackend.ts — NetBackend over Firebase RTDB (plan §10). Drop-in
 // replacement for the in-memory backend: events via push/onChildAdded, shared
 // cell claims via an atomic transaction.
-import { ref, push, onChildAdded, runTransaction } from 'firebase/database';
+import { ref, push, get, onChildAdded, runTransaction } from 'firebase/database';
 import type { Database } from 'firebase/database';
 import type { NetEvent, ClaimResolution, PlayerId } from '../contracts';
-import type { NetBackend, RoomChannel } from './backend';
+import type { NetBackend, RoomChannel, RoomStatus } from './backend';
 import { getDb } from './firebaseApp';
 
 export class FirebaseNetBackend implements NetBackend {
   private readonly db: Database;
   constructor(db?: Database) {
     this.db = db ?? getDb();
+  }
+
+  async roomStatus(roomId: string): Promise<RoomStatus> {
+    const snap = await get(ref(this.db, `rooms/${roomId}/match/events`));
+    if (!snap.exists()) return 'empty';
+    let started = false;
+    snap.forEach((child) => {
+      const v = child.val() as { t?: string } | null;
+      if (v?.t === 'phase') started = true;
+      return started; // true stops the iteration early
+    });
+    return started ? 'started' : 'waiting';
   }
 
   open(roomId: string): RoomChannel {

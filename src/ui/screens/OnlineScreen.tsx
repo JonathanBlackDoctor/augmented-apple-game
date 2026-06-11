@@ -4,6 +4,7 @@ import { useOnlineStore } from '../../app/onlineStore';
 import { OnlineController } from '../../app/OnlineController';
 import { byId } from '../../augments';
 import { OnlineHud } from '../components/OnlineHud';
+import { ExitButton } from '../components/ExitButton';
 
 const TIER_LABEL: Record<string, string> = { silver: '실버', gold: '골드', prismatic: '프리즘' };
 
@@ -49,6 +50,7 @@ export function OnlineScreen() {
     useGameStore.setState({ mode: 'versus' });
     useGameStore.getState().startVersus(5, 30_000);
   };
+  const backToMenu = (): void => ctrlRef.current?.backToMenu();
 
   const cls = s.winner === 'me' ? 'win' : s.winner === 'opp' ? 'loss' : 'draw';
 
@@ -56,6 +58,7 @@ export function OnlineScreen() {
     <div className="screen game online">
       <div className="board-host" ref={hostRef} />
       {s.stage === 'playing' && <OnlineHud />}
+      {s.stage === 'playing' && <ExitButton onExit={goHome} />}
 
       {s.stage === 'menu' && (
         <div className="overlay">
@@ -128,8 +131,41 @@ export function OnlineScreen() {
       {s.stage === 'connecting' && (
         <div className="overlay">
           <div className="lobby-card">
-            <h2>연결 중…</h2>
-            <div className="spinner" />
+            {s.noOpponent ? (
+              <>
+                <h2>상대를 찾을 수 없어요</h2>
+                <p className="aug-sub">초대 링크가 만료됐거나 상대가 자리를 비운 것 같아요.</p>
+                <button className="btn primary" onClick={goHome}>
+                  홈으로
+                </button>
+                <button className="btn ghost" onClick={backToMenu}>
+                  새 대결 만들기
+                </button>
+              </>
+            ) : (
+              <>
+                <h2>연결 중…</h2>
+                <div className="spinner" />
+                <button className="btn ghost" onClick={goHome}>
+                  취소
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {s.stage === 'expired' && (
+        <div className="overlay">
+          <div className="lobby-card">
+            <h2>초대 링크 만료</h2>
+            <p className="aug-sub">{s.error ?? '이 초대 링크는 더 이상 사용할 수 없어요.'}</p>
+            <button className="btn primary" onClick={goHome}>
+              홈으로
+            </button>
+            <button className="btn ghost" onClick={backToMenu}>
+              새 대결 만들기
+            </button>
           </div>
         </div>
       )}

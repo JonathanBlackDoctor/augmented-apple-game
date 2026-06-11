@@ -14,6 +14,13 @@ export interface RoomChannel {
   close(): void;
 }
 
+/** Pre-join probe result: 'empty' = no such room, 'waiting' = host still in
+ *  lobby, 'started' = match already started/finished (too late to join). */
+export type RoomStatus = 'empty' | 'waiting' | 'started';
+
 export interface NetBackend {
   open(roomId: string): RoomChannel;
+  /** Probe a room without joining (and without creating it). Lets the UI show
+   *  an "invite expired" notice instead of entering a dead room. */
+  roomStatus?(roomId: string): Promise<RoomStatus>;
 }

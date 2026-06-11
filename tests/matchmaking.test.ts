@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { makeRoomCode, isValidRoomCode, ROOM_CODE_LEN } from '../src/matchmaking/roomCode';
-import { parseDeepLink, buildRoomLink } from '../src/matchmaking/deepLink';
+import { parseDeepLink, buildRoomLink, stripDeepLink } from '../src/matchmaking/deepLink';
 import { BackendMatchmaker } from '../src/matchmaking';
 import { InMemoryNetBackend } from '../src/net';
 import { makeRng } from '../src/core';
@@ -33,6 +33,11 @@ describe('deep links', () => {
     expect(parseDeepLink('?room=PQRS78').room).toBe('PQRS78');
     expect(parseDeepLink('room=PQRS78').room).toBe('PQRS78');
     expect(parseDeepLink('').room).toBeUndefined();
+  });
+  it('strips consumed room/inv params, leaving other params alone', () => {
+    const out = stripDeepLink('https://x.github.io/aag/?room=ABC234&inv=u9&keep=1');
+    expect(out).toBe('https://x.github.io/aag/?keep=1');
+    expect(stripDeepLink('https://x.github.io/aag/')).toBeNull();
   });
 });
 

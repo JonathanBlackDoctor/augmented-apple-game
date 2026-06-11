@@ -27,6 +27,7 @@ import type { NetBackend } from '../net/backend';
 import { FIREBASE_CONFIGURED } from '../net/firebaseConfig';
 import { makeRoomCode, isValidRoomCode, buildRoomLink, parseDeepLink } from '../matchmaking';
 import { NO_LOBBY, type PublicLobby } from '../matchmaking/lobby';
+import { NO_PRESENCE, type RoomPresence } from '../matchmaking/presence';
 import { StandardRankingService, InMemoryRankingStore } from '../ranking';
 import { LocalProfileService, browserKV } from '../profile';
 import { COMPANION_ID, COMPANION_FIRST_MS, COMPANION_INTERVAL_MS } from './companion';
@@ -47,6 +48,8 @@ export class OnlineController {
   private backend: NetBackend | null = null;
   private lobby: PublicLobby = NO_LOBBY;
   private advertised = false; // currently listed in the public lobby
+  private presence: RoomPresence = NO_PRESENCE;
+  private heldRoom: string | null = null; // private invite room we currently hold
   private ranking: RankingService = new StandardRankingService(new InMemoryRankingStore());
   private profile: Profile | null = null;
   private profileSvc: ProfileService | null = null;
@@ -76,19 +79,29 @@ export class OnlineController {
       this.ranking = new StandardRankingService(new FirebaseRankingStore());
       const { getDb } = await import('../net/firebaseApp');
       const { FirebaseLobby } = await import('../matchmaking/lobby');
+      const { FirebaseRoomPresence } = await import('../matchmaking/presence');
       this.lobby = new FirebaseLobby(getDb());
+      this.presence = new FirebaseRoomPresence(getDb());
     }
     useOnlineStore.getState().set({ myName: this.profile.nickname });
     const dl = parseDeepLink(window.location.search);
     if (dl.room) {
-      // Arrived via a 1:1 invite link. Auto-join the room; if its code is malformed
-      // (a broken link) or the host has since closed the room (it expires when the
-      // host leaves — see lobby onDisconnect), the join falls through to the
-      // no-opponent timeout, which the screen now surfaces as an expired invite.
+      // Arrived via a 1:1 invite link.
       useOnlineStore.getState().set({ fromInvite: true });
       const c = dl.room.toUpperCase();
-      if (isValidRoomCode(c)) await this.join(c);
-      else useOnlineStore.getState().set({ stage: 'connecting', noOpponent: true });
+      if (!isValidRoomCode(c)) {
+        // Malformed (broken) link → straight to the expired screen.
+        useOnlineStore.getState().set({ stage: 'connecting', noOpponent: true });
+      } else if (await this.presence.isHeld(c)) {
+        // The host is still waiting in the room → join as usual.
+        await this.join(c);
+      } else {
+        // The host has already left (its room hold auto-clears on disconnect), so
+        // this invite link is dead. Surface the expired screen immediately WITHOUT
+        // joining: joining a dead room would replay its stale countdown event and
+        // auto-start a one-sided match the player could never finish.
+        useOnlineStore.getState().set({ stage: 'connecting', noOpponent: true });
+      }
     } else {
       useOnlineStore.getState().set({ stage: 'menu' });
     }
@@ -133,6 +146,10 @@ export class OnlineController {
     const base = window.location.href.split('?')[0];
     const link = buildRoomLink(base, code, this.profile?.uid);
     useOnlineStore.getState().set({ stage: 'hosting', roomCode: code, link, error: null, isPublic: false });
+    // Mark the room as live so anyone following the invite link knows the host is
+    // here; the hold auto-clears on disconnect and on release (leaving / matched).
+    this.heldRoom = code;
+    void this.presence.hold(code);
     await this.enter(code, 'host');
   }
 
@@ -220,9 +237,10 @@ export class OnlineController {
 
   private sync(s: OnlineSnapshot): void {
     const st = useOnlineStore.getState();
-    // Once an opponent is matched in, pull our public-lobby advertisement so no
-    // third player can be routed into this room.
+    // Once an opponent is matched in, pull our public-lobby advertisement and our
+    // invite-room hold so no third player can be routed into this room.
     if (this.advertised && s.oppPresent) this.withdrawLobby();
+    if (this.heldRoom && s.oppPresent) this.releasePresence();
     if (!this.started && s.phase !== 'lobby') {
       this.started = true;
       st.set({ stage: 'playing' });
@@ -497,8 +515,18 @@ export class OnlineController {
     void this.lobby.withdraw(this.profile?.uid ?? '');
   }
 
+  /** Release our invite-room hold (matched, cancelled, or screen left) so the link
+   *  goes dead the moment we stop hosting. */
+  private releasePresence(): void {
+    if (!this.heldRoom) return;
+    const code = this.heldRoom;
+    this.heldRoom = null;
+    void this.presence.release(code);
+  }
+
   destroy(): void {
     this.withdrawLobby();
+    this.releasePresence();
     cancelAnimationFrame(this.raf);
     clearTimeout(this.activationTimer);
     window.removeEventListener('resize', this.onResize);

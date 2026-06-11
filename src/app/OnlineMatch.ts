@@ -16,6 +16,7 @@ import type {
   NetSession,
   PublicProfile,
   Rect,
+  RoundConfig,
 } from '../contracts';
 import { versusOfferTiers, rollOfferTiers, buildHookBusFor } from '../augments/runtime';
 import { companionMove } from './companion';
@@ -59,6 +60,7 @@ export interface OnlineSnapshot {
   round: number;
   rounds: number;
   remainingMs: number;
+  roundDurationMs: number; // this round's augment-modified length (for the HUD bar)
   // countdown for the timed augment / roundCheck overlays (schedule-driven)
   phaseRemainingMs: number;
   myScore: number;
@@ -118,8 +120,13 @@ export class OnlineMatch {
   private readonly suspendGapMs: number;
 
   private readonly engine: CoreEngine = createEngine();
-  private readonly schedule: Seg[];
-  private readonly totalMs: number;
+  // Per-round window length (ms). Defaults to the base duration but is widened to
+  // fit the longer of the two players' augment-modified durations once both builds
+  // for the round are locked, so e.g. a +7s relief actually lasts 37s online (see
+  // applyRoundDuration). schedule/totalMs are rebuilt from it, so neither is final.
+  private roundDur: number[];
+  private schedule: Seg[];
+  private totalMs: number;
   private unsub: (() => void) | null = null;
 
   private phase: OnlinePhase = 'lobby';
@@ -134,6 +141,7 @@ export class OnlineMatch {
 
   private round = 0;
   private remainingMs = 0;
+  private roundDurationMs = 0; // effective (augment-modified) length of the current round
   private phaseRemainingMs = 0;
   private myRound = 0;
   private oppRound = 0;
@@ -196,6 +204,7 @@ export class OnlineMatch {
     this.disconnectMs = o.disconnectMs ?? 30_000;
     this.lobbyTimeoutMs = o.lobbyTimeoutMs ?? 15_000;
     this.suspendGapMs = o.suspendGapMs ?? 4_000;
+    this.roundDur = new Array(this.rounds).fill(this.durationMs);
     this.schedule = this.buildSchedule();
     this.totalMs = this.schedule.reduce((a, s) => Math.max(a, s.start + s.dur), 0);
   }
@@ -213,8 +222,9 @@ export class OnlineMatch {
       // augment window is collapsed early (see tick) and we jump straight here.
       segs.push({ phase: 'preRound', round: r, start: t, dur: this.preRoundMs });
       t += this.preRoundMs;
-      segs.push({ phase: 'round', round: r, start: t, dur: this.durationMs });
-      t += this.durationMs;
+      const roundDur = this.roundDur[r] ?? this.durationMs;
+      segs.push({ phase: 'round', round: r, start: t, dur: roundDur });
+      t += roundDur;
       // Mid-round review (라운드 점검), mirroring versus: both players see the round
       // verdict + running totals before the next pick. Schedule-driven, so the two
       // clients enter/leave it in lockstep.
@@ -370,9 +380,12 @@ export class OnlineMatch {
       this.enterPhase({ phase: 'matchResult', round: this.rounds - 1, start: 0, dur: 0 });
       return this.snapshot();
     }
+    const entering = this.segAt(elapsed);
+    const key = `${entering.phase}:${entering.round}`;
+    if (key !== this.appliedKey) this.enterPhase(entering);
+    // Re-read: entering a round may widen its window (applyRoundDuration), which
+    // rebuilds the schedule, so the timed-overlay countdown uses the fresh segment.
     const seg = this.segAt(elapsed);
-    const key = `${seg.phase}:${seg.round}`;
-    if (key !== this.appliedKey) this.enterPhase(seg);
     // Schedule-driven countdown for the timed overlays (augment + preRound + roundCheck).
     this.phaseRemainingMs = Math.max(0, seg.start + seg.dur - elapsed);
     if (this.phase === 'round') {
@@ -399,6 +412,7 @@ export class OnlineMatch {
       // Show the full clock behind the 3·2·1 countdown (the round hasn't run yet).
       this.remainingMs = this.durationMs;
     } else if (seg.phase === 'round') {
+      this.applyRoundDuration(seg.round); // widen the shared window to fit both builds
       this.beginRound(seg.round);
     } else if (seg.phase === 'augment') {
       this.offerSalt = 0;
@@ -441,11 +455,47 @@ export class OnlineMatch {
       augmentIds: [...this.myOwned],
     };
     this.engine.init(cfg, makeRng(cfg.seed), this.hookBus(this.myOwned));
-    this.engine.tick(this.nowMs);
-    this.remainingMs = this.durationMs;
+    // Anchor the engine and read the augment-modified duration so the first round
+    // frame already shows the real length (e.g. +7s relief → 37s) instead of the
+    // base duration for a frame.
+    this.remainingMs = this.engine.tick(this.nowMs).remainingMs;
+    this.roundDurationMs = this.remainingMs; // my engine's full (post-augment) length
     this.mySeq = 0;
     this.myRound = 0;
     this.oppRound = 0;
+  }
+
+  /** Augment-modified round length for an owned set (runs modifyRoundConfig over
+   *  the base config, exactly as the engine does in init). */
+  private effectiveDuration(owned: string[]): number {
+    const cfg: RoundConfig = {
+      seed: '',
+      cols: this.cols,
+      rows: this.rows,
+      durationMs: this.durationMs,
+      targetSum: this.targetSum,
+      modeId: 'separate',
+      augmentIds: [...owned],
+    };
+    const eff = this.hookBus(owned).run('modifyRoundConfig', cfg) as RoundConfig | undefined;
+    return eff?.durationMs ?? this.durationMs;
+  }
+
+  /** Widen round `r`'s shared window to the longer of the two players' augment
+   *  durations so neither build is cut short (a +7s relief lasts its full 37s; the
+   *  shorter build just idles at 0 for the tail). Both builds are locked before the
+   *  round and synced, so each client computes the SAME value and rebuilds the
+   *  schedule in lockstep. Only widens (never below base), and only when it changes. */
+  private applyRoundDuration(r: number): void {
+    const shared = Math.max(
+      this.durationMs,
+      this.effectiveDuration(this.myOwned),
+      this.effectiveDuration(this.oppOwned),
+    );
+    if (this.roundDur[r] === shared) return;
+    this.roundDur[r] = shared;
+    this.schedule = this.buildSchedule();
+    this.totalMs = this.schedule.reduce((a, s) => Math.max(a, s.start + s.dur), 0);
   }
 
   private finalizeRound(r: number): void {
@@ -553,6 +603,7 @@ export class OnlineMatch {
       round: this.round,
       rounds: this.rounds,
       remainingMs: this.remainingMs,
+      roundDurationMs: this.roundDurationMs || this.durationMs,
       phaseRemainingMs: this.phaseRemainingMs,
       myScore: this.phase === 'round' ? this.engine.getScore() : this.myRound,
       oppScore: this.oppRound,

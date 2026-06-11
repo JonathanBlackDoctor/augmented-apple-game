@@ -47,6 +47,12 @@ vi.mock('../src/app/sound', () => ({
     setEnabled: () => {},
   },
 }));
+// Offline config: this is a headless single-player flow test, so the controller
+// must take the local (no-network) identity/ranking path — not Firebase auth.
+vi.mock('../src/net/firebaseConfig', () => ({
+  FIREBASE_CONFIGURED: false,
+  firebaseConfig: {},
+}));
 vi.mock('../src/profile', () => ({
   LocalProfileService: class {
     async signInAnon() {

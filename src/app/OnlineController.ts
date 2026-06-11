@@ -8,7 +8,7 @@ import { computeLayout, type BoardLayout } from '../board/layout';
 import { pickGridDims } from '../board/orientation';
 import { InputController, type DragHandlers } from '../input/InputController';
 import { createMonotonicClock } from './clock';
-import { START_MMR } from '../ranking/elo';
+import { START_MMR, tierFromMmr } from '../ranking/elo';
 import { sfx } from './sound';
 import { playActivation, playClear, updateAmbient } from './augmentFx';
 import {
@@ -386,17 +386,26 @@ export class OnlineController {
     const winner = s.winner ?? 'draw';
     let mmrDelta: number | null = null;
     if (this.profile && s.oppPresent) {
+      // Weight the ELO by the opponent's real rating (exchanged in the handshake);
+      // fall back to our own MMR only if it never arrived (treats them as equal).
+      const oppMmr = s.oppMmr ?? this.profile.mmr;
       const opp: PublicProfile = {
         uid: 'opp',
         nickname: s.oppName,
         avatar: '🍏',
-        tier: 'Silver',
-        mmr: this.profile.mmr,
+        tier: tierFromMmr(oppMmr),
+        mmr: oppMmr,
       };
       const result = winner === 'me' ? 'win' : winner === 'opp' ? 'loss' : 'draw';
-      const r = await this.ranking.applyResult(this.profile, opp, result, true);
-      mmrDelta = r.mmrDelta;
-      await this.persistProfile();
+      // A backend write hiccup must never swallow the result screen — rank the
+      // result best-effort and always fall through to showing the outcome.
+      try {
+        const r = await this.ranking.applyResult(this.profile, opp, result, true);
+        mmrDelta = r.mmrDelta;
+        await this.persistProfile();
+      } catch (err) {
+        console.error('[ranking] failed to persist online result', err);
+      }
     }
     this.board.showSelection(null, false);
     // New personal-best total (shared across modes)? Capture before finishMatch().

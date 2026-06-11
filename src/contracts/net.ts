@@ -33,7 +33,10 @@ export type NetEvent =
   // Host announces the match start; cols/rows carry the host-chosen board aspect
   // so both clients render the same shared-seed board (portrait host → tall grid).
   | { t: 'phase'; phase: MatchPhase; round: number; startAtServerTs?: number; cols?: number; rows?: number }
-  | { t: 'ready'; player: PlayerId; phase: MatchPhase }
+  // `name`/`mmr` carry the sender's public identity so the opponent can show the
+  // real nickname and weight the post-match ELO by the actual opponent rating
+  // (instead of assuming an equal-MMR opponent). Optional for back-compat.
+  | { t: 'ready'; player: PlayerId; phase: MatchPhase; name?: string; mmr?: number }
   | { t: 'heartbeat'; player: PlayerId; ts: number };
 
 export interface NetSession {

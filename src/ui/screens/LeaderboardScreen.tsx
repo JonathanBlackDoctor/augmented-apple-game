@@ -22,6 +22,7 @@ function LbRow({ r, rank, me }: { r: PublicProfile; rank: number; me: boolean })
 
 export function LeaderboardScreen() {
   const [rows, setRows] = useState<PublicProfile[] | null>(null);
+  const [failed, setFailed] = useState(false);
   const [myUid, setMyUid] = useState<string | null>(null);
 
   useEffect(() => {
@@ -35,8 +36,14 @@ export function LeaderboardScreen() {
       try {
         const lb = await new StandardRankingService(store).leaderboard(20);
         if (alive) setRows(lb);
-      } catch {
-        if (alive) setRows([]);
+      } catch (err) {
+        // A read failure is NOT an empty board — surface it instead of silently
+        // showing "아직 기록이 없어요" (which masks rules/index/network problems).
+        console.error('[leaderboard] failed to load', err);
+        if (alive) {
+          setRows([]);
+          setFailed(true);
+        }
       }
       try {
         const me = await loadMyProfile();
@@ -63,8 +70,11 @@ export function LeaderboardScreen() {
       <div className="home-card lb-card">
         <h2 className="title sm">랭킹 · 상위 20</h2>
         {rows === null && <div className="spinner" />}
-        {rows && rows.length === 0 && (
-          <p className="aug-sub">아직 기록이 없어요. 친구와 랭크 대결을 해보세요!</p>
+        {rows && rows.length === 0 && failed && (
+          <p className="aug-sub">랭킹을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</p>
+        )}
+        {rows && rows.length === 0 && !failed && (
+          <p className="aug-sub">아직 기록이 없어요. 한 판 플레이해 랭킹에 이름을 올려보세요!</p>
         )}
         {rows && rows.length > 0 && (
           <ol className="lb-list">

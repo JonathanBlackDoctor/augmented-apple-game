@@ -1,7 +1,9 @@
 // app/VersusController.ts — runtime conductor for the vs-AI mode. Wires the
 // headless VersusMatch to the Pixi board, pointer input, monotonic clock, SFX,
-// profile (anon identity) and ranking (unranked vs bot). Mirrors MatchController.
-import type { Rect, Profile, PublicProfile, CellTag } from '../contracts';
+// profile (anon identity) and ranking. The AI ladder is RANKED: each rival has a
+// representative MMR (levelMmr), so climbing it moves the player's rating and
+// mirrors them onto the shared leaderboard. Mirrors MatchController.
+import type { Rect, Profile, PublicProfile, RankingService, CellTag } from '../contracts';
 import { BoardView } from '../board/BoardView';
 import { computeLayout, type BoardLayout } from '../board/layout';
 import { InputController, type DragHandlers } from '../input/InputController';
@@ -14,7 +16,9 @@ import { VersusMatch, type VersusSnapshot, type VersusPhase } from './VersusMatc
 import { playActivation, playClear, updateAmbient } from './augmentFx';
 import { LocalProfileService, browserKV } from '../profile';
 import { StandardRankingService, InMemoryRankingStore } from '../ranking';
-import { levelInfo, levelTuning, type EmotePersona } from '../bot';
+import { tierFromMmr } from '../ranking/elo';
+import { FIREBASE_CONFIGURED } from '../net/firebaseConfig';
+import { levelInfo, levelTuning, levelMmr, type EmotePersona } from '../bot';
 import { useProgressStore } from './progressStore';
 import { COMPANION_ID, COMPANION_FIRST_MS, COMPANION_INTERVAL_MS } from './companion';
 
@@ -59,8 +63,11 @@ export class VersusController {
   private companionStart = 0;
   private companionNextAt = 0;
 
-  private readonly profileSvc = new LocalProfileService(browserKV());
-  private readonly ranking = new StandardRankingService(new InMemoryRankingStore());
+  // Identity + ranking mirror the online path: Firebase-backed when configured
+  // (so the AI ladder shares one profile + the global leaderboard with online
+  // play), else a local anonymous profile. Set in mount() via signIn().
+  private ranking: RankingService = new StandardRankingService(new InMemoryRankingStore());
+  private persistProfile: () => Promise<void> = async () => {};
   private profile: Profile | null = null;
 
   async mount(parent: HTMLElement): Promise<void> {
@@ -77,7 +84,33 @@ export class VersusController {
     // common cause of "clicks land on the wrong cell" after layout shifts.
     this.ro = new ResizeObserver(() => this.onResize());
     this.ro.observe(parent);
-    this.profile = await this.profileSvc.signInAnon();
+    this.profile = await this.signIn();
+    if (FIREBASE_CONFIGURED) {
+      try {
+        const { FirebaseRankingStore } = await import('../ranking/firebaseStore');
+        this.ranking = new StandardRankingService(new FirebaseRankingStore());
+      } catch {
+        /* keep the in-memory ranking store (offline fallback) */
+      }
+    }
+  }
+
+  // Mirror OnlineController.signIn: Firebase anonymous identity when configured
+  // (cross-device, shared with online play), else a local KV-backed profile.
+  private async signIn(): Promise<Profile> {
+    if (FIREBASE_CONFIGURED) {
+      try {
+        const { FirebaseProfileService } = await import('../profile/firebase');
+        const svc = new FirebaseProfileService();
+        this.persistProfile = () => svc.save();
+        return await svc.signInAnon();
+      } catch {
+        /* fall through to local */
+      }
+    }
+    const svc = new LocalProfileService(browserKV());
+    this.persistProfile = async () => svc.persist();
+    return svc.signInAnon();
   }
 
   startVersus(): void {
@@ -383,17 +416,26 @@ export class VersusController {
     if (winner === 'me') useProgressStore.getState().recordClear(this.level);
     let mmrDelta: number | null = 0;
     if (this.profile) {
+      const info = levelInfo(this.level);
+      const oppMmr = levelMmr(this.level);
       const opp: PublicProfile = {
-        uid: 'bot',
-        nickname: 'AI',
-        avatar: '🤖',
-        tier: 'Silver',
-        mmr: this.profile.mmr,
+        uid: `bot-lv${this.level}`,
+        nickname: info.name,
+        avatar: info.avatar,
+        tier: tierFromMmr(oppMmr),
+        mmr: oppMmr,
       };
       const result = winner === 'me' ? 'win' : winner === 'opp' ? 'loss' : 'draw';
-      const r = await this.ranking.applyResult(this.profile, opp, result, false); // bot = unranked
-      mmrDelta = r.mmrDelta;
-      this.profileSvc.persist();
+      // The AI ladder is ranked: each rival has a representative MMR (levelMmr),
+      // so climbing the ladder moves your rating + writes you onto the leaderboard.
+      // Best-effort — a backend write hiccup must never swallow the result screen.
+      try {
+        const r = await this.ranking.applyResult(this.profile, opp, result, true);
+        mmrDelta = r.mmrDelta;
+        await this.persistProfile();
+      } catch (err) {
+        console.error('[ranking] failed to persist versus result', err);
+      }
     }
     this.board.showSelection(null, false);
     // New personal-best total (across all modes)? Capture before finishMatch()

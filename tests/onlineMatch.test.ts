@@ -56,6 +56,31 @@ describe('OnlineMatch — 2-client in-memory full match', () => {
   });
 });
 
+describe('OnlineMatch — identity handshake', () => {
+  it('exchanges each player’s real nickname + MMR via the ready handshake', async () => {
+    const backend = new InMemoryNetBackend();
+    const sa = new BackendNetSession(backend);
+    const sb = new BackendNetSession(backend);
+    const hostSelf: PublicProfile = { uid: 'A', nickname: '호스트', avatar: '🍎', tier: 'Gold', mmr: 1234 };
+    const guestSelf: PublicProfile = { uid: 'B', nickname: '게스트', avatar: '🍏', tier: 'Bronze', mmr: 870 };
+    await sa.join('ROOMID', hostSelf);
+    await sb.join('ROOMID', guestSelf);
+    const host = new OnlineMatch({ session: sa, role: 'host', self: hostSelf, roomId: 'ROOMID', ...FAST });
+    const guest = new OnlineMatch({ session: sb, role: 'guest', self: guestSelf, roomId: 'ROOMID', ...FAST });
+    await host.start();
+    await guest.start();
+    // A couple of ticks let the replayed/relayed ready events settle.
+    for (let now = 0; now < 200; now += 50) {
+      host.tick(now);
+      guest.tick(now);
+    }
+    expect(host.snapshot().oppName).toBe('게스트');
+    expect(host.snapshot().oppMmr).toBe(870);
+    expect(guest.snapshot().oppName).toBe('호스트');
+    expect(guest.snapshot().oppMmr).toBe(1234);
+  });
+});
+
 describe('OnlineMatch — mid-round review (roundCheck)', () => {
   it('runs a roundCheck phase after each round, exposing the verdict + opponent build', async () => {
     const backend = new InMemoryNetBackend();

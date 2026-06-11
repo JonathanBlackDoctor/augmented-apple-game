@@ -315,6 +315,28 @@ describe('augment balance tweaks', () => {
     for (const no of [9, 10, 21, 23, 29]) expect(eleven(selCtx(no))).toBeUndefined();
   });
 
+  it('초읽기 grants a flat +0.5s from a 2-combo; 가속 보상 scales with combo depth', () => {
+    const base = { cells: [0], count: 1, baseScore: 1, finalScore: 1, comboMultiplier: 1 };
+    // Invoke an augment's onClear with a stub ctx that records grantTimeMs(ms).
+    const timeGranted = (id: string, comboCount: number): number => {
+      let ms = 0;
+      const ctx = { comboCount, grantTimeMs: (n: number) => (ms += n) } as unknown as Parameters<
+        NonNullable<ReturnType<typeof rule>['hooks']['onClear']>
+      >[1];
+      rule(id).hooks.onClear!(base, ctx);
+      return ms;
+    };
+    // 초읽기 (countdown): nothing below a 2-combo, then a steady +0.5s.
+    expect(timeGranted('time.countdown', 1)).toBe(0);
+    expect(timeGranted('time.countdown', 2)).toBe(500);
+    expect(timeGranted('time.countdown', 7)).toBe(500); // stays flat regardless of depth
+    // 가속 보상 (tempo): nothing below a 3-combo, then comboCount × 0.1s, capped at +1s.
+    expect(timeGranted('time.tempo', 2)).toBe(0);
+    expect(timeGranted('time.tempo', 3)).toBe(300);
+    expect(timeGranted('time.tempo', 10)).toBe(1000); // 10 × 0.1s = cap
+    expect(timeGranted('time.tempo', 15)).toBe(1000); // stays at the +1s cap
+  });
+
   it("'도박사' rolls 10× on a hit (<0.2) and 0× on a miss", () => {
     const gambler = rule('risk.gambler').hooks.onClear!;
     const base = { cells: [0], count: 1, baseScore: 4, finalScore: 4, comboMultiplier: 1 };

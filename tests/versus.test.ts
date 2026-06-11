@@ -106,3 +106,31 @@ describe('VersusMatch — start-of-match pick + reroll', () => {
     expect(m.snapshot().rerollsLeft).toBe(0);
   });
 });
+
+describe('VersusMatch — separate clocks (self-shortened time)', () => {
+  it('a self-shortened clock (유리대포) lets the bot finish its own full round', () => {
+    const m = new VersusMatch({
+      seedBase: 'halfclock:1',
+      tuning: levelTuning(5),
+      durationMs: 4000,
+      augmentMs: 1000,
+      preRoundMs: 100,
+      roundCheckMs: 200,
+    });
+    // Start-of-match pick: force 유리대포 onto MY build only → my clock halves to ~2s.
+    expect(m.snapshot().phase).toBe('augment');
+    m.pickAugment('risk.glasscannon', 0);
+    let now = 0;
+    while (m.snapshot().phase !== 'round' && now < 5000) now = (m.tick(now), now + 20);
+    expect(m.snapshot().phase).toBe('round');
+    const roundStart = now;
+    // Past MY halved ~2s clock the round must still be live — the bot still has
+    // time on its own 4s clock. (Pre-fix the round ended the instant my clock ran
+    // out, cutting the bot short and handing the player a free round.)
+    while (now < roundStart + 2600) now = (m.tick(now), now + 20);
+    expect(m.snapshot().phase).toBe('round');
+    // It still resolves on its own once the bot's clock also runs out.
+    while (m.snapshot().phase === 'round' && now < roundStart + 15000) now = (m.tick(now), now + 20);
+    expect(m.snapshot().phase).toBe('roundCheck');
+  });
+});

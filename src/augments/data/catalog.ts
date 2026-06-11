@@ -39,9 +39,12 @@ export const CATALOG: Augment[] = [
   {
     id: 'time.countdown',
     name: '초읽기',
-    desc: '콤보(2연속+) 성공마다 +0.5초',
+    desc: '콤보 2연속+ 유지 시 제거마다 +0.5초 (일정량)',
     tier: 'silver',
     family: 'time',
+    // The steady time-bank: a flat +0.5s on every clear once a 2-combo is going.
+    // Pairs with 가속 보상(time.tempo), which instead *scales* with combo depth —
+    // 초읽기 is the reliable low-combo option, 가속 보상 the high-combo payoff.
     hooks: {
       onClear: (r, c) => {
         if (c.comboCount >= 2) c.grantTimeMs(500);
@@ -52,12 +55,16 @@ export const CATALOG: Augment[] = [
   {
     id: 'time.tempo',
     name: '가속 보상',
-    desc: '콤보 3연속+ 유지 시 제거마다 +0.5초',
+    desc: '콤보 3연속+부터 콤보가 길수록 시간 가속 (콤보 단계당 +0.1초, 최대 +1초)',
     tier: 'silver',
     family: 'time',
+    // Acceleration reward: from a 3-combo on, the time bonus *grows* with the
+    // combo length (comboCount × 0.1s, capped at +1s) — combo 3 → +0.3s,
+    // combo 10 → +1.0s (and no further) — so it rewards sustained chains rather
+    // than the flat tick of 초읽기, while the cap keeps a long chain in check.
     hooks: {
       onClear: (r, c) => {
-        if (c.comboCount >= 3) c.grantTimeMs(500);
+        if (c.comboCount >= 3) c.grantTimeMs(Math.min(1000, c.comboCount * 100));
         return r;
       },
     },
@@ -89,12 +96,12 @@ export const CATALOG: Augment[] = [
   {
     id: 'time.lord',
     name: '시간의 지배자',
-    desc: '내가 사과를 터뜨릴 때마다 상대 화면의 사과가 1초 동안 ?로 가려져요',
+    desc: '내가 사과를 터뜨릴 때마다 상대 화면의 사과가 0.5초 동안 ?로 가려져요',
     tier: 'prismatic',
     family: 'time',
     // Pure-disruption augment whose effect lives in the app layer: every time the
     // owner clears apples, the OPPONENT's board hides its numerals (shows "?") for
-    // ~1s, re-armed (not extended) on each fresh clear. Applied by the controllers
+    // ~0.5s, re-armed (not extended) on each fresh clear. Applied by the controllers
     // (vs-AI: bot clear → my board; online: opponent clear → my board), so the core
     // carries no hook for it. See VersusController / OnlineController.
     hooks: {},

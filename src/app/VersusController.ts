@@ -302,8 +302,8 @@ export class VersusController {
     if (botDelta > 0) {
       useVersusStore.getState().bumpOppGain(botDelta);
       // 시간의 지배자: when the rival (who owns time.lord) clears, MY apples are
-      // veiled as "?" for 1s — re-armed on each of its clears.
-      if (s.botOwned.includes('time.lord')) this.board.pulseHideLabels(1000);
+      // veiled as "?" for 0.3s — re-armed on each of its clears.
+      if (s.botOwned.includes('time.lord')) this.board.pulseHideLabels(300);
       // Reacts to its own clear: gloat when ahead, stay breezy when even/behind.
       if (this.persona)
         this.botEmote(this.botAhead(s) ? this.persona.ahead : this.persona.even, { chance: 0.72 });

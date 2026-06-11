@@ -235,10 +235,17 @@ export class VersusMatch {
     if (this.phase === 'round') {
       if (this.roundStartMs === null) this.roundStartMs = nowMs;
       const my = this.myEngine.tick(nowMs);
-      this.botEngine.tick(nowMs);
+      const bot = this.botEngine.tick(nowMs);
       this.remainingMs = my.remainingMs;
+      // The bot stops thinking the moment its own clock runs out (a rejected
+      // commit otherwise burns botRng and breaks determinism); see runBot.
+      if (bot.ended) this.botActive = false;
       this.runBot(nowMs);
-      if (my.ended) this.endRound(nowMs);
+      // Separate-boards mode: each side plays its OWN full clock. End the round
+      // only when BOTH timers have expired — otherwise a player who shortened
+      // their own clock (유리대포·외줄타기) would also cut the bot's time short,
+      // ending the round before the AI finished and handing the player a free win.
+      if (my.ended && bot.ended) this.endRound(nowMs);
     } else if (this.phase === 'roundCheck') {
       this.phaseRemainingMs = Math.max(0, (this.phaseEndsAt ?? nowMs) - nowMs);
       if (nowMs >= (this.phaseEndsAt ?? nowMs)) this.advanceAfterCheck(nowMs);

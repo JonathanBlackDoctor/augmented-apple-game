@@ -330,10 +330,11 @@ describe('augment balance tweaks', () => {
     expect(timeGranted('time.countdown', 1)).toBe(0);
     expect(timeGranted('time.countdown', 2)).toBe(500);
     expect(timeGranted('time.countdown', 7)).toBe(500); // stays flat regardless of depth
-    // 가속 보상 (tempo): nothing below a 3-combo, then comboCount × 0.2s (accelerates).
+    // 가속 보상 (tempo): nothing below a 3-combo, then comboCount × 0.1s, capped at +1s.
     expect(timeGranted('time.tempo', 2)).toBe(0);
-    expect(timeGranted('time.tempo', 3)).toBe(600);
-    expect(timeGranted('time.tempo', 5)).toBe(1000);
+    expect(timeGranted('time.tempo', 3)).toBe(300);
+    expect(timeGranted('time.tempo', 10)).toBe(1000); // 10 × 0.1s = cap
+    expect(timeGranted('time.tempo', 15)).toBe(1000); // stays at the +1s cap
   });
 
   it("'도박사' rolls 10× on a hit (<0.2) and 0× on a miss", () => {

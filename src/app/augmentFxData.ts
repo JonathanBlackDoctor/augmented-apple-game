@@ -35,10 +35,10 @@ export const FX_COL: Record<FxColorKey, [string, string, string]> = {
 export const ACT: Record<string, ActSpec> = {
   "time.relief": {"kind":"gain","glow":"green","badges":[{"t":"+7초","c":"green","big":true}]},
   "time.countdown": {"kind":"gain","glow":"green","repeat":3,"badges":[{"t":"+0.5초","c":"green"}]},
-  "time.tempo": {"kind":"gauge","glow":"teal","badges":[{"t":"콤보×0.2초","c":"teal"}]},
+  "time.tempo": {"kind":"gauge","glow":"teal","badges":[{"t":"콤보×0.1초","c":"teal"}]},
   "time.warmup": {"kind":"window","glow":"gold","badges":[{"t":"1.5×","c":"gold","big":true},{"t":"8초","c":"gold"}]},
   "time.spurt": {"kind":"speed","glow":"red","badges":[{"t":"2×","c":"gold","big":true}]},
-  "time.lord": {"kind":"window","glow":"prism","badges":[{"t":"상대 ? 0.3초","c":"prism","big":true}]},
+  "time.lord": {"kind":"window","glow":"prism","badges":[{"t":"상대 ? 0.5초","c":"prism","big":true}]},
   "combo.training": {"kind":"combo","glow":"green","count":3,"badges":[{"t":"+30%","c":"green","big":true}]},
   "combo.chain": {"kind":"combo","glow":"gold","count":4,"badges":[{"t":"4＋ → 2×","c":"gold","big":true}]},
   "combo.frenzy": {"kind":"gauge","glow":"gold","ramp":true,"badges":[{"t":"+5% / 사과","c":"gold"}]},

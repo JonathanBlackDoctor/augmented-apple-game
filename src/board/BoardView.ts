@@ -445,7 +445,7 @@ export class BoardView {
   /** Veil every numeral as "?" for `ms`, then reveal — the time.lord disruption
    *  the opponent inflicts on us each time they clear. Re-armed (not extended) on
    *  each call, so a fresh hit restarts the full window from now. */
-  pulseHideLabels(ms = 300): void {
+  pulseHideLabels(ms = 500): void {
     this.setLabelsHidden(true);
     this.fx?.desat(true);
     clearTimeout(this.labelPulseTimer);

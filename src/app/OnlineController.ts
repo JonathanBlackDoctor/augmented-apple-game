@@ -261,8 +261,8 @@ export class OnlineController {
     if (oppDelta > 0) {
       useOnlineStore.setState((c) => ({ oppGainSeq: c.oppGainSeq + 1, oppGainAmount: oppDelta }));
       // 시간의 지배자: the opponent owns time.lord and just cleared → veil MY apples
-      // as "?" for 0.3s, re-armed on each of their clears.
-      if (s.oppOwned.includes('time.lord')) this.board.pulseHideLabels(300);
+      // as "?" for 0.5s, re-armed on each of their clears.
+      if (s.oppOwned.includes('time.lord')) this.board.pulseHideLabels(500);
     }
     this.prevOppScore = s.oppScore;
 

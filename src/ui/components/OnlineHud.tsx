@@ -3,6 +3,7 @@ import { useOnlineStore } from '../../app/onlineStore';
 import { hudTimerState } from './hudTimer';
 import { AnimNum } from './AnimNum';
 import { SeriesPips } from './SeriesPips';
+import { DominanceBar } from './DominanceBar';
 
 interface Pop {
   seq: number;
@@ -29,6 +30,7 @@ export function OnlineHud() {
 
   return (
     <div className="hud versus-hud">
+      <DominanceBar me={live ? s.myScore : 0} opp={live ? s.oppScore : 0} />
       <div className="vs-side me">
         <span className="vs-label">{s.myName}</span>
         <span className="vs-score">

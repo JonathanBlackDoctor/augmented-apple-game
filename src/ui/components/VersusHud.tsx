@@ -4,6 +4,7 @@ import { useVersusStore } from '../../app/versusStore';
 import { hudTimerState } from './hudTimer';
 import { AnimNum } from './AnimNum';
 import { SeriesPips } from './SeriesPips';
+import { DominanceBar } from './DominanceBar';
 
 interface Pop {
   seq: number;
@@ -30,6 +31,7 @@ export function VersusHud({ onPause }: { onPause?: () => void }) {
 
   return (
     <div className="hud versus-hud">
+      <DominanceBar me={s.roundScore} opp={v.oppRoundScore} />
       <div className="vs-side me">
         <span className="vs-label">나</span>
         <span className="vs-score">

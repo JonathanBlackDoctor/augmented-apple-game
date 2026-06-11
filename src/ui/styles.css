@@ -1165,6 +1165,88 @@ body {
   border: none;
   box-shadow: 0 8px 22px rgba(58, 42, 30, 0.22);
 }
+/* ============================================================
+   전선(戰線) 바 — round-dominance tug-of-war, pinned to the HUD's top edge.
+   Styled deliberately apart from the timer bar (matte, square, full-bleed,
+   never pulses) so the two gauges never read as one. Timer = urgency; this
+   = 전황. See DominanceBar.tsx for the seam mapping.
+   ============================================================ */
+.versus-hud {
+  position: relative;
+  padding-top: 11px; /* clear the absolutely-positioned 전선 바 */
+}
+.dom-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 5px;
+  overflow: hidden;
+  /* opponent's colour is the substrate; .dom-me paints my side over it */
+  background: #a83a2b;
+  pointer-events: none;
+}
+.dom-me {
+  position: absolute;
+  inset: 0;
+  background: #2d6a45;
+  /* same spring curve on both layers so seam + fill move as one; the
+     overshoot (y > 1) sells the "밀었다 되튕김" push. */
+  transition: transform 0.45s cubic-bezier(0.34, 1.4, 0.5, 1);
+  will-change: transform;
+}
+/* fixed centre reference — without it a 53% lead is invisible */
+.dom-tick {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  margin-left: -0.5px;
+  background: rgba(255, 255, 255, 0.5);
+  z-index: 2;
+}
+.dom-seam {
+  position: absolute;
+  top: -1px;
+  bottom: -1px;
+  width: 2px;
+  margin-left: -1px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 0 5px rgba(255, 255, 255, 0.7);
+  transition: left 0.45s cubic-bezier(0.34, 1.4, 0.5, 1);
+  z-index: 3;
+}
+/* 접전(within ±5%): the seam breathes to say "neck and neck" */
+.dom-bar.tie .dom-seam {
+  animation: dom-shimmer 1.1s ease-in-out infinite;
+}
+@keyframes dom-shimmer {
+  0%, 100% { box-shadow: 0 0 4px rgba(255, 255, 255, 0.55); }
+  50% { box-shadow: 0 0 9px rgba(255, 255, 255, 0.95); }
+}
+/* lead-change flash — re-keyed in JS so it replays on every reversal */
+.dom-flash {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.95);
+  animation: dom-spark 0.5s ease-out forwards;
+}
+@keyframes dom-spark {
+  0% { transform: scale(0.3); opacity: 0.95; }
+  100% { transform: scale(2.6); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dom-me, .dom-seam { transition-duration: 0.18s; transition-timing-function: ease-out; }
+  .dom-bar.tie .dom-seam { animation: none; }
+  .dom-flash { animation-duration: 0.3s; }
+}
+
 .versus-hud .vs-side {
   display: flex;
   flex-direction: column;

@@ -254,7 +254,7 @@ describe('new augments', () => {
       cells: [2, 3, 2, 4, 0, 6, 1, 7, 8],
       tags: ['normal', 'normal', 'normal', 'normal', 'normal', 'normal', 'normal', 'normal', 'normal'],
     };
-    const base = { cells: [4], count: 1, baseScore: 1, finalScore: 1, comboMultiplier: 1 };
+    const base = { cells: [4], count: 1, baseScore: 1, finalScore: 1, comboMultiplier: 1, comboCount: 1 };
     const ctx = { board, clearedTags: ['bomb'] } as unknown as Parameters<NonNullable<typeof bomb.hooks.onClear>>[1];
     const res = bomb.hooks.onClear!(base, ctx);
     // The four orthogonal neighbours are cleared on the board…
@@ -276,7 +276,7 @@ describe('new augments', () => {
       cells: [0, 0, 5, 6, 0, 0, 0, 0, 0],
       tags: ['normal', 'normal', 'normal', 'normal', 'normal', 'normal', 'normal', 'normal', 'normal'],
     };
-    const base = { cells: [0], count: 1, baseScore: 1, finalScore: 1, comboMultiplier: 1 };
+    const base = { cells: [0], count: 1, baseScore: 1, finalScore: 1, comboMultiplier: 1, comboCount: 1 };
     const ctx = { board, clearedTags: ['bomb'] } as unknown as Parameters<NonNullable<typeof bomb.hooks.onClear>>[1];
     const res = bomb.hooks.onClear!(base, ctx);
     // Only the non-empty neighbour (down=3) explodes; the empty one is ignored.
@@ -316,7 +316,7 @@ describe('augment balance tweaks', () => {
   });
 
   it('초읽기 grants a flat +0.5s from a 2-combo; 가속 보상 scales with combo depth', () => {
-    const base = { cells: [0], count: 1, baseScore: 1, finalScore: 1, comboMultiplier: 1 };
+    const base = { cells: [0], count: 1, baseScore: 1, finalScore: 1, comboMultiplier: 1, comboCount: 1 };
     // Invoke an augment's onClear with a stub ctx that records grantTimeMs(ms).
     const timeGranted = (id: string, comboCount: number): number => {
       let ms = 0;
@@ -339,7 +339,7 @@ describe('augment balance tweaks', () => {
 
   it("'도박사' rolls 10× on a hit (<0.2) and 0× on a miss", () => {
     const gambler = rule('risk.gambler').hooks.onClear!;
-    const base = { cells: [0], count: 1, baseScore: 4, finalScore: 4, comboMultiplier: 1 };
+    const base = { cells: [0], count: 1, baseScore: 4, finalScore: 4, comboMultiplier: 1, comboCount: 1 };
     const ctxWith = (roll: number) =>
       ({ rng: { next: () => roll } }) as unknown as Parameters<typeof gambler>[1];
     expect(gambler(base, ctxWith(0.1)).finalScore).toBe(40); // 4 × 10
@@ -347,7 +347,7 @@ describe('augment balance tweaks', () => {
   });
 
   it('grants a +50% set bonus once a family reaches 3 augments', () => {
-    const base = { cells: [0], count: 1, baseScore: 10, finalScore: 10, comboMultiplier: 1 };
+    const base = { cells: [0], count: 1, baseScore: 10, finalScore: 10, comboMultiplier: 1, comboCount: 1 };
     const clearCtx = { comboCount: 1, grantTimeMs: () => {} } as unknown as Parameters<
       NonNullable<ReturnType<typeof rule>['hooks']['onClear']>
     >[1];

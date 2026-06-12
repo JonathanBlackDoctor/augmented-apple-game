@@ -26,6 +26,10 @@ import type {
 import { makeRng } from './rng';
 import { generateBoard, rectToCells } from './board';
 
+// A combo only carries over if the next successful clear lands within this
+// window of the previous one; a longer pause lets the chain lapse.
+const COMBO_WINDOW_MS = 2000;
+
 class Engine implements CoreEngine {
   private baseCfg!: RoundConfig;
   private cfg!: RoundConfig; // effective (post modifyRoundConfig)
@@ -35,6 +39,7 @@ class Engine implements CoreEngine {
   private board!: Board;
   private score = 0;
   private comboCount = 0;
+  private lastClearTMs = 0; // round-relative time of the last successful clear
   private failCount = 0;
 
   private remainingMs = 0;
@@ -59,6 +64,7 @@ class Engine implements CoreEngine {
 
     this.score = 0;
     this.comboCount = 0;
+    this.lastClearTMs = 0;
     this.failCount = 0;
     this.remainingMs = this.cfg.durationMs;
     this.lastNow = null;
@@ -102,7 +108,13 @@ class Engine implements CoreEngine {
     const clearedValues = cells.map((i) => this.board.cells[i] as number);
     const clearedTags: CellTag[] = cells.map((i) => this.board.tags?.[i] ?? 'normal');
 
+    // The chain only continues if this clear lands within COMBO_WINDOW_MS of
+    // the previous one; a longer gap lets the combo lapse and restart at 1.
+    if (this.comboCount > 0 && action.tMs - this.lastClearTMs > COMBO_WINDOW_MS) {
+      this.comboCount = 0;
+    }
     this.comboCount++;
+    this.lastClearTMs = action.tMs;
     this.lastActivityMs = this.lastNow ?? this.lastActivityMs;
 
     // Remove apples first; onClear sees the cleared values/tags via ctx.
@@ -117,6 +129,7 @@ class Engine implements CoreEngine {
       baseScore: cells.length,
       finalScore: cells.length,
       comboMultiplier: 1,
+      comboCount: this.comboCount,
     };
     const ctx: ClearCtx = {
       board: this.board,

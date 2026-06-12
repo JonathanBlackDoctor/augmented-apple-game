@@ -48,6 +48,7 @@ export interface ClearResult {
   baseScore: number;
   finalScore: number;
   comboMultiplier: number;
+  comboCount: number; // engine's consecutive-clear streak after this clear (single source of truth)
 }
 
 export type CommitResult = ClearResult | { rejected: true; reason: string };

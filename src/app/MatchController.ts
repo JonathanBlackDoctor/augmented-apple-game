@@ -275,7 +275,9 @@ export class MatchController {
         sfx.fail();
         return;
       }
-      this.comboStreak++;
+      // Mirror the engine's authoritative streak (it applies the 2s combo
+      // window), so HUD/SFX/FX never drift from what the augments actually see.
+      this.comboStreak = res.comboCount;
       this.board.burst(res.cells);
       this.board.setBoard(this.engine.getBoard());
       st.setRoundScore(this.engine.getScore());

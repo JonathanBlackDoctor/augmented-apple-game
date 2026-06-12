@@ -435,7 +435,8 @@ export class VersusController {
         if (res) sfx.fail();
         return;
       }
-      this.comboStreak++;
+      // Mirror the engine's authoritative streak (2s combo window applied).
+      this.comboStreak = res.comboCount;
       this.board.burst(res.cells);
       this.board.setBoard(m.myBoard());
       const snap = m.snapshot();

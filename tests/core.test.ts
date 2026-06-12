@@ -102,14 +102,19 @@ describe('engine evaluate / commit / score', () => {
     const e = createEngine();
     e.init(cfg('combo-window'), makeRng('combo-window'), recordBus);
     let seq = 0;
+    // The streak the engine reports in its commit result — the value the UI
+    // controllers (HUD/SFX/FX) now mirror, so it must match what augments see.
+    const returned: number[] = [];
     // tMs gaps: 0 -> +500 -> +1500 (all within 2s) -> +2001 (lapsed)
     for (const tMs of [0, 500, 2000, 4001]) {
       const r = findValidRect(e.getBoard(), (rect) => e.evaluate(rect));
       if (!r) break;
-      e.commit({ seq: ++seq, rect: r, tMs });
+      returned.push((e.commit({ seq: ++seq, rect: r, tMs }) as ClearResult).comboCount);
     }
     // First three chain (1,2,3); the >2s gap before the fourth restarts at 1.
     expect(combos).toEqual([1, 2, 3, 1]);
+    // The commit result exposes the same streak (single source of truth).
+    expect(returned).toEqual([1, 2, 3, 1]);
   });
 
   it('rejects an invalid selection without changing the score', () => {

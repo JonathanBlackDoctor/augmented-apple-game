@@ -129,6 +129,7 @@ class Engine implements CoreEngine {
       baseScore: cells.length,
       finalScore: cells.length,
       comboMultiplier: 1,
+      comboCount: this.comboCount,
     };
     const ctx: ClearCtx = {
       board: this.board,

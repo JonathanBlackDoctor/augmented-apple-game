@@ -252,7 +252,7 @@ export class VersusController {
             chance: 0.95,
           });
       }
-      updateAmbient(this.board, snap.myOwned, snap.remainingMs, this.durationMs);
+      updateAmbient(this.board, snap.myOwned, snap.remainingMs, snap.roundDurationMs);
       this.tickCompanion();
       st.setPhase('round');
     } else if (snap.phase === 'preRound') {
@@ -308,7 +308,9 @@ export class VersusController {
 
   private sync(s: VersusSnapshot): void {
     const st = useGameStore.getState();
-    useGameStore.setState({ durationMs: this.durationMs, remainingMs: s.remainingMs, owned: s.myOwned });
+    // Use the round's augment-modified length so the HUD timer bar fills correctly
+    // (e.g. a +7s relief round drains from 37s, not a base-30s bar that sits full).
+    useGameStore.setState({ durationMs: s.roundDurationMs, remainingMs: s.remainingMs, owned: s.myOwned });
     st.setRound(s.round);
     st.setRoundScore(s.myScore);
     st.setTotalScore(s.myTotal);
@@ -496,7 +498,7 @@ export class VersusController {
         finalScore: res.finalScore,
         comboMultiplier: res.comboMultiplier,
         remainingMs: snap.remainingMs,
-        durationMs: this.durationMs,
+        durationMs: snap.roundDurationMs,
       });
     },
   };

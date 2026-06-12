@@ -43,6 +43,7 @@ export interface VersusSnapshot {
   round: number; // 0-based
   rounds: number;
   remainingMs: number;
+  roundDurationMs: number; // this round's augment-modified length (for the HUD bar)
   phaseRemainingMs: number; // countdown for the timed roundCheck/augment overlays
   myScore: number;
   botScore: number;
@@ -88,6 +89,7 @@ export class VersusMatch {
   private phase: VersusPhase = 'round';
   private roundStartMs: number | null = null;
   private remainingMs = 0;
+  private roundDurationMs = 0; // effective (augment-modified) length of the current round
   private phaseEndsAt: number | null = null; // deadline for timed overlay phases
   private phaseRemainingMs = 0;
   private lastRound: {
@@ -146,7 +148,7 @@ export class VersusMatch {
     return buildHookBusFor(owned);
   }
 
-  private beginRound(): void {
+  private beginRound(nowMs = 0): void {
     const o = this.opts;
     const mkCfg = (owned: string[]): RoundConfig => ({
       seed: this.roundSeed(this.round),
@@ -160,8 +162,14 @@ export class VersusMatch {
     const seed = this.roundSeed(this.round);
     this.myEngine.init(mkCfg(this.myOwned), makeRng(seed), this.hookBus(this.myOwned));
     this.botEngine.init(mkCfg(this.botOwned), makeRng(seed), this.hookBus(this.botOwned));
-    this.remainingMs = o.durationMs;
-    this.roundStartMs = null;
+    // Anchor both engines at the round's start and read the augment-modified
+    // duration straight away, so the very first snapshot already shows the real
+    // round length (e.g. +7s relief → 37s) instead of the base duration for a
+    // frame before the next tick corrects it.
+    this.remainingMs = this.myEngine.tick(nowMs).remainingMs;
+    this.roundDurationMs = this.remainingMs; // full length of this round (post-augment)
+    this.botEngine.tick(nowMs);
+    this.roundStartMs = nowMs;
     this.mySeq = 0;
     this.botSeq = 0;
     this.botNextAt = 500 + this.botRng.int(600); // first "think" before acting
@@ -260,7 +268,7 @@ export class VersusMatch {
     } else if (this.phase === 'preRound') {
       // 3·2·1 countdown after the pick; the round begins only when it elapses.
       this.phaseRemainingMs = Math.max(0, (this.phaseEndsAt ?? nowMs) - nowMs);
-      if (nowMs >= (this.phaseEndsAt ?? nowMs)) this.beginRound();
+      if (nowMs >= (this.phaseEndsAt ?? nowMs)) this.beginRound(nowMs);
     }
     return this.snapshot();
   }
@@ -376,6 +384,7 @@ export class VersusMatch {
       round: this.phase === 'augment' ? this.offerRound : this.round,
       rounds: this.opts.rounds,
       remainingMs: this.remainingMs,
+      roundDurationMs: this.roundDurationMs || this.opts.durationMs,
       phaseRemainingMs: this.phaseRemainingMs,
       myScore: this.myEngine.getScore(),
       botScore: this.botEngine.getScore(),

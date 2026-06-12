@@ -268,7 +268,7 @@ export class OnlineController {
       this.companionOn = false;
     }
     if (s.phase === 'round') {
-      updateAmbient(this.board, s.myOwned, s.remainingMs, DURATION);
+      updateAmbient(this.board, s.myOwned, s.remainingMs, s.roundDurationMs);
       this.tickCompanion();
     }
 
@@ -314,7 +314,7 @@ export class OnlineController {
       round: s.round,
       rounds: s.rounds,
       remainingMs: s.remainingMs,
-      durationMs: DURATION,
+      durationMs: s.roundDurationMs, // augment-modified length → correct HUD timer bar
       overlayRemainingMs: s.phaseRemainingMs,
       myScore: s.myScore,
       oppScore: s.oppScore,
@@ -360,13 +360,13 @@ export class OnlineController {
           ? s.remainingMs
           : s.phase === 'roundCheck' || s.phase === 'matchResult'
             ? 0
-            : DURATION;
+            : s.roundDurationMs;
       useGameStore.setState({
         phase: skyPhase,
         roundIndex: skyRound,
         totalRounds: s.rounds,
         remainingMs: skyRemaining,
-        durationMs: DURATION,
+        durationMs: s.roundDurationMs,
       });
     }
   }
@@ -485,7 +485,7 @@ export class OnlineController {
         finalScore: res.finalScore,
         comboMultiplier: res.comboMultiplier,
         remainingMs: snap.remainingMs,
-        durationMs: DURATION,
+        durationMs: snap.roundDurationMs,
       });
     },
   };

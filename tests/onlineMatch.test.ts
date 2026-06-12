@@ -369,7 +369,10 @@ describe('OnlineMatch — robustness', () => {
     const guest = new OnlineMatch({ session: sb, role: 'guest', self: B, roomId: '123', ...FAST });
     await guest.start(7000);
     let g = 7000;
-    for (let i = 0; i < 400; i++) {
+    // Generous bound: auto-picked time augments can lengthen rounds (a +7s relief
+    // on the tiny FAST base nearly 5×'s a round), so the match runs well past the
+    // base schedule. Both clients rebuild that schedule deterministically.
+    for (let i = 0; i < 4000; i++) {
       host.tick(h); guest.tick(g); h += 50; g += 50;
       if (host.snapshot().phase === 'matchResult' && guest.snapshot().phase === 'matchResult') break;
     }
